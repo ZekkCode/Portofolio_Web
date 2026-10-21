@@ -87,16 +87,26 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,name='Javi A. Torres',tit
       style.setProperty('--pc-active',light.p.toFixed(4));
     };
     const frame=(now:number)=>{
-      const dt=Math.min(0.05,(now-last)/1000||0);last=now;
+      const rawDt = last ? (now - last) / 1000 : 0.016;
+      last = now;
+      const dt = clamp(rawDt, 0.001, 0.05);
       const slow=now<slowUntil;const stiffness=slow?24:120;const damping=slow?9:16;
       const steps=Math.max(1,Math.ceil(dt/(1/120)));const h=dt/steps;
-      for(let i=0;i<steps;i++){for(const axis of[x,y]){axis.v+=(stiffness*(axis.target-axis.p)-damping*axis.v)*h;axis.p+=axis.v*h;}}
+      for(let i=0;i<steps;i++){
+        for(const axis of[x,y]){
+          axis.v+=(stiffness*(axis.target-axis.p)-damping*axis.v)*h;
+          axis.v=clamp(axis.v,-25,25);
+          axis.p+=axis.v*h;
+          axis.p=clamp(axis.p,-1.5,1.5);
+        }
+      }
       const tau=light.target>light.p?0.18:slow?0.9:0.45;
-      light.p+=(light.target-light.p)*(1-Math.exp(-dt/tau));write();
+      light.p=clamp(light.p+(light.target-light.p)*(1-Math.exp(-dt/tau)),0,1);
+      write();
       const moving=Math.abs(x.target-x.p)>0.0005||Math.abs(y.target-y.p)>0.0005||Math.abs(x.v)>0.0005||Math.abs(y.v)>0.0005||Math.abs(light.target-light.p)>0.002;
       if(moving){raf=requestAnimationFrame(frame);}else{x.p=x.target;y.p=y.target;light.p=light.target;write();raf=0;}
     };
-    const wake=()=>{if(raf)return;last=performance.now();raf=requestAnimationFrame(frame);};
+    const wake=()=>{if(raf)return;last=0;raf=requestAnimationFrame(frame);};
     const aim=(nx:number,ny:number,on=true)=>{x.target=clamp(nx,-1,1);y.target=clamp(ny,-1,1);light.target=on?1:0;slowUntil=0;wake();};
     const aimAt=(event:PointerEvent)=>{const rect=root.getBoundingClientRect();if(!rect.width||!rect.height)return;aim(((event.clientX-rect.left)/rect.width)*2-1,((event.clientY-rect.top)/rect.height)*2-1);};
     const release=()=>aim(0,0,false);

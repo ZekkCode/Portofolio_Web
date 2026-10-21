@@ -13,7 +13,7 @@ function Header() {
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
         <SmoothNavLink href="#atas" className="flex items-center gap-2">
           <span className="size-2.5 rounded-full bg-brand" aria-hidden="true" />
-          <span className="font-display text-sm tracking-tight uppercase">
+          <span className="font-display text-base font-extrabold tracking-tight text-ink">
             {profile.brand}
           </span>
         </SmoothNavLink>
@@ -23,7 +23,7 @@ function Header() {
             <SmoothNavLink
               key={link.href}
               href={link.href}
-              className="transition-colors hover:text-ink"
+              className="font-medium transition-colors hover:text-ink"
             >
               {link.label}
             </SmoothNavLink>
@@ -47,54 +47,50 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative flex min-h-[90svh] scroll-mt-24 flex-col items-center justify-center gap-8 px-5 pt-12 pb-24 sm:min-h-[94svh] sm:pt-16 sm:pb-32 overflow-hidden"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-12 pb-20 sm:pt-20 sm:pb-28"
     >
-      <ParallaxFloatingBadge
-        label="UI/UX & Frontend"
-        speed={0.15}
-        className="hidden xl:block absolute left-12 top-1/3"
-      />
-      <ParallaxFloatingBadge
-        label="Creative Engineer"
-        speed={-0.12}
-        className="hidden xl:block absolute right-12 top-1/2"
-      />
+      <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
+        <div className="flex flex-col items-start gap-6 text-left">
+          <div className="space-y-3">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.06]">
+              {profile.name}
+            </h1>
+            <p className="text-lg sm:text-xl font-semibold text-brand">
+              {profile.rolesFull}
+            </p>
+          </div>
 
-      <div className="flex flex-col items-center gap-3 text-center max-w-2xl">
-        <h1 className="font-display text-4xl sm:text-6xl font-black tracking-tight text-ink uppercase">
-          {profile.name}
-        </h1>
-        <p className="text-lg sm:text-xl font-semibold text-brand">
-          {profile.rolesFull}
-        </p>
-      </div>
+          <p className="max-w-lg text-base leading-relaxed text-body">
+            Membangun antarmuka produk digital yang berkarakter, interaktif, dan mudah digunakan.
+            Menggabungkan desain visual terarah dengan rekayasa Next.js, TypeScript, dan visual WebGL.
+          </p>
 
-      <Parallax speed={-0.06}>
-        <ProfileCardStage />
-      </Parallax>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <SmoothNavLink
+              href="#cv"
+              className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-ink"
+            >
+              Buka Berkas CV
+            </SmoothNavLink>
+            <SmoothNavLink
+              href="#proyek"
+              className="rounded-full border border-line bg-white px-6 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/40"
+            >
+              Lihat Proyek
+            </SmoothNavLink>
+          </div>
 
-      <div className="flex flex-col items-center gap-6">
-        <p className="flex flex-col items-center gap-2 text-sm text-body sm:flex-row sm:gap-3">
-          <span className="font-medium text-ink">{profile.site.replace("https://", "")}</span>
-          <span className="hidden text-line sm:inline" aria-hidden="true">·</span>
-          <span>{profile.location}</span>
-          <span className="hidden text-line sm:inline" aria-hidden="true">·</span>
-          <span>Freelance sejak {profile.since}</span>
-        </p>
+          <div className="pt-2 text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="font-medium text-ink">{profile.site.replace("https://", "")}</span>
+            <span aria-hidden="true" className="text-line">•</span>
+            <span>{profile.location}</span>
+            <span aria-hidden="true" className="text-line">•</span>
+            <span>Freelance sejak {profile.since}</span>
+          </div>
+        </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <SmoothNavLink
-            href="#proyek"
-            className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-ink"
-          >
-            Lihat Proyek
-          </SmoothNavLink>
-          <a
-            href={`mailto:${profile.contact.email}`}
-            className="rounded-full border border-line bg-white px-6 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/40"
-          >
-            Email Saya
-          </a>
+        <div className="flex items-center justify-center lg:justify-end">
+          <ProfileCardStage />
         </div>
       </div>
     </section>
@@ -205,7 +201,7 @@ function Contact() {
               aria-hidden="true"
             />
             <div className="relative">
-              <h2 className="font-display text-2xl leading-tight text-white uppercase sm:text-4xl">
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
                 Mulai proyek bersama
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/80 sm:text-base">
@@ -229,7 +225,7 @@ function Contact() {
                 </a>
               </div>
 
-              <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold tracking-[0.1em] text-white/70 uppercase">
+              <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-white/80">
                 {profile.contact.socials.map((social) => (
                   <li key={social.label}>
                     <a

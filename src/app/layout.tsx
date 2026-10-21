@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
-import { Archivo_Black, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { profile } from "@/lib/profile";
 import "./globals.css";
 
-const inter = Inter({
+const fontDisplay = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-display",
   display: "swap",
 });
 
-const archivo = Archivo_Black({
+const fontBody = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-archivo",
+  variable: "--font-body",
   display: "swap",
 });
 
@@ -54,10 +53,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${archivo.variable}`}>
+    <html lang="id" className={`${fontBody.variable} ${fontDisplay.variable}`}>
       <body className="antialiased">
         <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );
 }
+

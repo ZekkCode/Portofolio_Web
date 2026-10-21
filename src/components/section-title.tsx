@@ -8,10 +8,10 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-10 max-w-2xl">
-      <h2 className="font-display text-3xl leading-tight uppercase sm:text-4xl text-ink">
+      <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
         {title}
       </h2>
-      {desc && <p className="mt-3 text-sm leading-relaxed text-body sm:text-base">{desc}</p>}
+      {desc && <p className="mt-3 text-base leading-relaxed text-body">{desc}</p>}
     </div>
   );
 }

@@ -81,14 +81,17 @@ const typeInto = (selector, value, index = 0) =>
   evaluate(`(() => {
     const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
     if (!el) return false;
-    const setter = Object.getOwnPropertyDescriptor(el.constructor.prototype, "value").set;
+    if (el._valueTracker) el._valueTracker.setValue("");
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     setter.call(el, ${JSON.stringify(value)});
     el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
     return true;
   })()`);
 
 
 try {
+  console.log("Checking Chrome connection on port", port);
   let ready = false;
   for (let attempt = 0; attempt < 40 && !ready; attempt++) {
     try {
@@ -99,6 +102,7 @@ try {
     }
   }
   assert.ok(ready, "Chrome DevTools tidak merespons");
+  console.log("Chrome ready");
 
   const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
   const page = list.find((item) => item.type === "page");
@@ -114,8 +118,10 @@ try {
   await new Promise((resolve) => ws.addEventListener("open", resolve));
   await send("Page.enable");
   await send("Runtime.enable");
+  console.log("Navigating to /");
 
-  await goto("/", 3500);
+  await goto("/", 1500);
+  console.log("On /, evaluating hero");
   const hero = await evaluate(`(() => {
     const canvas = document.querySelector("#atas canvas, #kontak canvas, canvas");
     return canvas ? { width: canvas.width, height: canvas.height } : null;
@@ -129,7 +135,8 @@ try {
   );
   console.log("ok  hero: lanyard 3D render + proyek tampil");
 
-  await goto("/admin", 3500);
+  await goto("/admin", 1500);
+  console.log("On /admin");
   const controls = await evaluate(`document.querySelectorAll('input, select, textarea').length`);
   assert.ok(controls >= 20, `panel admin cuma punya ${controls} kontrol`);
   assert.equal(
@@ -174,7 +181,7 @@ try {
   );
   console.log("ok  admin: tambah proyek tersimpan");
 
-  await goto("/", 3500);
+  await goto("/", 1500);
   assert.equal(
     await evaluate(`document.body.innerText.includes("Proyek Cek Otomatis")`),
     true,

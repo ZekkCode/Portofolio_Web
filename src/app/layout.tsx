@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(profile.site),
   alternates: { canonical: "/" },
   title: {
-    default: "Zakaria Mujur Prasetyo — UI/UX Designer & Frontend Developer",
+    default: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
     template: "%s | ZekkTech",
   },
   description:
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     locale: "id_ID",
     url: "/",
     siteName: "ZekkTech",
-    title: "Zakaria Mujur Prasetyo — UI/UX Designer & Frontend Developer",
+    title: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
     description:
       "UI/UX Designer & Frontend Developer asal Bangkalan, Madura. Freelancer sejak 2020.",
   },

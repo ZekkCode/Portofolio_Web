@@ -197,10 +197,13 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <button
               type="button"
               onClick={onClose}
-              className="flex size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-line/40 hover:text-ink"
+              className="flex size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink"
               aria-label="Tutup modal"
             >
-              ✕
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
         </div>
@@ -302,13 +305,18 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <div className={`rounded-2xl border ${currentRoleDetail.borderColor} ${currentRoleDetail.bgLight} p-5 sm:p-6`}>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/5 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{currentRoleDetail.badge.slice(0, 2)}</span>
+                  <div
+                    className="flex size-7 items-center justify-center rounded-lg text-white font-black text-xs"
+                    style={{ backgroundColor: currentRoleDetail.color }}
+                  >
+                    {currentRoleDetail.title.charAt(0)}
+                  </div>
                   <div>
                     <h3 className="text-lg font-bold text-ink">{currentRoleDetail.title}</h3>
                     <p className="text-xs font-semibold text-body">{currentRoleDetail.subtitle}</p>
                   </div>
                 </div>
-                <span className={`text-xs font-bold ${currentRoleDetail.textColor} uppercase tracking-wider`}>
+                <span className={`text-sm font-semibold ${currentRoleDetail.textColor}`}>
                   Fokus Spesialisasi
                 </span>
               </div>
@@ -435,8 +443,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 />
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <h4 className="text-sm font-bold text-ink">Freelance Designer & Tech Specialist</h4>
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                    2020 — Sekarang
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                    2020 - Sekarang
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-emerald-600">
@@ -458,7 +466,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 <div>
                   <p className="font-bold text-ink">S1 Teknik Informatika</p>
                   <p className="text-body font-medium">Universitas Trunojoyo Madura</p>
-                  <p className="text-[11px] text-body/80">2024 — Sekarang • Bangkalan</p>
+                  <p className="text-xs text-body">2024 - Sekarang · Bangkalan</p>
                 </div>
                 <div className="border-t border-line/70 pt-3">
                   <p className="font-bold text-ink">SMK Jurusan Multimedia</p>

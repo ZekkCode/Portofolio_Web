@@ -174,7 +174,7 @@ export const writeConfig = (next: SiteConfig) => {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
-    // kuota penuh (gambar terlalu besar) — draft tetap jalan di memori
+    // kuota penuh (gambar terlalu besar); draft tetap jalan di memori
   }
   emit();
 };

@@ -2,7 +2,7 @@
 @import "lenis/dist/lenis.css";
 
 /* ===========================================================
-   DESIGN TOKENS — ubah di sini, seluruh halaman ikut menyesuaikan
+   DESIGN TOKENS: ubah di sini, seluruh halaman ikut menyesuaikan
    =========================================================== */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -35,7 +35,7 @@
 }
 
 /* ===========================================================
-   GRID BACKGROUND — CSS only, tanpa canvas
+   GRID BACKGROUND: CSS only, tanpa canvas
    =========================================================== */
 .grid-bg {
   position: fixed;

@@ -105,14 +105,13 @@ function About() {
   return (
     <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
       <SectionTitle
-        eyebrow="Tentang"
-        title="Desain, kode, dan segala hal yang berbau teknologi"
-        desc={`${profile.rolesFull} — bikin tampilan yang enak dipakai, lalu pastikan kodenya jalan.`}
+        title="Desain Antarmuka & Rekayasa Web"
+        desc={`${profile.rolesFull}. Merancang antarmuka bersih dan membangun sistem web yang andal.`}
       />
 
       <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <div className="space-y-4 text-sm leading-relaxed text-body sm:text-base">
+          <div className="space-y-4 text-base leading-relaxed text-body">
             {profile.bio.map((par) => (
               <p key={par.slice(0, 24)}>{par}</p>
             ))}
@@ -127,7 +126,7 @@ function About() {
                 >
                   <dt className="sr-only">{stat.label}</dt>
                   <dd className="font-display text-2xl leading-none">{stat.value}</dd>
-                  <dd className="mt-1.5 text-[10px] font-semibold tracking-[0.12em] text-body uppercase">
+                  <dd className="mt-1.5 text-sm font-medium text-body">
                     {stat.label}
                   </dd>
                 </div>
@@ -137,8 +136,8 @@ function About() {
         </div>
 
         <div>
-          <h3 className="mb-5 text-[11px] font-bold tracking-[0.2em] text-brand uppercase">
-            Pengalaman
+          <h3 className="mb-5 text-sm font-bold text-brand">
+            Pengalaman Kerja & Organisasi
           </h3>
           <Parallax speed={0.05}>
             <ol className="space-y-6 border-l border-line pl-5">
@@ -148,14 +147,14 @@ function About() {
                     className="absolute top-1.5 -left-[26px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs"
                     aria-hidden="true"
                   />
-                  <p className="text-[10px] font-bold tracking-[0.12em] text-body uppercase">
+                  <p className="text-xs font-semibold text-body">
                     {item.period}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-ink">{item.role}</p>
-                  <p className="text-xs text-body">
+                  <p className="text-sm text-body">
                     {item.org} · {item.place}
                   </p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-body">{item.desc}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-body">{item.desc}</p>
                 </li>
               ))}
             </ol>
@@ -207,11 +206,10 @@ function Contact() {
             />
             <div className="relative">
               <h2 className="font-display text-2xl leading-tight text-white uppercase sm:text-4xl">
-                Punya ide proyek?
+                Mulai proyek bersama
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/80 sm:text-base">
-                Terbuka untuk peluang freelance, kerja sama, atau sekadar diskusi santai soal
-                desain dan teknologi.
+                Terbuka untuk kolaborasi frontend, desain antarmuka, dan konsultasi teknis.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -256,7 +254,7 @@ function Contact() {
 function Footer() {
   return (
     <footer className="border-t border-line/70">
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-5 py-8 text-[11px] tracking-[0.08em] text-body uppercase sm:flex-row">
+      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-5 py-8 text-sm text-body sm:flex-row">
         <p>© {new Date().getFullYear()} {profile.name}</p>
         <p>Next.js + Tailwind CSS</p>
       </div>

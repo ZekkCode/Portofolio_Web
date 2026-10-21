@@ -10,9 +10,8 @@ export function ProjectsSection() {
   return (
     <section id="proyek" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
       <SectionTitle
-        eyebrow="Portofolio"
-        title="Proyek yang sudah dikerjakan"
-        desc="Dari sistem informasi, algoritma information retrieval, bot Telegram, sampai aplikasi booking hotel."
+        title="Proyek Pilihan"
+        desc="Aplikasi web, sistem informasi, algoritma temu kembali informasi, dan bot otomatisasi."
       />
 
       <Parallax speed={0.04}>
@@ -34,7 +33,7 @@ export function ProjectsSection() {
                 {project.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-brand/8 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-brand uppercase"
+                    className="rounded-full bg-brand/8 px-3 py-1 text-xs font-medium text-brand"
                   >
                     {tag}
                   </span>

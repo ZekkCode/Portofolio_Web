@@ -34,14 +34,14 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
       {/* Header Info */}
       <div className="pt-1.5">
         <div className="flex items-center justify-between gap-1">
-          <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
-            CV • ZEKKTECH
+          <span className="text-xs font-semibold text-slate-500">
+            Curriculum Vitae
           </span>
           <span
-            className="rounded px-2 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider"
+            className="rounded px-2 py-0.5 text-xs font-semibold text-white"
             style={{ backgroundColor: detail.color }}
           >
-            {detail.title.split(" ")[0]}
+            {detail.title}
           </span>
         </div>
 
@@ -56,7 +56,7 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
             <h4 className="font-bold text-slate-900 leading-tight text-xs truncate">
               Zakaria Mujur P.
             </h4>
-            <p className="text-[10px] font-medium text-slate-500 truncate">
+            <p className="text-xs font-medium text-slate-500 truncate">
               {detail.subtitle}
             </p>
           </div>
@@ -70,7 +70,7 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
           {detail.tools.slice(0, 3).map((tool) => (
             <span
               key={tool}
-              className="rounded bg-slate-100 border border-slate-200/60 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 leading-none"
+              className="rounded bg-slate-100 border border-slate-200/60 px-2 py-0.5 text-xs font-medium text-slate-700 leading-none"
             >
               {tool}
             </span>
@@ -78,21 +78,21 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
         </div>
 
         {/* Mini highlight bullet */}
-        <p className="mt-2 text-[10px] leading-snug text-slate-600 line-clamp-3">
+        <p className="mt-2 text-xs leading-snug text-slate-600 line-clamp-3">
           {detail.desc}
         </p>
       </div>
 
       {/* Footer Callout */}
       <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-[9px] font-medium tracking-wider uppercase text-slate-400">
+        <span className="text-xs font-medium text-slate-500">
           zekktech.biz.id
         </span>
         <span
-          className="inline-flex items-center gap-0.5 text-[10px] font-bold hover:underline"
+          className="inline-flex items-center gap-0.5 text-xs font-semibold hover:underline"
           style={{ color: detail.color }}
         >
-          Buka CV →
+          Lihat Profil →
         </span>
       </div>
     </div>
@@ -119,13 +119,12 @@ export function CvFolderSection() {
   return (
     <section id="cv" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
       <SectionTitle
-        eyebrow="Curriculum Vitae"
-        title="Berkas & CV Per Role Profesional"
-        desc="Buka folder interaktif untuk melihat lembar CV Zakaria Mujur Prasetyo sesuai bidang: Desainer Grafis, UI/UX Designer, Frontend Developer, dan IT Support. Klik lembaran atau tombol role untuk membaca profil lengkap dari zekktech.biz.id."
+        title="Berkas Karir & Kurikulum Vitae"
+        desc="Empat lembar rekam jejak teknis: Desain Grafis, UI/UX, Frontend Development, dan Dukungan Sistem IT. Tarik dokumen atau pilih tombol untuk pratinjau data lengkap."
       />
 
       {/* Main Interactive Stage Box */}
-      <div className="relative mt-8 overflow-hidden rounded-3xl border border-line bg-linear-to-b from-white/90 via-slate-50/70 to-white/90 p-6 sm:p-10 shadow-xl shadow-brand/5 backdrop-blur-sm">
+      <div className="relative mt-8 overflow-hidden rounded-3xl border border-line bg-white/95 p-6 sm:p-10 backdrop-blur-sm">
         {/* Decorative Grid Lines */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -243,8 +242,8 @@ export function CvFolderSection() {
 
         {/* Bottom Role Quick-Access Badges */}
         <div className="relative z-10 mt-2 border-t border-line/70 pt-5">
-          <p className="text-center text-xs font-bold uppercase tracking-wider text-body mb-3">
-            Atau klik langsung per role untuk pratinjau instan:
+          <p className="text-center text-sm font-medium text-body mb-3">
+            Atau pilih langsung per bidang untuk pratinjau:
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {roleKeys.map((key) => {

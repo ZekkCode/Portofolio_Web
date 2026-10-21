@@ -740,14 +740,14 @@ const placeHanging = (sim: Simulation, layout: CardLayout, intro: boolean) => {
   for (let i = 1; i <= JOINTS; i++) {
     nodes[i].copy(nodes[i - 1]);
     if (intro) {
-      nodes[i].x += sim.rest * 0.7;
-      nodes[i].y -= sim.rest * 0.5;
+      nodes[i].x += sim.rest * 0.15;
+      nodes[i].y -= sim.rest * 0.95;
     } else {
       nodes[i].y -= sim.rest;
     }
   }
   body.quaternion.identity();
-  if (intro) body.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 3);
+  if (intro) body.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 12);
   body.hang.set(0, layout.hangY, 0);
   const offset = scratch.a.copy(body.hang).applyQuaternion(body.quaternion);
   body.position.copy(nodes[JOINTS]).sub(offset);
@@ -1084,7 +1084,7 @@ const Lanyard = ({
     const frameView = () => {
       const s = settingsRef.current!;
       const aspect = view.width / view.height;
-      const strapRatio = mix(0.08, 0.28, clamp(s.strapLength, 0, 1));
+      const strapRatio = mix(0.12, 0.44, clamp(s.strapLength, 0, 1));
       const neededHeight = (layout.height * 1.5) / Math.max(0.2, 1 - strapRatio);
       let viewHeight = Math.max(layout.height / clamp(s.size, 0.15, 0.8), neededHeight);
       const minimumWidth = Math.max(layout.width * 2.5, 3.8);

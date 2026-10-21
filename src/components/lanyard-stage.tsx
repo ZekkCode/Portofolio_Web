@@ -7,7 +7,7 @@ export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
 
   return (
-    <div className={`relative h-[500px] w-full sm:h-[580px] lg:h-[640px] ${className}`}>
+    <div className={`relative w-full ${className || "h-[500px] sm:h-[580px] lg:h-[640px]"}`}>
       <Lanyard
         {...lanyard}
         frontImage={lanyard.frontImage || undefined}

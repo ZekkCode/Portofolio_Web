@@ -15,9 +15,13 @@ Untuk detail arsitektur, standar desain, dan pemeliharaan teknis, baca dokumen p
 - 📑 **[`CONTEXT.md`](./CONTEXT.md)**: Arsitektur proyek, peta komponen, dan alur state data.
 - 🎨 **[`DESIGN.md`](./DESIGN.md)**: Standar desain editorial, pasangan font Bricolage & Plus Jakarta Sans, palet warna, dan aturan anti-slop.
 - 🌊 **[`PARALLAX.md`](./PARALLAX.md)**: Konfigurasi Lenis Smooth Scroll, viewport culling, dan sistem GPU parallax.
-- 🤖 **[`AGENTS.md`](./AGENTS.md)**: Panduan untuk AI coding agents, perintah validasi wajib, dan konvensi git.
+- 🛠️ **[`SKILL.md`](./SKILL.md)**: Taksonomi kompetensi 4 role karier ZekkTech dan skill AI Agent terpasang.
+- 🔄 **[`WORKFLOW.md`](./WORKFLOW.md)**: Alur kerja pengembangan, siklus pengujian CDP, dan otomatisasi Vercel CI/CD.
+- 🤖 **[`AGENTS.md`](./AGENTS.md)**: Panduan untuk AI coding agents, checklist validasi wajib, dan konvensi git.
 - 🔒 **[`SECURITY.md`](./SECURITY.md)**: Kebijakan keamanan, konfigurasi HTTP security headers, dan isolasi rute admin.
 - 🔍 **[`SEO.md`](./SEO.md)**: Strategi mesin pencari, dynamic OpenGraph image, sitemap.xml, robots.txt, dan JSON-LD schema.
+- 📜 **[`POLICY.md`](./POLICY.md)**: Kebijakan privasi cookie-less, tata kelola data klien, dan lisensi open source.
+- 🤝 **[`CONTRIBUTING.md`](./CONTRIBUTING.md)**: Panduan kontribusi, alur pull request, dan standar kode.
 
 ---
 

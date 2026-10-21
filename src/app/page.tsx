@@ -1,11 +1,12 @@
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ParallaxFloatingBadge, SmoothNavLink } from "@/components/parallax";
+import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
-import { navLinks, profile } from "@/lib/profile";
+import { profile } from "@/lib/profile";
 
 function Header() {
   return (
@@ -18,23 +19,11 @@ function Header() {
           </span>
         </SmoothNavLink>
 
-        <nav className="hidden items-center gap-7 text-sm text-body sm:flex">
-          {navLinks.map((link) => (
-            <SmoothNavLink
-              key={link.href}
-              href={link.href}
-              className="font-medium transition-colors hover:text-ink"
-            >
-              {link.label}
-            </SmoothNavLink>
-          ))}
-        </nav>
-
         <a
           href={profile.contact.whatsapp}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+          className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:inline-flex"
         >
           Hubungi Saya
         </a>
@@ -249,7 +238,7 @@ function Contact() {
 
 function Footer() {
   return (
-    <footer className="border-t border-line/70">
+    <footer className="border-t border-line/70 pb-28 md:pb-36">
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-5 py-8 text-sm text-body sm:flex-row">
         <p>© {new Date().getFullYear()} {profile.name}</p>
         <p>Next.js + Tailwind CSS</p>
@@ -281,6 +270,7 @@ export default function Home() {
         />
       </div>
       <Header />
+      <PortfolioPillNav />
       <main>
         <Hero />
         <About />

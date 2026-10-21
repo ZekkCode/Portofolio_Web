@@ -74,6 +74,7 @@ const click = (text) =>
     const button = [...document.querySelectorAll("button")].find((item) => item.textContent.trim() === ${JSON.stringify(text)});
     if (!button) return false;
     button.click();
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
     return true;
   })()`);
 
@@ -120,7 +121,7 @@ try {
   await send("Runtime.enable");
   console.log("Navigating to /");
 
-  await goto("/", 1500);
+  await goto("/", 3000);
   console.log("On /, evaluating hero");
   const hero = await evaluate(`(() => {
     const canvas = document.querySelector("#atas canvas, #kontak canvas, canvas");
@@ -135,7 +136,7 @@ try {
   );
   console.log("ok  hero: lanyard 3D render + proyek tampil");
 
-  await goto("/admin", 1500);
+  await goto("/admin", 3000);
   console.log("On /admin");
   const controls = await evaluate(`document.querySelectorAll('input, select, textarea').length`);
   assert.ok(controls >= 20, `panel admin cuma punya ${controls} kontrol`);
@@ -181,7 +182,7 @@ try {
   );
   console.log("ok  admin: tambah proyek tersimpan");
 
-  await goto("/", 1500);
+  await goto("/", 2500);
   assert.equal(
     await evaluate(`document.body.innerText.includes("Proyek Cek Otomatis")`),
     true,

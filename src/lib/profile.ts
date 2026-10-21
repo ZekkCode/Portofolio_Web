@@ -1,0 +1,118 @@
+export const profile = {
+  name: "Zakaria Mujur Prasetyo",
+  nickname: "Zekk",
+  brand: "ZekkTech",
+  roles: "UI/UX & Frontend Developer",
+  rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",
+  tagline: "Mahasiswa Teknik Informatika",
+  location: "Bangkalan, Madura",
+  site: "https://zekktech.biz.id",
+  since: "2020",
+  bio: [
+    "Mahasiswa Teknik Informatika 2024 yang sudah terjun ke dunia freelance sejak 2020. Suka ngulik desain, koding, dan segala hal yang berbau teknologi dari Esdeh.",
+    "Lulusan SMK Multimedia yang dibekali ilmu grafis, desain visual, dan rakit PC. Sejak 2020 aktif membantu pelajar, UMKM, dan komunitas di bidang desain UI/UX, pembuatan website, serta branding visual.",
+  ],
+  stats: [
+    { value: "7", label: "Proyek selesai" },
+    { value: "29", label: "Sertifikat" },
+    { value: "6+", label: "Tahun freelance" },
+    { value: "3", label: "Organisasi" },
+  ],
+  stack: [
+    "Figma",
+    "Adobe XD",
+    "Illustrator",
+    "Photoshop",
+    "CapCut",
+    "Filmora",
+    "TailwindCSS",
+    "MySQL",
+    "GitHub",
+  ],
+  experience: [
+    {
+      role: "Kepala Divisi Media Creative",
+      org: "HIMATIF UTM",
+      place: "Bangkalan",
+      period: "2024-09 — Sekarang",
+      desc: "Memimpin tim dalam merancang identitas visual, media publikasi kegiatan, dokumentasi, serta manajemen konten sosial media organisasi.",
+    },
+    {
+      role: "Kepala Divisi Media Creative",
+      org: "Komunitas Linux dan Cyber Security — KOALISI",
+      place: "Bangkalan",
+      period: "2024-10 — Sekarang",
+      desc: "Merancang aset digital publikasi dan infografis edukasi seputar open source, distro Linux, serta awareness keamanan siber.",
+    },
+    {
+      role: "Core Team Media Creative",
+      org: "Google Developer Groups on Campus UTM",
+      place: "Bangkalan",
+      period: "2024-10 — Sekarang",
+      desc: "Mendesain materi visual workshop teknologi, mengelola branding visual GDGoC di sosial media, dan memproduksi konten kreatif seputar program Google.",
+    },
+  ],
+  projects: [
+    {
+      title: "SIGAP-Pangan",
+      desc: "Sistem Informasi dan Peringatan Rantai Pasok Pangan. Platform informasi untuk mendata dan memberikan peringatan terkait pasokan logistik pangan.",
+      tags: ["Sistem Informasi", "Web App"],
+      repo: "https://github.com/ZekkCode/SIGAP-Pangan",
+    },
+    {
+      title: "Mesin Pencari TP/TF-IDF",
+      desc: "Implementasi Information Retrieval untuk membangun mesin pencari teks menggunakan kalkulasi TF-IDF dan Cosine Similarity.",
+      tags: ["Algorithm", "Python"],
+      repo: "https://github.com/ZekkCode/information-retrieval",
+    },
+    {
+      title: "ZEDD",
+      desc: "Zekk External Downloader Drive. Alat bantu untuk mengunduh dan mengelola sinkronisasi file melalui integrasi eksternal.",
+      tags: ["Tools", "Downloader"],
+      repo: "https://github.com/ZekkCode/ZEDD-Zekk-External-Downloader-Drive",
+    },
+    {
+      title: "Network Capture Video Downloader",
+      desc: "Cara dan tutorial mencari serta mengunduh video streaming HLS (.m3u8) langsung dari panel Network browser dengan yt-dlp.",
+      tags: ["Tutorial", "yt-dlp"],
+      repo: "https://github.com/ZekkCode/Download-Video-Lewat-Network-Capture",
+    },
+    {
+      title: "ZekkStore",
+      desc: "Bot Telegram otomatis untuk transaksi produk digital seperti SMM Panel dan pulsa, dengan perutean pesanan terenkripsi.",
+      tags: ["Python", "Telegram API"],
+      repo: "https://github.com/ZekkCode/BotZekkStoreTelegram",
+    },
+    {
+      title: "Trevio",
+      desc: "Sistem manajemen pemesanan hotel dengan multi-hotel, verifikasi pembayaran manual, dan notifikasi via Email & WhatsApp.",
+      tags: ["PHP Native", "MySQL", "Tailwind"],
+      repo: "https://github.com/Buthzz/trevio-project",
+    },
+    {
+      title: "TOEL",
+      desc: "Aplikasi web latihan dan simulasi tes TOEFL. Dibuat sebagai Project Akhir mata kuliah Dasar Pemrograman Web.",
+      tags: ["Bootstrap", "Node.js"],
+      repo: "https://github.com/ZekkCode/OnlineTest-TOEFL_DPW",
+    },
+  ],
+  contact: {
+    email: "zakariamujur6@gmail.com",
+    whatsapp: "https://wa.me/62881081772005",
+    socials: [
+      { label: "GitHub", href: "https://github.com/ZekkCode" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/zakariamp" },
+      { label: "Instagram", href: "https://www.instagram.com/zekksparow" },
+      { label: "Behance", href: "https://www.behance.net/zakariamp" },
+      { label: "Trakteer", href: "https://trakteer.id/zakariamp" },
+    ],
+  },
+} as const;
+
+export const navLinks = [
+  { label: "Tentang", href: "#tentang" },
+  { label: "CV Role", href: "#cv" },
+  { label: "Stack", href: "#stack" },
+  { label: "Proyek", href: "#proyek" },
+  { label: "Kontak", href: "#kontak" },
+] as const;

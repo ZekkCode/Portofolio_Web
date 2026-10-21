@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+/* ===========================================================
+   DESIGN TOKENS — ubah di sini, seluruh halaman ikut menyesuaikan
+   =========================================================== */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), "Arial Black", Impact, sans-serif;
+
+  --color-ink: #0a0a14;
+  --color-body: #52526b;
+  --color-line: #dcdce8;
+  --color-brand: #1b45c4;
+  --color-brand-light: #2f6fe0;
+  --color-brand-ink: #123a9e;
+}
+
+@layer base {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
+
+  body {
+    background: #fff;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand) 18%, #fff);
+  }
+}
+
+/* ===========================================================
+   GRID BACKGROUND — CSS only, tanpa canvas
+   =========================================================== */
+.grid-bg {
+  position: fixed;
+  inset: -1px;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #fff;
+  background-image:
+    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+  background-size: var(--grid-size, 24px) var(--grid-size, 24px);
+  animation: grid-drift 22s linear infinite;
+}
+
+.grid-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, #fff 100%);
+}
+
+@keyframes grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to {
+    background-position: var(--grid-size, 24px) var(--grid-size, 24px),
+      var(--grid-size, 24px) var(--grid-size, 24px);
+  }
+}
+
+/* ===========================================================
+   AKSESIBILITAS
+   =========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .grid-bg { animation: none; }
+}
+
+@media (max-width: 620px) {
+  .grid-bg { --grid-size: 18px; }
+}

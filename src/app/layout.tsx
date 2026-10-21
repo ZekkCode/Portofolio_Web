@@ -154,7 +154,7 @@ const jsonLd = {
       name: profile.name,
       alternateName: [profile.nickname, profile.brand, "zekksparow"],
       url: profile.site,
-      image: `${profile.site}/card.png`,
+      image: `${profile.site}/card.webp`,
       jobTitle: [
         "UI/UX Designer",
         "Frontend Developer",

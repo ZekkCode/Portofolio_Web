@@ -155,13 +155,22 @@ function Stack() {
     <section id="stack" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
       <SectionTitle eyebrow="Tech Stack" title="Peralatan harian" />
       <Parallax speed={0.03}>
-        <ul className="flex flex-wrap gap-2.5">
+        <ul className="flex flex-wrap gap-3">
           {profile.stack.map((tool) => (
             <li
-              key={tool}
-              className="rounded-full border border-line bg-white/80 px-4 py-2 text-sm font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:border-brand/40 backdrop-blur-xs"
+              key={tool.name}
+              className="inline-flex items-center gap-2.5 rounded-full border border-line bg-white/85 py-1.5 pr-4 pl-2 text-sm font-medium shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:border-brand/40 hover:shadow-md backdrop-blur-xs"
             >
-              {tool}
+              <img
+                src={tool.icon}
+                alt={tool.name}
+                width={24}
+                height={24}
+                className="size-6 rounded-full object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+              <span className="text-ink">{tool.name}</span>
             </li>
           ))}
         </ul>

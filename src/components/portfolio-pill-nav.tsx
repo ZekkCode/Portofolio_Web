@@ -73,7 +73,7 @@ export function PortfolioPillNav() {
         <div className="pointer-events-auto">
           <PillNav
             logo={
-              <span className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-extrabold tracking-tight text-white shadow-sm">
+              <span className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-black italic tracking-tighter text-white shadow-sm">
                 ZT
               </span>
             }
@@ -82,7 +82,7 @@ export function PortfolioPillNav() {
             items={desktopNavItems}
             activeHref={activeSection}
             onItemClick={handleItemClick}
-            layout="split"
+            layout="joined"
             itemStyle="plain"
             hoverEffect="glide"
             indicator="pill"
@@ -96,7 +96,6 @@ export function PortfolioPillNav() {
             collapse="never"
             intro={false}
             ariaLabel="Navigasi Desktop"
-            className="w-max shadow-2xl ring-1 ring-slate-900/5"
           />
         </div>
       </div>

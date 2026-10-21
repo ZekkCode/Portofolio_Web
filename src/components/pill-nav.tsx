@@ -155,7 +155,7 @@ const LOGO =
 const LOGO_LINK =
   'absolute inset-0 grid place-items-center rounded-[inherit] text-[var(--pn-strong)] no-underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--pn-ring)]';
 const MARK =
-  'grid h-[var(--pn-mark)] w-[var(--pn-mark)] place-items-center [&_img]:block [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_svg]:block [&_svg]:h-full [&_svg]:w-full';
+  'grid h-[var(--pn-inner)] w-[var(--pn-inner)] place-items-center group-data-[layout=split]/nav:h-[var(--pn-mark)] group-data-[layout=split]/nav:w-[var(--pn-mark)] [&_img]:block [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_svg]:block [&_svg]:h-full [&_svg]:w-full';
 const BAR =
   'relative z-[1] box-border flex h-[var(--pn-h)] shrink-0 min-w-max items-center rounded-full px-1.5 py-[var(--pn-pad)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:p-0';
 const TRACK = 'relative h-full';

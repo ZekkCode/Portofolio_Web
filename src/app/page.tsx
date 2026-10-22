@@ -40,46 +40,62 @@ function Hero() {
     >
       <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
         <div className="flex flex-col items-start gap-6 text-left">
-          <div className="space-y-3">
+          <Parallax speed={-0.04} align="top" className="space-y-3">
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.06]">
               {profile.name}
             </h1>
             <p className="text-lg sm:text-xl font-semibold text-brand">
               {profile.rolesFull}
             </p>
-          </div>
+          </Parallax>
 
-          <p className="max-w-lg text-base leading-relaxed text-body">
-            Membangun antarmuka produk digital yang berkarakter, interaktif, dan mudah digunakan.
-            Menggabungkan desain visual terarah dengan rekayasa Next.js, TypeScript, dan visual WebGL.
-          </p>
+          <Parallax speed={0.03} align="top" className="space-y-6">
+            <p className="max-w-lg text-base leading-relaxed text-body">
+              Membangun antarmuka produk digital yang berkarakter, interaktif, dan mudah digunakan.
+              Menggabungkan desain visual terarah dengan rekayasa Next.js, TypeScript, dan visual WebGL.
+            </p>
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <SmoothNavLink
-              href="#cv"
-              className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-ink"
-            >
-              Buka Berkas CV
-            </SmoothNavLink>
-            <SmoothNavLink
-              href="#proyek"
-              className="rounded-full border border-line bg-white px-6 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/40"
-            >
-              Lihat Proyek
-            </SmoothNavLink>
-          </div>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <SmoothNavLink
+                href="#cv"
+                className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-ink shadow-sm"
+              >
+                Buka Berkas CV
+              </SmoothNavLink>
+              <SmoothNavLink
+                href="#proyek"
+                className="rounded-full border border-line bg-white px-6 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink/40"
+              >
+                Lihat Proyek
+              </SmoothNavLink>
+            </div>
 
-          <div className="pt-2 text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-medium text-ink">{profile.site.replace("https://", "")}</span>
-            <span aria-hidden="true" className="text-line">•</span>
-            <span>{profile.location}</span>
-            <span aria-hidden="true" className="text-line">•</span>
-            <span>Freelance sejak {profile.since}</span>
-          </div>
+            <div className="pt-2 text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-medium text-ink">{profile.site.replace("https://", "")}</span>
+              <span aria-hidden="true" className="text-line">•</span>
+              <span>{profile.location}</span>
+              <span aria-hidden="true" className="text-line">•</span>
+              <span>Freelance sejak {profile.since}</span>
+            </div>
+          </Parallax>
         </div>
 
-        <div className="flex items-center justify-center lg:justify-end">
-          <ProfileCardStage />
+        <div className="relative flex items-center justify-center lg:justify-end">
+          <ParallaxFloatingBadge
+            label="Available for Work"
+            speed={0.14}
+            align="top"
+            className="absolute -top-3.5 right-4 z-20 hidden sm:block"
+          />
+          <ParallaxFloatingBadge
+            label="Next.js &amp; WebGL"
+            speed={-0.12}
+            align="top"
+            className="absolute -bottom-4 left-4 z-20 hidden sm:block"
+          />
+          <Parallax speed={-0.07} align="top">
+            <ProfileCardStage />
+          </Parallax>
         </div>
       </div>
     </section>
@@ -96,11 +112,13 @@ function About() {
 
       <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <div className="space-y-4 text-base leading-relaxed text-body">
-            {profile.bio.map((par) => (
-              <p key={par.slice(0, 24)}>{par}</p>
-            ))}
-          </div>
+          <Parallax speed={-0.02}>
+            <div className="space-y-4 text-base leading-relaxed text-body">
+              {profile.bio.map((par) => (
+                <p key={par.slice(0, 24)}>{par}</p>
+              ))}
+            </div>
+          </Parallax>
 
           <Parallax speed={0.03}>
             <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -185,12 +203,14 @@ function Contact() {
     <section id="kontak" className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-8 pb-24 sm:pb-36 overflow-x-clip">
       <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-10">
         {/* KIRI: Lanyard 3D Stage dengan Tali Panjang */}
-        <div className="relative flex items-center justify-center overflow-hidden rounded-3xl border border-line/60 bg-gradient-to-b from-slate-50/80 via-white to-slate-100/60 p-2 shadow-xs">
-          <LanyardStage className="h-[520px] sm:h-[580px] lg:h-[640px]" />
-        </div>
+        <Parallax speed={-0.03} className="w-full">
+          <div className="relative flex items-center justify-center overflow-hidden rounded-3xl border border-line/60 bg-gradient-to-b from-slate-50/80 via-white to-slate-100/60 p-2 shadow-xs">
+            <LanyardStage className="h-[520px] sm:h-[580px] lg:h-[640px]" />
+          </div>
+        </Parallax>
 
         {/* KANAN: Kotak Div Contact Me */}
-        <Parallax speed={0.03} className="w-full">
+        <Parallax speed={0.04} className="w-full">
           <div className="relative overflow-hidden rounded-3xl bg-brand-ink p-8 text-left text-white shadow-xl shadow-brand-ink/15 sm:p-12">
             <div
               className="pointer-events-none absolute inset-0 opacity-10"

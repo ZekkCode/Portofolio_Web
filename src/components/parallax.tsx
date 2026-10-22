@@ -6,6 +6,7 @@ import { useLenis } from "lenis/react";
 interface ParallaxProps {
   children: ReactNode;
   speed?: number; // e.g. -0.2 to 0.2 (negative = rises faster, positive = lags behind)
+  align?: "center" | "top"; // "top" for hero/top-of-page elements, "center" for page sections
   className?: string;
   style?: CSSProperties;
 }
@@ -13,26 +14,56 @@ interface ParallaxProps {
 export function Parallax({
   children,
   speed = 0.1,
+  align = "center",
   className = "",
   style,
 }: ParallaxProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  useLenis(() => {
+  useLenis((lenis) => {
     const el = ref.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      el.style.transform = "";
+      return;
+    }
+
     const windowHeight = window.innerHeight;
+
+    if (align === "top") {
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom < -200 || rect.top > windowHeight + 200) return;
+      const scrollY = lenis ? lenis.scroll : window.scrollY;
+      const offset = scrollY * speed;
+      el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
+      return;
+    }
+
+    const currentOffset = parseFloat(el.dataset.parallaxOffset || "0");
+    const rect = el.getBoundingClientRect();
 
     // Viewport cull
     if (rect.bottom < -150 || rect.top > windowHeight + 150) return;
 
-    const elementCenter = rect.top + rect.height / 2;
+    const naturalTop = rect.top - currentOffset;
+    const naturalCenter = naturalTop + rect.height / 2;
     const viewportCenter = windowHeight / 2;
-    const offset = (elementCenter - viewportCenter) * speed;
+    const offset = (naturalCenter - viewportCenter) * speed;
 
+    el.dataset.parallaxOffset = String(offset);
     el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
   });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (align === "top") {
+      const scrollY = window.scrollY;
+      const offset = scrollY * speed;
+      el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
+    }
+  }, [align, speed]);
 
   return (
     <div ref={ref} className={`will-change-transform ${className}`} style={style}>
@@ -44,17 +75,19 @@ export function Parallax({
 interface ParallaxFloatingBadgeProps {
   label: string;
   speed?: number;
+  align?: "center" | "top";
   className?: string;
 }
 
 export function ParallaxFloatingBadge({
   label,
   speed = 0.15,
+  align = "center",
   className = "",
 }: ParallaxFloatingBadgeProps) {
   return (
-    <Parallax speed={speed} className={`pointer-events-none select-none ${className}`}>
-      <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white/90 px-3.5 py-1.5 text-xs font-medium text-body backdrop-blur-md">
+    <Parallax speed={speed} align={align} className={`pointer-events-none select-none ${className}`}>
+      <span className="inline-flex items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-ink shadow-sm backdrop-blur-md">
         <span className="size-1.5 rounded-full bg-brand" aria-hidden="true" />
         {label}
       </span>
@@ -109,3 +142,4 @@ export function SmoothNavLink({
     </a>
   );
 }
+

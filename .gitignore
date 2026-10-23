@@ -17,6 +17,7 @@ _*.txt
 taste-skill-2.1.4/
 _lanyard.json
 .claude/
+.views.json
 
 
 

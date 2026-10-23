@@ -153,7 +153,7 @@ try {
   console.log(`ok  admin: ${controls} kontrol lanyard + proyek`);
 
   assert.equal(await typeInto('input[type="range"]', "0.85", 0), true, "slider tidak ditemukan");
-  await sleep(200);
+  await sleep(300);
   assert.equal(await click("Simpan"), true, "tombol Simpan tidak ditemukan");
   await sleep(400);
   const saved = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").lanyard?.cornerRadius`);

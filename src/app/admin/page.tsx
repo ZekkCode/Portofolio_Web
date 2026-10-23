@@ -231,6 +231,7 @@ function Control({
         step={field.step}
         value={number}
         onChange={(event) => onChange(Number(event.target.value))}
+        onInput={(event) => onChange(Number((event.target as HTMLInputElement).value))}
         className="mt-1.5 w-full accent-brand"
       />
     </label>

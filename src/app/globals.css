@@ -1,16 +1,32 @@
 @import "tailwindcss";
 @import "lenis/dist/lenis.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ===========================================================
-   DESIGN TOKENS: ubah di sini, seluruh halaman ikut menyesuaikan
+   DESIGN TOKENS & THEMES (LIGHT / DARK)
    =========================================================== */
+:root {
+  --color-ink: #0a0a14;
+  --color-body: #52526b;
+  --color-line: #dcdce8;
+  --bg-page: #ffffff;
+}
+
+.dark {
+  --color-ink: #f8fafc;
+  --color-body: #94a3b8;
+  --color-line: #262e40;
+  --bg-page: #08090e;
+}
+
 @theme {
   --font-sans: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-display), -apple-system, BlinkMacSystemFont, sans-serif;
 
-  --color-ink: #0a0a14;
-  --color-body: #52526b;
-  --color-line: #dcdce8;
+  --color-ink: var(--color-ink);
+  --color-body: var(--color-body);
+  --color-line: var(--color-line);
   --color-brand: #1b45c4;
   --color-brand-light: #2f6fe0;
   --color-brand-ink: #123a9e;
@@ -22,17 +38,19 @@
   }
 
   body {
-    background: #fff;
+    background: var(--bg-page);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--color-brand) 18%, #fff);
+    background: color-mix(in oklab, var(--color-brand) 25%, #fff);
   }
 }
+
 
 /* ===========================================================
    GRID BACKGROUND: CSS only, tanpa canvas

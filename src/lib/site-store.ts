@@ -88,9 +88,9 @@ export const defaultLanyard: LanyardConfig = {
 };
 
 export const defaultProfileCard: ProfileCardConfig = {
-  avatarUrl: "",
+  avatarUrl: "/profile.webp",
   iconUrl: "",
-  miniAvatarUrl: "",
+  miniAvatarUrl: "/profile.webp",
   name: profile.name,
   title: profile.roles,
   handle: "zekksparow",
@@ -139,6 +139,12 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   }
   const lanyard = { ...defaultLanyard, ...(rawLanyard ?? {}) } as LanyardConfig;
   const profileCard = { ...defaultProfileCard, ...(raw.profileCard ?? {}) } as ProfileCardConfig;
+  if (!profileCard.avatarUrl) {
+    profileCard.avatarUrl = defaultProfileCard.avatarUrl;
+  }
+  if (!profileCard.miniAvatarUrl) {
+    profileCard.miniAvatarUrl = defaultProfileCard.miniAvatarUrl;
+  }
   const projects = Array.isArray(raw.projects)
     ? raw.projects
         .filter((item) => item && typeof item.title === "string")

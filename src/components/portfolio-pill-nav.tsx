@@ -1,26 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 import PillNav, { type PillNavItem } from "@/components/pill-nav";
 import { useSmoothScrollTo } from "@/components/parallax";
 import { profile } from "@/lib/profile";
-
-const desktopNavItems: PillNavItem[] = [
-  { label: "Tentang", href: "#tentang" },
-  { label: "CV Role", href: "#cv" },
-  { label: "Stack", href: "#stack" },
-  { label: "Proyek", href: "#proyek" },
-  { label: "Kontak", href: "#kontak" },
-];
-
-const mobileNavItems: PillNavItem[] = [
-  { label: "Tentang", href: "#tentang" },
-  { label: "CV Role", href: "#cv" },
-  { label: "Stack", href: "#stack" },
-  { label: "Proyek", href: "#proyek" },
-  { label: "Kontak", href: "#kontak" },
-  { label: "Hubungi WhatsApp", href: profile.contact.whatsapp },
-];
 
 function useActiveSection() {
   const [active, setActive] = useState<string>("#atas");
@@ -53,8 +38,34 @@ function useActiveSection() {
 }
 
 export function PortfolioPillNav() {
+  const { t } = useTranslation();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const activeSection = useActiveSection();
   const scrollTo = useSmoothScrollTo();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
+
+  const desktopNavItems: PillNavItem[] = [
+    { label: t("nav.about"), href: "#tentang" },
+    { label: t("nav.cv"), href: "#cv" },
+    { label: t("nav.stack"), href: "#stack" },
+    { label: t("nav.projects"), href: "#proyek" },
+    { label: t("nav.contact"), href: "#kontak" },
+  ];
+
+  const mobileNavItems: PillNavItem[] = [
+    { label: t("nav.about"), href: "#tentang" },
+    { label: t("nav.cv"), href: "#cv" },
+    { label: t("nav.stack"), href: "#stack" },
+    { label: t("nav.projects"), href: "#proyek" },
+    { label: t("nav.contact"), href: "#kontak" },
+    { label: t("nav.whatsapp"), href: profile.contact.whatsapp },
+  ];
 
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {
     if (item.href?.startsWith("#")) {
@@ -87,7 +98,7 @@ export function PortfolioPillNav() {
             hoverEffect="glide"
             indicator="pill"
             surface="glass"
-            theme="light"
+            theme={navTheme}
             size="md"
             highlightColor="#1b45c4"
             highlightTextColor="#ffffff"
@@ -108,7 +119,7 @@ export function PortfolioPillNav() {
           onItemClick={handleItemClick}
           collapse="always"
           surface="glass"
-          theme="light"
+          theme={navTheme}
           size="md"
           highlightColor="#1b45c4"
           highlightTextColor="#ffffff"

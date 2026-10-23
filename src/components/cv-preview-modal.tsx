@@ -165,9 +165,9 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl transition-all">
+      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl transition-all dark:border-line/60 dark:bg-[#0c0e17]">
         {/* Sticky Modal Top Bar */}
-        <div className="flex items-center justify-between border-b border-line/80 bg-white/95 px-5 py-3.5 backdrop-blur-md sm:px-8">
+        <div className="flex items-center justify-between border-b border-line/80 bg-white/95 px-5 py-3.5 backdrop-blur-md sm:px-8 dark:border-line/40 dark:bg-[#0c0e17]/95">
           <div className="flex items-center gap-2.5">
             <span className="flex size-3 rounded-full bg-brand" aria-hidden="true" />
             <div>
@@ -184,7 +184,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <button
               type="button"
               onClick={() => window.print()}
-              className="hidden rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-body transition hover:border-ink/40 hover:text-ink sm:inline-flex items-center gap-1.5"
+              className="hidden rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-body transition hover:border-ink/40 hover:text-ink sm:inline-flex items-center gap-1.5 dark:border-line/40 dark:bg-slate-900"
               title="Cetak CV"
             >
               <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -197,7 +197,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <button
               type="button"
               onClick={onClose}
-              className="flex size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink"
+              className="flex size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink dark:border-line/40 dark:bg-slate-900"
               aria-label="Tutup modal"
             >
               <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -208,13 +208,13 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           </div>
         </div>
         {/* Role Filter Tabs */}
-        <div className="flex overflow-x-auto border-b border-line bg-slate-50/70 px-4 py-2 sm:px-8 no-scrollbar gap-1.5">
+        <div className="flex overflow-x-auto border-b border-line bg-slate-50/70 px-4 py-2 sm:px-8 no-scrollbar gap-1.5 dark:border-line/40 dark:bg-[#141824]">
           <button
             type="button"
             onClick={() => setActiveRole("all")}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide transition ${
               activeRole === "all"
-                ? "bg-ink text-white shadow-sm"
+                ? "bg-ink text-white shadow-sm dark:bg-white dark:text-ink"
                 : "text-body hover:bg-line/40 hover:text-ink"
             }`}
           >
@@ -243,34 +243,45 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
         {/* Scrollable CV Document Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-8">
           {/* Header Banner & Identitas */}
-          <div className="rounded-2xl border border-line bg-linear-to-br from-slate-50 to-white p-5 sm:p-6 shadow-xs">
+          <div className="rounded-2xl border border-line bg-linear-to-br from-slate-50 to-white p-5 sm:p-6 shadow-xs dark:border-line/40 dark:from-[#141824] dark:to-[#0e111a]">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-brand uppercase">
-                    Mahasiswa S1 Teknik Informatika
-                  </span>
-                  <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-600 uppercase">
-                    Freelance Aktif Sejak 2020
-                  </span>
+              <div className="flex items-start gap-4">
+                <div className="relative size-16 sm:size-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-slate-100 shadow-xs">
+                  <img
+                    src={profile.avatar}
+                    alt={profile.name}
+                    width={80}
+                    height={80}
+                    className="size-full object-cover object-top"
+                  />
                 </div>
-                <h1 className="mt-2 text-2xl font-extrabold text-ink sm:text-3xl">
-                  Zakaria Mujur Prasetyo
-                </h1>
-                <p className="mt-1 text-sm font-semibold text-brand">
-                  UI/UX Designer · Frontend Developer · Graphic Designer · IT Support
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-body max-w-2xl">
-                  Bangkalan, Madura, Jawa Timur • Lulusan SMK Multimedia • Pemilik & Penulis Utama{" "}
-                  <a
-                    href="https://zekktech.biz.id"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-semibold text-brand underline underline-offset-2"
-                  >
-                    zekktech.biz.id
-                  </a>
-                </p>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-brand uppercase">
+                      Mahasiswa S1 Teknik Informatika
+                    </span>
+                    <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-600 uppercase">
+                      Freelance Aktif Sejak 2020
+                    </span>
+                  </div>
+                  <h1 className="mt-1.5 text-2xl font-extrabold text-ink sm:text-3xl">
+                    Zakaria Mujur Prasetyo
+                  </h1>
+                  <p className="mt-1 text-sm font-semibold text-brand">
+                    UI/UX Designer · Frontend Developer · Graphic Designer · IT Support
+                  </p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-body max-w-2xl">
+                    Bangkalan, Madura, Jawa Timur • Lulusan SMK Multimedia • Pemilik &amp; Penulis Utama{" "}
+                    <a
+                      href="https://zekktech.biz.id"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-brand underline underline-offset-2"
+                    >
+                      zekktech.biz.id
+                    </a>
+                  </p>
+                </div>
               </div>
 
               {/* Quick Contact Box */}

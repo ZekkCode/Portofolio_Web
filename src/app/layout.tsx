@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { ThemeProvider } from "@/components/theme-provider";
 import { profile } from "@/lib/profile";
 import "./globals.css";
 
@@ -208,7 +209,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" className={`${fontBody.variable} ${fontDisplay.variable}`}>
+    <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable}`}>
       <head>
         <script
           type="application/ld+json"
@@ -216,7 +217,9 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <SmoothScroll>{children}</SmoothScroll>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+          <SmoothScroll>{children}</SmoothScroll>
+        </ThemeProvider>
       </body>
     </html>
   );

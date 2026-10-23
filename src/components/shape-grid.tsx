@@ -644,6 +644,18 @@ export default function ShapeGrid({
     });
     visibility.observe(container);
 
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        state.visible = false;
+        cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      } else {
+        state.visible = true;
+        wake();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerdown', onDown, { passive: true });
     document.documentElement.addEventListener('pointerleave', onLeave);
@@ -665,6 +677,7 @@ export default function ShapeGrid({
       cancelAnimationFrame(state.raf);
       resizeObserver.disconnect();
       visibility.disconnect();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerdown', onDown);
       document.documentElement.removeEventListener('pointerleave', onLeave);

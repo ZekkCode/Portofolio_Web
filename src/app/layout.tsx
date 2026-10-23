@@ -1,20 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { profile } from "@/lib/profile";
 import "./globals.css";
 
-const fontDisplay = Bricolage_Grotesque({
+const fontDisplay = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
+  weight: ["700", "800"],
 });
 
 const fontBody = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
+  weight: ["400", "500", "600"],
 });
 
 export const viewport: Viewport = {

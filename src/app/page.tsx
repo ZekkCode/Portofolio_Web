@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import "@/lib/i18n";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
-import { Parallax, ParallaxFloatingBadge, SmoothNavLink } from "@/components/parallax";
+import { Parallax, SmoothNavLink } from "@/components/parallax";
 import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
@@ -110,18 +110,6 @@ function Hero() {
         </div>
 
         <div className="relative flex items-center justify-center lg:justify-end">
-          <ParallaxFloatingBadge
-            label="Available for Work"
-            speed={0.14}
-            align="top"
-            className="absolute -top-3.5 right-4 z-20 hidden sm:block"
-          />
-          <ParallaxFloatingBadge
-            label="Next.js &amp; WebGL"
-            speed={-0.12}
-            align="top"
-            className="absolute -bottom-4 left-4 z-20 hidden sm:block"
-          />
           <Parallax speed={-0.07} align="top">
             <ProfileCardStage />
           </Parallax>

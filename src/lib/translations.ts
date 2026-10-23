@@ -10,8 +10,8 @@ export const translations = {
       whatsapp: "Hubungi WhatsApp",
     },
     hero: {
-      roles: "UI/UX Designer · Frontend Developer · Freelancer",
-      desc: "Membangun antarmuka produk digital yang berkarakter, interaktif, dan mudah digunakan. Menggabungkan desain visual terarah dengan rekayasa Next.js, TypeScript, dan visual WebGL.",
+      roles: "UI/UX Designer & Frontend Developer",
+      desc: "Desainer UI/UX dan frontend developer asal Mojokerto. Merancang antarmuka produk web, menulis Next.js dan TypeScript, serta mengeksplorasi interaksi 3D.",
       cvBtn: "Buka Berkas CV",
       projectsBtn: "Lihat Proyek",
       since: "Freelance sejak 2020",
@@ -19,8 +19,8 @@ export const translations = {
     about: {
       eyebrow: "Tentang Saya",
       title: "Desain Antarmuka & Rekayasa Web",
-      desc: "UI/UX Designer · Frontend Developer · Freelancer. Merancang antarmuka bersih dan membangun sistem web yang andal.",
-      philosophy: "Profil & Filosofi Kerja",
+      desc: "Merancang antarmuka bersih dan membangun sistem web yang cepat serta andal.",
+      philosophy: "Profil & Pendekatan Kerja",
       expTitle: "Pengalaman Kerja & Organisasi",
       stats: {
         projects: "Proyek selesai",
@@ -31,7 +31,7 @@ export const translations = {
     },
     cv: {
       title: "Berkas Karir & Kurikulum Vitae",
-      desc: "Empat lembar rekam jejak teknis: Desain Grafis, UI/UX, Frontend Development, dan Dukungan Sistem IT. Tarik dokumen atau pilih tombol untuk pratinjau data lengkap.",
+      desc: "Empat bidang: Desain Grafis, UI/UX, Frontend Development, dan Dukungan IT. Buka lembar CV untuk membaca detail pengalaman.",
       badge: "Folder Berkas CV Interaktif",
       instruction: "• Tarik, buka flap, atau klik lembar CV",
       openFolder: "Buka Folder",
@@ -43,17 +43,17 @@ export const translations = {
     stack: {
       eyebrow: "Tech Stack",
       title: "Peralatan Harian",
-      desc: "Teknologi dan perangkat lunak yang digunakan secara reguler dalam alur kerja rekayasa dan desain antarmuka.",
+      desc: "Bahasa pemrograman, framework, dan perangkat lunak yang saya gunakan sehari-hari.",
     },
     projects: {
       title: "Proyek Pilihan",
-      desc: "Aplikasi web, sistem informasi, algoritma temu kembali informasi, dan bot otomatisasi.",
+      desc: "Aplikasi web, sistem informasi, dan tools yang pernah saya bangun.",
       viewRepo: "Lihat repo",
     },
     contact: {
       badge: "Terbuka untuk freelance & kolaborasi",
-      title: "Hubungi Saya",
-      desc: "Tertarik mendiskusikan desain antarmuka, rekayasa frontend web, maupun pengembangan sistem? Mari terhubung langsung.",
+      title: "Mulai Diskusi",
+      desc: "Punya ide proyek, tawaran kerja sama, atau butuh bantuan frontend? Kirim pesan langsung lewat WhatsApp atau email.",
       location: "Lokasi:",
       status: "Status:",
       since: "Freelance sejak 2020",
@@ -70,8 +70,8 @@ export const translations = {
       whatsapp: "Chat on WhatsApp",
     },
     hero: {
-      roles: "UI/UX Designer · Frontend Developer · Freelancer",
-      desc: "Crafting distinctive, interactive, and user-centric digital product interfaces. Blending purposeful visual design with Next.js, TypeScript, and WebGL engineering.",
+      roles: "UI/UX Designer & Frontend Developer",
+      desc: "UI/UX designer and frontend developer based in Mojokerto, Indonesia. I design clean interfaces, write robust Next.js and TypeScript, and build 3D web interactions.",
       cvBtn: "Explore CV Files",
       projectsBtn: "View Projects",
       since: "Freelancing since 2020",
@@ -79,8 +79,8 @@ export const translations = {
     about: {
       eyebrow: "About Me",
       title: "Interface Design & Web Engineering",
-      desc: "UI/UX Designer · Frontend Developer · Freelancer. Designing clean interfaces and engineering reliable web systems.",
-      philosophy: "Profile & Work Philosophy",
+      desc: "Designing clean interfaces and engineering fast, accessible frontend applications.",
+      philosophy: "Profile & Work Approach",
       expTitle: "Work & Organization Experience",
       stats: {
         projects: "Projects done",
@@ -91,7 +91,7 @@ export const translations = {
     },
     cv: {
       title: "Career & Curriculum Vitae Files",
-      desc: "Four sheets of technical track record: Graphic Design, UI/UX, Frontend Development, and IT Systems Support. Drag documents or click to preview full details.",
+      desc: "Four disciplines: Graphic Design, UI/UX, Frontend Development, and IT Systems. Open any sheet to inspect details.",
       badge: "Interactive CV Folder",
       instruction: "• Drag, open flap, or click CV sheet",
       openFolder: "Open Folder",
@@ -103,17 +103,17 @@ export const translations = {
     stack: {
       eyebrow: "Tech Stack",
       title: "Daily Tech Stack",
-      desc: "Technologies and software used regularly in interface design and web engineering workflows.",
+      desc: "Languages, frameworks, and creative software I use daily.",
     },
     projects: {
       title: "Featured Projects",
-      desc: "Web applications, information systems, retrieval algorithms, and automation bots.",
+      desc: "Web applications, information systems, and developer tools I've built.",
       viewRepo: "View repo",
     },
     contact: {
       badge: "Open for freelance & collaboration",
       title: "Get In Touch",
-      desc: "Interested in discussing interface design, frontend web engineering, or system development? Let's connect directly.",
+      desc: "Have a project in mind, an opportunity, or looking for frontend work? Reach out directly via WhatsApp or email.",
       location: "Location:",
       status: "Status:",
       since: "Freelancing since 2020",

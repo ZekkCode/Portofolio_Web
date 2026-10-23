@@ -19,13 +19,14 @@ export function SectionTitle({
         {title}
       </h2>
       {desc && (
-        <div className="mt-3.5 inline-block rounded-2xl border border-line/80 bg-white/90 px-4 py-2.5 text-sm sm:text-base leading-relaxed text-body shadow-2xs backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90">
+        <p className="mt-3 text-base leading-relaxed text-body">
           {desc}
-        </div>
+        </p>
       )}
     </div>
   );
 }
+
 
 
 

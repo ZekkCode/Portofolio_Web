@@ -6,7 +6,7 @@ export const profile = {
   roles: "UI/UX & Frontend Developer",
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",
   tagline: "Mahasiswa Teknik Informatika",
-  location: "Bangkalan, Madura",
+  location: "Mojokerto, Jawa Timur",
   site: "https://zekktech.biz.id",
   since: "2020",
   bio: [

@@ -50,7 +50,7 @@ function Header() {
             href={profile.contact.whatsapp}
             target="_blank"
             rel="noreferrer"
-            className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:inline-flex dark:bg-white dark:text-ink"
+            className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5 md:inline-flex dark:bg-white dark:text-slate-900"
           >
             {t("nav.contactBtn")}
           </a>
@@ -66,51 +66,30 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-12 pb-20 sm:pt-20 sm:pb-28"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-12 pb-32 sm:pt-20 sm:pb-44 min-h-[85vh] flex flex-col justify-center"
     >
       <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
         <div className="flex flex-col items-start gap-6 text-left">
           <Parallax speed={-0.04} align="top" className="space-y-3">
-            <div className="flex items-center gap-4">
-              <div className="relative size-14 sm:size-16 shrink-0 overflow-hidden rounded-full border-2 border-brand/25 bg-slate-100 shadow-md ring-4 ring-brand/10">
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  width={64}
-                  height={64}
-                  className="size-full object-cover object-top"
-                  loading="eager"
-                  decoding="async"
-                />
-                <span
-                  className="absolute bottom-0 right-0 size-3.5 rounded-full border-2 border-white bg-emerald-500 shadow-xs dark:border-slate-900"
-                  title="Online"
-                />
-              </div>
-              <div>
-                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.08]">
-                  {profile.name}
-                </h1>
-                <p className="text-base sm:text-lg font-semibold text-brand">
-                  {t("hero.roles")}
-                </p>
-              </div>
-            </div>
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.06]">
+              {profile.name}
+            </h1>
+            <p className="text-lg sm:text-xl font-semibold text-brand">
+              {t("hero.roles")}
+            </p>
           </Parallax>
 
           <Parallax speed={0.03} align="top" className="space-y-6 w-full max-w-xl">
-            <div className="rounded-2xl border border-line/80 bg-white/95 p-5 sm:p-6 shadow-xs backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90 space-y-4">
-              <p className="text-base sm:text-lg leading-relaxed text-body">
-                {t("hero.desc")}
-              </p>
+            <p className="text-base sm:text-lg leading-relaxed text-body">
+              {t("hero.desc")}
+            </p>
 
-              <div className="border-t border-line/70 pt-3 text-xs sm:text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1.5 dark:border-line/40">
-                <span className="font-semibold text-ink">{profile.site.replace("https://", "")}</span>
-                <span aria-hidden="true" className="text-line">•</span>
-                <span>{profile.location}</span>
-                <span aria-hidden="true" className="text-line">•</span>
-                <span className="font-medium text-brand">{t("hero.since")}</span>
-              </div>
+            <div className="text-xs sm:text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="font-semibold text-ink">{profile.site.replace("https://", "")}</span>
+              <span aria-hidden="true" className="text-line">•</span>
+              <span>{profile.location}</span>
+              <span aria-hidden="true" className="text-line">•</span>
+              <span className="font-medium text-brand">{t("hero.since")}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -163,26 +142,18 @@ function About() {
         desc={t("about.desc")}
       />
 
-      <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
           <Parallax speed={-0.02}>
-            <div className="rounded-2xl border border-line/80 bg-white/95 p-6 shadow-xs backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90 space-y-4">
-              <div className="flex items-center gap-2 border-b border-line/60 pb-3 dark:border-line/40">
-                <span className="size-2 rounded-full bg-brand" aria-hidden="true" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
-                  {t("about.philosophy")}
-                </h3>
-              </div>
-              <div className="space-y-3.5 text-sm sm:text-base leading-relaxed text-body">
-                {profile.bio.map((par) => (
-                  <p key={par.slice(0, 24)}>{par}</p>
-                ))}
-              </div>
+            <div className="space-y-4 text-base leading-relaxed text-body">
+              {profile.bio.map((par) => (
+                <p key={par.slice(0, 24)}>{par}</p>
+              ))}
             </div>
           </Parallax>
 
           <Parallax speed={0.03}>
-            <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {profile.stats.map((stat, idx) => {
                 const statKey = idx === 0 ? "projects" : idx === 1 ? "certificates" : idx === 2 ? "years" : "organizations";
                 return (
@@ -203,30 +174,23 @@ function About() {
         </div>
 
         <div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-bold text-brand dark:border-brand/30 dark:bg-brand/10">
-            <span className="size-1.5 rounded-full bg-brand" aria-hidden="true" />
+          <h3 className="mb-5 text-sm font-bold text-brand dark:text-blue-400">
             {t("about.expTitle")}
-          </div>
+          </h3>
           <Parallax speed={0.05}>
-            <ol className="space-y-4 border-l-2 border-brand/20 pl-4 sm:pl-5">
+            <ol className="space-y-6 border-l border-line/70 pl-5 dark:border-line/40">
               {profile.experience.map((item) => (
-                <li
-                  key={item.org}
-                  className="relative rounded-2xl border border-line/80 bg-white/95 p-4 sm:p-5 shadow-xs backdrop-blur-md transition hover:border-brand/40 dark:border-line/60 dark:bg-[#111422]/90"
-                >
+                <li key={item.org} className="relative">
                   <span
-                    className="absolute top-5 -left-[23px] sm:-left-[27px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs dark:border-slate-900"
+                    className="absolute top-1.5 -left-[26px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs dark:border-slate-900"
                     aria-hidden="true"
                   />
-                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                    <span className="font-bold text-brand">{item.period}</span>
-                    <span className="font-medium text-body">{item.place}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-bold text-ink">{item.role}</p>
-                  <p className="text-xs font-medium text-body/90">{item.org}</p>
-                  <div className="mt-2.5 rounded-xl border border-line/50 bg-slate-50/80 p-3 text-xs sm:text-sm leading-relaxed text-body dark:border-line/40 dark:bg-[#181d30]/75">
-                    {item.desc}
-                  </div>
+                  <p className="text-xs font-semibold text-body">
+                    {item.period} · {item.place}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{item.role}</p>
+                  <p className="text-sm text-body">{item.org}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-body">{item.desc}</p>
                 </li>
               ))}
             </ol>
@@ -239,37 +203,45 @@ function About() {
 
 function Stack() {
   const { t } = useTranslation();
+  const duplicatedStack = [...profile.stack, ...profile.stack];
 
   return (
-    <section id="stack" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
-      <SectionTitle
-        eyebrow={t("stack.eyebrow")}
-        title={t("stack.title")}
-        desc={t("stack.desc")}
-      />
-      <Parallax speed={0.03}>
-        <div className="rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-8 shadow-xs backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90">
-          <ul className="flex flex-wrap gap-3">
-            {profile.stack.map((tool) => (
-              <li
-                key={tool.name}
-                className="inline-flex items-center gap-2.5 rounded-full border border-line/80 bg-white py-1.5 pr-4 pl-3 text-sm font-medium shadow-2xs transition hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/50 dark:bg-[#191e32]"
-              >
-                <img
-                  src={tool.icon}
-                  alt={tool.name}
-                  width={20}
-                  height={20}
-                  className="size-5 shrink-0 object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span className="text-ink">{tool.name}</span>
-              </li>
-            ))}
-          </ul>
+    <section id="stack" className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-20 sm:py-28 overflow-hidden">
+      <div className="mx-auto max-w-5xl">
+        <SectionTitle
+          eyebrow={t("stack.eyebrow")}
+          title={t("stack.title")}
+          desc={t("stack.desc")}
+        />
+      </div>
+
+      <div className="relative mt-4 w-full overflow-hidden py-4">
+        {/* Left & Right gradient fade masks */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
+
+        <div className="animate-marquee flex items-center gap-4 py-2">
+          {duplicatedStack.map((tool, idx) => (
+            <div
+              key={`${tool.name}-${idx}`}
+              className="group flex shrink-0 items-center gap-3 rounded-full border border-line/80 bg-white/90 px-4 py-2.5 text-sm font-semibold text-ink shadow-2xs backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/50 dark:bg-[#111422]/90 dark:text-slate-200"
+            >
+              <img
+                src={tool.icon}
+                alt={tool.name}
+                width={22}
+                height={22}
+                className="size-5.5 shrink-0 object-contain transition-transform group-hover:scale-110"
+                loading="lazy"
+                decoding="async"
+              />
+              <span className="whitespace-nowrap font-medium tracking-tight">
+                {tool.name}
+              </span>
+            </div>
+          ))}
         </div>
-      </Parallax>
+      </div>
     </section>
   );
 }

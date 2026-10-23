@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     template: "%s | ZekkTech",
   },
   description:
-    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Bangkalan, Madura. Eksplorasi berkas CV interaktif, proyek Next.js, dan desain antarmuka.",
+    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif, proyek Next.js, dan desain antarmuka.",
   applicationName: "ZekkTech Portfolio",
   authors: [{ name: profile.name, url: profile.site }],
   generator: "Next.js",
@@ -50,15 +50,14 @@ export const metadata: Metadata = {
     "zekksparow",
     "UI/UX Designer Indonesia",
     "Frontend Developer Indonesia",
-    "Web Developer Bangkalan",
-    "Web Developer Madura",
+    "Web Developer Mojokerto",
     "Web Developer Jawa Timur",
+    "Desainer UI/UX Mojokerto",
     "Next.js Developer Indonesia",
     "React Developer",
     "TypeScript Developer",
     "Tailwind CSS",
     "Portfolio Web Developer",
-    "Desainer UI/UX Madura",
     "Graphic Designer Freelance",
     "Jasa Pembuatan Website",
     "IT Support Specialist",
@@ -86,7 +85,7 @@ export const metadata: Metadata = {
     siteName: profile.brand,
     title: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
     description:
-      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Bangkalan, Madura. Eksplorasi berkas CV interaktif dan proyek digital.",
+      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif dan proyek digital.",
     images: [
       {
         url: "/opengraph-image",
@@ -101,7 +100,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
     description:
-      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Bangkalan, Madura.",
+      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Mojokerto, Jawa Timur.",
     creator: "@zekksparow",
     site: "@zekksparow",
     images: ["/opengraph-image"],
@@ -129,9 +128,9 @@ export const metadata: Metadata = {
   },
   other: {
     "geo.region": "ID-JI",
-    "geo.placename": "Bangkalan",
-    "geo.position": "-7.0315;112.7483",
-    ICBM: "-7.0315, 112.7483",
+    "geo.placename": "Mojokerto",
+    "geo.position": "-7.4726;112.4385",
+    ICBM: "-7.4726, 112.4385",
   },
 };
 
@@ -166,7 +165,7 @@ const jsonLd = {
       gender: "Male",
       address: {
         "@type": "PostalAddress",
-        addressLocality: "Bangkalan",
+        addressLocality: "Mojokerto",
         addressRegion: "Jawa Timur",
         addressCountry: "ID",
       },

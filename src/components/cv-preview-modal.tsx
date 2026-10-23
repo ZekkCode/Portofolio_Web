@@ -271,7 +271,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                     UI/UX Designer · Frontend Developer · Graphic Designer · IT Support
                   </p>
                   <p className="mt-1.5 text-xs leading-relaxed text-body max-w-2xl">
-                    Bangkalan, Madura, Jawa Timur • Lulusan SMK Multimedia • Pemilik &amp; Penulis Utama{" "}
+                    Mojokerto, Jawa Timur • Lulusan SMK Multimedia • Pemilik &amp; Penulis Utama{" "}
                     <a
                       href="https://zekktech.biz.id"
                       target="_blank"

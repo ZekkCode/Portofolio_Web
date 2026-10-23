@@ -30,9 +30,9 @@ export function ProjectsSection() {
               }}
             >
               <h3 className="font-semibold text-ink">{project.title}</h3>
-              <div className="mt-2.5 flex-1 rounded-xl border border-line/50 bg-slate-50/70 p-3 text-sm leading-relaxed text-body dark:border-line/40 dark:bg-[#181d30]/75">
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-body">
                 {project.desc}
-              </div>
+              </p>
               <div className="mt-4 flex flex-wrap items-center gap-1.5">
                 {project.tags.map((tag) => (
                   <span

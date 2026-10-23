@@ -279,99 +279,114 @@ function Contact() {
   const { t } = useTranslation();
 
   return (
-    <section id="kontak" className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-8 pb-24 sm:pb-36 overflow-x-clip">
-      <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-10">
-        {/* KIRI: Lanyard 3D Stage dengan Tali Panjang */}
-        <Parallax speed={-0.03} className="w-full">
-          <div className="relative flex items-center justify-center overflow-hidden rounded-3xl border border-line/60 bg-gradient-to-b from-slate-50/80 via-white to-slate-100/60 p-2 shadow-xs dark:from-[#111422] dark:via-[#191e32] dark:to-[#111422] dark:border-line/50">
-            <LanyardStage className="h-[420px] sm:h-[540px] lg:h-[640px]" />
-          </div>
-        </Parallax>
+    <section id="kontak" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
+      <SectionTitle
+        eyebrow={t("contact.badge")}
+        title={t("contact.title")}
+        desc={t("contact.desc")}
+      />
 
-        {/* KANAN: Kotak Div Contact Me */}
-        <Parallax speed={0.04} className="w-full">
-          <div className="relative overflow-hidden rounded-3xl bg-brand-ink p-8 text-left text-white shadow-xl shadow-brand-ink/15 sm:p-12 dark:bg-[#0e1326] dark:border dark:border-brand/30">
-            <div
-              className="pointer-events-none absolute inset-0 opacity-10"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 14px)",
-              }}
-              aria-hidden="true"
-            />
-            <div className="relative z-10 flex flex-col gap-6">
-              <div className="inline-flex w-max items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white/90 backdrop-blur-xs">
-                <span className="size-2 rounded-full bg-emerald-400" />
-                <span>{t("contact.badge")}</span>
+      <Parallax speed={0.03} className="w-full">
+        <div className="relative overflow-hidden rounded-3xl border border-line/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90">
+          <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
+            {/* KIRI: Lanyard 3D Stage */}
+            <div className="relative flex flex-col justify-between border-b border-line/70 lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-6">
+              <div className="flex items-center justify-between border-b border-line/50 pb-3 dark:border-line/30">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-brand animate-pulse" />
+                  <span className="text-xs font-semibold text-ink">ID Card 3D Virtual</span>
+                </div>
+                <span className="text-[11px] font-medium text-body">Three.js Physics</span>
               </div>
 
-              <div>
-                <h2 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl leading-tight">
-                  {t("contact.title")}
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-white/80 sm:text-base">
-                  {t("contact.desc")}
-                </p>
+              <div className="relative my-auto flex items-center justify-center py-4">
+                <LanyardStage className="h-[440px] sm:h-[500px] lg:h-[520px]" />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <a
-                  href={profile.contact.whatsapp}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-ink transition-transform hover:-translate-y-0.5 hover:bg-slate-100 shadow-md"
-                >
-                  <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.32a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.53c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.03-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.44 1.03 2.61c.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.17-.47-.29" />
-                  </svg>
-                  WhatsApp
-                </a>
-                <a
-                  href={`mailto:${profile.contact.email}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-                >
-                  <svg className="size-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                  {profile.contact.email}
-                </a>
+              <div className="border-t border-line/50 pt-3 text-center text-xs text-body dark:border-line/30">
+                <span>• Tarik atau klik kartu untuk berinteraksi</span>
               </div>
+            </div>
 
-              {/* Info Kontak & Lokasi */}
-              <div className="border-t border-white/15 pt-5 text-xs text-white/70">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <span className="font-semibold text-white/90">{t("contact.location")} </span>
-                    <span>{profile.location}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white/90">{t("contact.status")} </span>
-                    <span>{t("contact.since")}</span>
-                  </div>
+            {/* KANAN: Panel Informasi Kontak */}
+            <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-6">
+              <div className="space-y-4">
+                <div className="inline-flex w-max items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-bold text-brand dark:border-brand/30 dark:bg-brand/10 dark:text-blue-400">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{t("contact.badge")}</span>
+                </div>
+
+                <div>
+                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
+                    {t("contact.title")}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-body">
+                    {t("contact.desc")}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <a
+                    href={profile.contact.whatsapp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 hover:-translate-y-0.5"
+                  >
+                    <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.32a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.53c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.03-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.44 1.03 2.61c.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.17-.47-.29" />
+                    </svg>
+                    WhatsApp
+                  </a>
+                  <a
+                    href={`mailto:${profile.contact.email}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-bold text-ink shadow-2xs transition hover:border-brand/50 hover:-translate-y-0.5 dark:border-line/60 dark:bg-slate-900 dark:text-white"
+                  >
+                    <svg className="size-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                    {profile.contact.email}
+                  </a>
                 </div>
               </div>
 
-              {/* Socials */}
-              <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-white/80">
-                {profile.contact.socials.map((social) => (
-                  <li key={social.label}>
-                    <a
-                      href={social.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="transition-colors hover:text-white underline-offset-4 hover:underline"
-                    >
-                      {social.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              {/* Info Kontak & Lokasi */}
+              <div className="space-y-4 border-t border-line/60 pt-5 dark:border-line/40">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl border border-line/60 bg-slate-50/70 p-3 dark:border-line/40 dark:bg-[#181d30]/60">
+                    <span className="block text-[11px] font-semibold text-body">{t("contact.location")}</span>
+                    <span className="mt-0.5 font-bold text-ink">{profile.location}</span>
+                  </div>
+                  <div className="rounded-xl border border-line/60 bg-slate-50/70 p-3 dark:border-line/40 dark:bg-[#181d30]/60">
+                    <span className="block text-[11px] font-semibold text-body">{t("contact.status")}</span>
+                    <span className="mt-0.5 font-bold text-brand dark:text-blue-400">{t("contact.since")}</span>
+                  </div>
+                </div>
+
+                {/* Socials */}
+                <div className="pt-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-body">Social Profiles</span>
+                  <ul className="mt-2 flex flex-wrap items-center gap-2">
+                    {profile.contact.socials.map((social) => (
+                      <li key={social.label}>
+                        <a
+                          href={social.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-line/70 bg-white px-3 py-1 text-xs font-semibold text-ink shadow-2xs transition hover:border-brand/40 hover:text-brand dark:border-line/50 dark:bg-[#181d30] dark:text-slate-200"
+                        >
+                          {social.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-        </Parallax>
-      </div>
+        </div>
+      </Parallax>
     </section>
   );
 }

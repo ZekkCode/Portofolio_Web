@@ -138,7 +138,12 @@ try {
 
   await goto("/admin", 3000);
   console.log("On /admin");
-  const controls = await evaluate(`document.querySelectorAll('input, select, textarea').length`);
+  let controls = 0;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    controls = await evaluate(`document.querySelectorAll('input, select, textarea').length`);
+    if (controls >= 20) break;
+    await sleep(250);
+  }
   assert.ok(controls >= 20, `panel admin cuma punya ${controls} kontrol`);
   assert.equal(
     await evaluate(

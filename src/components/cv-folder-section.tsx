@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { useMounted } from "@/lib/use-mounted";
 import Folder, { type FolderEntry } from "@/components/folder";
 import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-preview-modal";
 import { Parallax } from "@/components/parallax";
@@ -104,17 +105,13 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
 export function CvFolderSection() {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const sectionRef = useRef<HTMLElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleKey>("all");
   const [folderMode, setFolderMode] = useState<"flap" | "book">("flap");
   const [folderVariant, setFolderVariant] = useState<"solid" | "glass">("glass");
   const [isFolderOpen, setIsFolderOpen] = useState(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
 

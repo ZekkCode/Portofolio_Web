@@ -89,7 +89,7 @@
   inset: -1px;
   z-index: -1;
   pointer-events: none;
-  background-color: #fff;
+  background-color: var(--bg-page);
   background-image:
     linear-gradient(to right, var(--color-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
@@ -101,7 +101,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 55%, #fff 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, var(--bg-page) 100%);
 }
 
 @keyframes grid-drift {

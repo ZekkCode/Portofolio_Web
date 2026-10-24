@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { useMounted } from "@/lib/use-mounted";
 import PillNav, { type PillNavItem } from "@/components/pill-nav";
 import { useSmoothScrollTo } from "@/components/parallax";
 import { profile } from "@/lib/profile";
@@ -40,13 +41,9 @@ function useActiveSection() {
 export function PortfolioPillNav() {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const activeSection = useActiveSection();
   const scrollTo = useSmoothScrollTo();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
 

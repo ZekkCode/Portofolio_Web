@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import "@/lib/i18n";
+import { useMounted } from "@/lib/use-mounted";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, SmoothNavLink } from "@/components/parallax";
@@ -24,7 +25,7 @@ function Header() {
     <header className="sticky top-0 z-40 border-b border-line/70 bg-white/80 backdrop-blur-md dark:border-line/40 dark:bg-[#08090e]/80">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-5">
         <SmoothNavLink href="#atas" className="flex items-center gap-2 sm:gap-2.5">
-          <img
+          <Image
             src={profile.avatar}
             alt={profile.brand}
             width={28}
@@ -214,14 +215,12 @@ function Stack() {
               key={`${tool.name}-${idx}`}
               className="group flex shrink-0 items-center gap-3 rounded-full border border-line/80 bg-white/90 px-4 py-2.5 text-sm font-semibold text-ink shadow-2xs backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/50 dark:bg-[#111422]/90 dark:text-slate-200"
             >
-              <img
+              <Image
                 src={tool.icon}
                 alt={tool.name}
                 width={22}
                 height={22}
                 className="size-5.5 shrink-0 object-contain transition-transform group-hover:scale-110"
-                loading="lazy"
-                decoding="async"
               />
               <span className="whitespace-nowrap font-medium tracking-tight">
                 {tool.name}
@@ -254,9 +253,9 @@ function Contact() {
               <div className="flex items-center justify-between border-b border-line/50 pb-3 dark:border-line/30">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-brand animate-pulse" />
-                  <span className="text-xs font-semibold text-ink">ID Card 3D Virtual</span>
+                  <span className="text-xs font-semibold text-ink">{t("contact.cardTitle")}</span>
                 </div>
-                <span className="text-[11px] font-medium text-body">Three.js Physics</span>
+                <span className="text-[11px] font-medium text-body">{t("contact.cardSubtitle")}</span>
               </div>
 
               <div className="relative my-auto flex items-center justify-center py-4">
@@ -264,7 +263,7 @@ function Contact() {
               </div>
 
               <div className="border-t border-line/50 pt-3 text-center text-xs text-body dark:border-line/30">
-                <span>• Tarik atau klik kartu untuk berinteraksi</span>
+                <span>{t("contact.cardHint")}</span>
               </div>
             </div>
 
@@ -326,7 +325,7 @@ function Contact() {
 
                 {/* Socials */}
                 <div className="pt-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-body">Social Profiles</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-body">{t("contact.socialsTitle")}</span>
                   <ul className="mt-2 flex flex-wrap items-center gap-2">
                     {profile.contact.socials.map((social) => (
                       <li key={social.label}>
@@ -352,6 +351,7 @@ function Contact() {
 }
 
 function Footer() {
+  const { t } = useTranslation();
   const { views } = usePageViews();
 
   return (
@@ -361,7 +361,7 @@ function Footer() {
         <div className="flex items-center gap-2 text-xs text-body">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line/70 bg-white/60 px-2.5 py-0.5 text-[11px] font-medium backdrop-blur-xs dark:border-line/40 dark:bg-slate-900/60">
             <span className="size-1.5 rounded-full bg-emerald-500" />
-            <span>{views.toLocaleString()} views</span>
+            <span>{views.toLocaleString()} {t("contact.views")}</span>
           </span>
           <span aria-hidden="true" className="text-line">•</span>
           <span>Next.js + Tailwind CSS</span>
@@ -373,12 +373,7 @@ function Footer() {
 
 export default function Home() {
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  const mounted = useMounted();
   const isDark = mounted && resolvedTheme === "dark";
 
   return (

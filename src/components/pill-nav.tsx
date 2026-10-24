@@ -291,10 +291,12 @@ export const PillNav = ({
     indicator,
     activeIndex,
     bounce: clamp(bounce, 0, 1),
-    stretch: clamp(stretch, 0, 1)
+    stretch: clamp(stretch, 0, 1),
   };
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useIsomorphicLayoutEffect(() => {
+    settingsRef.current = settings;
+  });
 
   const palette = THEMES[theme] ?? THEMES.dark;
   const vars: Record<string, string> = { ...palette, ...(SIZES[size] ?? SIZES.md) };
@@ -698,9 +700,11 @@ export const PillNav = ({
     });
   }, [collapsed, joined]);
 
-  useEffect(() => {
+  const [prevCollapsed, setPrevCollapsed] = useState(collapsed);
+  if (prevCollapsed !== collapsed) {
+    setPrevCollapsed(collapsed);
     if (!collapsed && open) setOpen(false);
-  }, [collapsed, open]);
+  }
 
   useIsomorphicLayoutEffect(() => {
     const panel = panelRef.current;
@@ -844,6 +848,7 @@ export const PillNav = ({
         <span ref={logoRef} className={[LOGO, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
           <LinkComponent href={logoHref} className={LOGO_LINK} aria-label={logoAlt} onPointerEnter={spin}>
             <span ref={markRef} className={MARK}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               {typeof logo === 'string' ? <img src={logo} alt="" draggable={false} /> : logo}
             </span>
           </LinkComponent>

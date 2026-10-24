@@ -1076,6 +1076,7 @@ const renderItem = (item: FolderEntry): ReactNode => {
     if (item.image) {
       return (
         <div className="absolute overflow-hidden" style={PHOTO_STYLE}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={item.image}
             alt={item.alt ?? item.title ?? ''}
@@ -1258,16 +1259,15 @@ const Folder = ({
   );
 
   const setOpenRef = useRef(setOpen);
-  setOpenRef.current = setOpen;
 
   const rgb = parseColor(color);
   const paper = parseColor(paperColor);
   const backTone = mixRgb(rgb, [0, 0, 0], 0.16);
   const insideTop = rgbString(mixRgb(rgb, [0, 0, 0], 0.08));
   const insideBottom = rgbString(backTone);
+  const depth = Math.round(Math.max(g.w, g.h) * 5);
 
-  const settingsRef = useRef<Settings>(null as unknown as Settings);
-  settingsRef.current = {
+  const currentSettings: Settings = {
     open: isOpen,
     layout,
     openOn,
@@ -1291,10 +1291,17 @@ const Folder = ({
     insideBottom,
     insideTone: [mixRgb(rgb, [0, 0, 0], 0.08).map(v => v / 255), backTone.map(v => v / 255)],
     content: `${mode}|${scale}|${paperColor}|${color}|${g.tabX}|${g.tabW}`,
-    depth: Math.round(Math.max(g.w, g.h) * 5),
+    depth,
     view,
     g
   };
+
+  const settingsRef = useRef<Settings>(currentSettings);
+
+  useIsomorphicLayoutEffect(() => {
+    setOpenRef.current = setOpen;
+    settingsRef.current = currentSettings;
+  });
 
   useEffect(() => {
     const root = rootRef.current;
@@ -2235,7 +2242,7 @@ const Folder = ({
     '--folder-doc-w': `${g.docW}px`,
     '--folder-doc-h': `${g.docH}px`,
     '--folder-frost': `${(1.5 + clamp(frost, 0, 1) * 10) * scale}px`,
-    '--folder-depth': `${settingsRef.current.depth}px`,
+    '--folder-depth': `${depth}px`,
     '--folder-scale': scale,
     width: 'var(--folder-w)',
     height: 'calc(var(--folder-tab-h) + var(--folder-h))',

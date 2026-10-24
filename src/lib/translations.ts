@@ -57,6 +57,11 @@ export const translations = {
       location: "Lokasi:",
       status: "Status:",
       since: "Freelance sejak 2020",
+      cardTitle: "Kartu ID 3D Virtual",
+      cardSubtitle: "Three.js Physics",
+      cardHint: "• Tarik atau klik kartu untuk berinteraksi",
+      socialsTitle: "Profil Media Sosial",
+      views: "views",
     },
   },
   en: {
@@ -117,6 +122,11 @@ export const translations = {
       location: "Location:",
       status: "Status:",
       since: "Freelancing since 2020",
+      cardTitle: "3D Virtual ID Card",
+      cardSubtitle: "Three.js Physics",
+      cardHint: "• Drag or click the card to interact",
+      socialsTitle: "Social Profiles",
+      views: "views",
     },
   },
 };

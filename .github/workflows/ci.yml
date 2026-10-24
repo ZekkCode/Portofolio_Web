@@ -31,5 +31,8 @@ jobs:
       - name: TypeScript Type Check
         run: npx tsc --noEmit
 
+      - name: ESLint Code Quality
+        run: npm run lint
+
       - name: Next.js Production Build
         run: npm run build

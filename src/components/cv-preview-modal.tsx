@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { profile } from "@/lib/profile";
 
 export type RoleKey = "all" | "graphic" | "uiux" | "frontend" | "itsupport";
@@ -124,10 +125,12 @@ interface CvPreviewModalProps {
 
 export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPreviewModalProps) {
   const [activeRole, setActiveRole] = useState<RoleKey>(initialRole);
+  const [prevInitialRole, setPrevInitialRole] = useState<RoleKey>(initialRole);
 
-  useEffect(() => {
+  if (initialRole !== prevInitialRole) {
+    setPrevInitialRole(initialRole);
     setActiveRole(initialRole);
-  }, [initialRole]);
+  }
 
   useEffect(() => {
     if (!isOpen) return;
@@ -247,7 +250,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
                 <div className="relative size-16 sm:size-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-slate-100 shadow-xs">
-                  <img
+                  <Image
                     src={profile.avatar}
                     alt={profile.name}
                     width={80}

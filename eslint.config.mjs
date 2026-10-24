@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     ".taste-skill/**",
     "taste-skill*/**",
     "scripts/**",
+    "_**",
+    "session-chat-cline/**",
   ]),
 ]);
 

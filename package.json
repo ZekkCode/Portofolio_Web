@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "engines": {
+    "node": ">=22.10.0",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
     "@types/three": "^0.186.0",
     "i18next": "^26.5.6",

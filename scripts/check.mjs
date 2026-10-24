@@ -82,7 +82,7 @@ const typeInto = (selector, value, index = 0) =>
   evaluate(`(() => {
     const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
     if (!el) return false;
-    if (el._valueTracker) el._valueTracker.setValue("");
+    if (el._valueTracker) el._valueTracker.setValue(el.type === "range" ? "0" : "");
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     setter.call(el, ${JSON.stringify(value)});
     el.dispatchEvent(new Event("input", { bubbles: true }));

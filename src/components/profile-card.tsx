@@ -61,8 +61,11 @@ const isDark=(color:string):boolean|null=>{const match=/^#?([0-9a-f]{3}|[0-9a-f]
 const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,name='Javi A. Torres',title='Software Engineer',handle='javicodes',status='Online',statusColor='#22c55e',contactText='Contact',showUserInfo=true,onContactClick,theme='dark',backdropColor,radius=16,holo=0.8,glare=0.5,enableTilt=true,tiltStrength=12,parallax=8,enableMobileTilt=false,mobileTiltSensitivity=5,intro=true,className=''}:ProfileCardProps)=>{
   const rootRef=useRef<HTMLDivElement>(null);
   const engineRef=useRef<Engine|null>(null);
-  const settings={enableTilt,tiltStrength,parallax,mobileTiltSensitivity,intro};
-  const settingsRef=useRef(settings);settingsRef.current=settings;
+  const settings = { enableTilt, tiltStrength, parallax, mobileTiltSensitivity, intro };
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
   useEffect(()=>{
     const root=rootRef.current;if(!root)return;
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -142,12 +145,14 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,name='Javi A. Torres',tit
         <div className={TILE}>
           <span className={LAYER} style={SHEEN_STYLE}/>
           <span className={HOLO} style={HOLO_STYLE}><span className={HOLO_LAYER} style={GLOW_STYLE}/><span className={HOLO_LAYER} style={SHIFT_STYLE}/></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           {avatarUrl&&<img className={PHOTO} style={PHOTO_STYLE} src={avatarUrl} alt={name||''} loading="lazy" draggable={false}/>}
           {(name||title)&&(<><span className={LAYER} style={SCRIM_STYLE}/><div className={INFO}>{name&&<h3 className={NAME}>{name}</h3>}{title&&<p className={TITLE}>{title}</p>}</div></>)}
           <span className={TILE_RIM}/>
         </div>
         {showUserInfo&&(
           <div className={FOOTER}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             {miniAvatarUrl&&<span className={AVATAR}><img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/></span>}
             <div className={META}>{handle&&<span className={HANDLE}>@{handle}</span>}{status&&<span className={STATUS}>{status}</span>}</div>
             {contactText&&<button type="button" className={CONTACT} onClick={onContactClick} aria-label={name?`${contactText} ${name}`:contactText}><MailIcon />{contactText}</button>}

@@ -196,7 +196,7 @@ function Stack() {
         />
       </div>
 
-      <div className="relative mt-4 w-full overflow-hidden py-4">
+      <Parallax speed={0.03} className="relative mt-4 w-full overflow-hidden py-4">
         {/* Left & Right gradient fade masks */}
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
@@ -220,7 +220,7 @@ function Stack() {
             </div>
           ))}
         </div>
-      </div>
+      </Parallax>
     </section>
   );
 }

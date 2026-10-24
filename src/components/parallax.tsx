@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLenis } from "lenis/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface ParallaxProps {
   children: ReactNode;
@@ -9,6 +15,7 @@ interface ParallaxProps {
   align?: "center" | "top"; // "top" for hero/top-of-page elements, "center" for page sections
   className?: string;
   style?: CSSProperties;
+  scrub?: boolean | number;
 }
 
 export function Parallax({
@@ -17,53 +24,114 @@ export function Parallax({
   align = "center",
   className = "",
   style,
+  scrub = true,
 }: ParallaxProps) {
   const ref = useRef<HTMLDivElement>(null);
-
-  useLenis((lenis) => {
-    const el = ref.current;
-    if (!el) return;
-
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      el.style.transform = "";
-      return;
-    }
-
-    const windowHeight = window.innerHeight;
-
-    if (align === "top") {
-      const rect = el.getBoundingClientRect();
-      if (rect.bottom < -200 || rect.top > windowHeight + 200) return;
-      const scrollY = lenis ? lenis.scroll : window.scrollY;
-      const offset = scrollY * speed;
-      el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
-      return;
-    }
-
-    const currentOffset = parseFloat(el.dataset.parallaxOffset || "0");
-    const rect = el.getBoundingClientRect();
-
-    // Viewport cull
-    if (rect.bottom < -150 || rect.top > windowHeight + 150) return;
-
-    const naturalTop = rect.top - currentOffset;
-    const naturalCenter = naturalTop + rect.height / 2;
-    const viewportCenter = windowHeight / 2;
-    const offset = (naturalCenter - viewportCenter) * speed;
-
-    el.dataset.parallaxOffset = String(offset);
-    el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
-  });
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (align === "top") {
-      const scrollY = window.scrollY;
-      const offset = scrollY * speed;
-      el.style.transform = `translate3d(0, ${offset.toFixed(2)}px, 0)`;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
     }
-  }, [align, speed]);
+
+    const yMovement = speed * 450;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        {
+          y: align === "top" ? 0 : -yMovement * 0.5,
+        },
+        {
+          y: align === "top" ? yMovement : yMovement * 0.5,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el,
+            start: align === "top" ? "top top" : "top bottom",
+            end: align === "top" ? "bottom top" : "bottom top",
+            scrub: scrub === true ? 0.6 : scrub,
+            invalidateOnRefresh: true,
+          },
+        }
+      );
+    }, ref);
+
+    return () => ctx.revert();
+  }, [align, speed, scrub]);
+
+  return (
+    <div ref={ref} className={`will-change-transform ${className}`} style={style}>
+      {children}
+    </div>
+  );
+}
+
+export interface ScrollScrubProps {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  from?: gsap.TweenVars;
+  to?: gsap.TweenVars;
+  start?: string;
+  end?: string;
+  scrub?: boolean | number;
+  pin?: boolean;
+}
+
+export function ScrollScrub({
+  children,
+  className = "",
+  style,
+  from,
+  to = {},
+  start = "top bottom",
+  end = "bottom top",
+  scrub = true,
+  pin = false,
+}: ScrollScrubProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      const scrollTriggerConfig: ScrollTrigger.Vars = {
+        trigger: el,
+        start,
+        end,
+        scrub: scrub === true ? 0.6 : scrub,
+        pin,
+        invalidateOnRefresh: true,
+      };
+
+      if (from) {
+        gsap.fromTo(
+          el,
+          from,
+          {
+            ...to,
+            ease: "none",
+            scrollTrigger: scrollTriggerConfig,
+          }
+        );
+      } else {
+        gsap.to(el, {
+          ...to,
+          ease: "none",
+          scrollTrigger: scrollTriggerConfig,
+        });
+      }
+    }, ref);
+
+    return () => ctx.revert();
+  }, [from, to, start, end, scrub, pin]);
 
   return (
     <div ref={ref} className={`will-change-transform ${className}`} style={style}>

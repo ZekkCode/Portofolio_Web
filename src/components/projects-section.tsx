@@ -74,44 +74,49 @@ export function ProjectsSection() {
             }
 
             return (
-              <a
+              <Parallax
                 key={project.id}
-                href={project.repo || "#proyek"}
-                target={project.repo ? "_blank" : undefined}
-                rel="noreferrer"
-                className="group flex flex-col justify-between rounded-2xl border border-line/80 bg-white/95 p-5 sm:p-6 shadow-2xs transition duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]/90"
+                speed={idx % 2 === 0 ? 0.03 : -0.02}
+                className="flex"
               >
-                <div>
-                  <div className="flex items-center justify-between text-xs text-muted">
-                    <span className="font-mono text-[11px]">0{idx + 1}</span>
-                    <span className="text-[11px] font-medium text-body">
-                      {project.tags[0] || "Code"}
+                <a
+                  href={project.repo || "#proyek"}
+                  target={project.repo ? "_blank" : undefined}
+                  rel="noreferrer"
+                  className="group flex flex-1 flex-col justify-between rounded-2xl border border-line/80 bg-white/95 p-5 sm:p-6 shadow-2xs transition duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]/90"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-muted">
+                      <span className="font-mono text-[11px]">0{idx + 1}</span>
+                      <span className="text-[11px] font-medium text-body">
+                        {project.tags[0] || "Code"}
+                      </span>
+                    </div>
+                    <h3 className="mt-3 font-display text-lg font-bold text-ink tracking-tight group-hover:text-brand transition-colors">
+                      {project.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-body line-clamp-3">
+                      {project.desc}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 border-t border-line/50 pt-4 dark:border-line/30 flex items-center justify-between">
+                    <div className="flex flex-wrap gap-1.5">
+                      {project.tags.slice(0, 2).map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-[11px] font-medium text-body"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand dark:text-blue-400 group-hover:underline">
+                      {t("projects.viewRepo")} →
                     </span>
                   </div>
-                  <h3 className="mt-3 font-display text-lg font-bold text-ink tracking-tight group-hover:text-brand transition-colors">
-                    {project.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-body line-clamp-3">
-                    {project.desc}
-                  </p>
-                </div>
-
-                <div className="mt-5 border-t border-line/50 pt-4 dark:border-line/30 flex items-center justify-between">
-                  <div className="flex flex-wrap gap-1.5">
-                    {project.tags.slice(0, 2).map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[11px] font-medium text-body"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand dark:text-blue-400 group-hover:underline">
-                    {t("projects.viewRepo")} →
-                  </span>
-                </div>
-              </a>
+                </a>
+              </Parallax>
             );
           })}
         </div>

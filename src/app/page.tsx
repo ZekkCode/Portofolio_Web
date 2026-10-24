@@ -19,31 +19,39 @@ import { profile } from "@/lib/profile";
 
 function Header() {
   const { t } = useTranslation();
+  const { views } = usePageViews();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-sm dark:border-line dark:bg-[#08090e]/95">
+    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-md dark:border-line dark:bg-[#08090e]/95">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-5">
         <SmoothNavLink href="#atas" className="flex items-center gap-2.5">
           <Image
             src={profile.avatar}
             alt={profile.brand}
-            width={28}
-            height={28}
-            className="size-7 rounded-full object-cover border border-line"
+            width={30}
+            height={30}
+            className="size-7.5 rounded-full object-cover border border-brand/30 shadow-2xs"
           />
           <span className="font-display text-base font-bold tracking-tight text-ink">
             {profile.brand}
           </span>
         </SmoothNavLink>
 
-        <div className="flex items-center gap-2 sm:gap-3 pr-14 md:pr-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 pr-14 md:pr-0">
+          <span
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-[11px] font-semibold text-body backdrop-blur-md dark:border-line/60 dark:bg-slate-900/80"
+            title="Total Kunjungan / Page Views"
+          >
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span suppressHydrationWarning>{views.toLocaleString("id-ID")} views</span>
+          </span>
           <LanguageToggle />
           <ThemeToggle />
           <a
             href={profile.contact.whatsapp}
             target="_blank"
             rel="noreferrer"
-            className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition hover:bg-black md:inline-flex dark:bg-white dark:text-slate-900"
+            className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition hover:bg-black md:inline-flex dark:bg-white dark:text-slate-900 shadow-2xs"
           >
             {t("nav.contactBtn")}
           </a>
@@ -59,25 +67,48 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-12 pb-24 sm:pt-20 sm:pb-36 min-h-[85vh] flex flex-col justify-center"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-16 sm:pt-16 sm:pb-24 min-h-[72vh] flex flex-col justify-center"
     >
-      <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
-        <div className="flex flex-col items-start gap-6 text-left">
-          <Parallax speed={-0.03} align="top" className="space-y-4">
-            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.02]">
-              {profile.name}
+      {/* Ambient gradient glow to eliminate empty/barren feeling */}
+      <div className="pointer-events-none absolute -top-12 left-1/2 -z-10 h-72 w-full max-w-3xl -translate-x-1/2 rounded-full bg-gradient-to-tr from-brand/10 via-blue-500/8 to-indigo-500/10 blur-3xl dark:from-brand/20 dark:via-blue-600/15 dark:to-indigo-600/15" />
+
+      <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
+        <div className="flex flex-col items-start gap-5 text-left">
+          <Parallax speed={-0.03} align="top" className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/5 px-3 py-1 text-xs font-semibold text-brand backdrop-blur-xs dark:border-brand/30 dark:bg-brand/10 dark:text-blue-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{t("contact.badge")}</span>
+            </div>
+
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.1]">
+              Zakaria Mujur{" "}
+              <span className="bg-gradient-to-r from-brand via-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-sky-300 dark:to-indigo-400">
+                Prasetyo
+              </span>
             </h1>
-            <p className="text-lg sm:text-xl font-semibold text-brand dark:text-blue-400">
+            <p className="text-base sm:text-lg font-semibold text-brand dark:text-blue-400">
               {t("hero.roles")}
             </p>
           </Parallax>
 
-          <Parallax speed={0.02} align="top" className="space-y-6 w-full max-w-xl">
-            <p className="text-base sm:text-lg leading-relaxed text-body">
+          <Parallax speed={0.02} align="top" className="space-y-5 w-full max-w-xl">
+            <p className="text-sm sm:text-base leading-relaxed text-body">
               {t("hero.desc")}
             </p>
 
-            <div className="text-xs sm:text-sm text-body flex flex-wrap items-center gap-x-3 gap-y-1.5 font-medium">
+            {/* Quick Tech Highlights Badge Strip */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {["Next.js 16", "TypeScript", "Tailwind CSS", "Figma", "Three.js"].map((tech) => (
+                <span
+                  key={tech}
+                  className="rounded-md border border-line bg-surface/80 px-2.5 py-1 text-[11px] font-medium text-body backdrop-blur-xs dark:border-line/60 dark:bg-[#111422]/80"
+                >
+                  {tech}
+                </span>
+              ))}
+            </div>
+
+            <div className="text-xs text-body flex flex-wrap items-center gap-x-3 gap-y-1 font-medium pt-1">
               <span className="font-semibold text-ink">{profile.site.replace("https://", "")}</span>
               <span aria-hidden="true" className="text-line">•</span>
               <span>{profile.location}</span>
@@ -88,13 +119,13 @@ function Hero() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <SmoothNavLink
                 href="#cv"
-                className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-ink shadow-sm"
+                className="rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-ink hover:shadow-md"
               >
                 {t("hero.cvBtn")}
               </SmoothNavLink>
               <SmoothNavLink
                 href="#proyek"
-                className="rounded-full border border-line bg-white px-6 py-2.5 text-sm font-semibold text-ink transition hover:border-ink dark:border-line dark:bg-[#111422] dark:text-slate-100"
+                className="rounded-full border border-line bg-white/90 px-6 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs backdrop-blur-xs transition hover:border-brand/40 dark:border-line dark:bg-[#111422]/90 dark:text-slate-100"
               >
                 {t("hero.projectsBtn")}
               </SmoothNavLink>
@@ -116,35 +147,41 @@ function About() {
   const { t } = useTranslation();
 
   return (
-    <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
+    <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-16 sm:py-24">
       <SectionTitle
         title={t("about.title")}
         desc={t("about.desc")}
       />
 
-      <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
           <Parallax speed={-0.02}>
-            <div className="space-y-4 text-base leading-relaxed text-body">
+            <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
               {profile.bio.map((par) => (
                 <p key={par.slice(0, 24)}>{par}</p>
               ))}
             </div>
           </Parallax>
 
+          {/* Rich Stats Cards Grid with Glow on Hover */}
           <Parallax speed={0.02}>
-            <div className="mt-8 rounded-2xl border border-line bg-surface p-5 sm:p-6 dark:border-line dark:bg-[#0e121d]">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
-                Rekam Jejak & Portofolio
+            <div className="mt-8">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+                Rekam Jejak & Pengalaman
               </h4>
-              <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {profile.stats.map((stat, idx) => {
                   const statKey = idx === 0 ? "projects" : idx === 1 ? "certificates" : idx === 2 ? "years" : "organizations";
                   return (
-                    <div key={stat.label} className="border-l-2 border-brand/40 pl-3">
+                    <div
+                      key={stat.label}
+                      className="group relative overflow-hidden rounded-2xl border border-line/80 bg-white/90 p-4 shadow-2xs backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]/90"
+                    >
                       <dt className="sr-only">{stat.label}</dt>
-                      <dd className="font-display text-2xl font-bold text-ink leading-none">{stat.value}</dd>
-                      <dd className="mt-1.5 text-xs font-medium text-body">
+                      <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
+                        {stat.value}
+                      </dd>
+                      <dd className="mt-2 text-xs font-medium text-body">
                         {t(`about.stats.${statKey}`)}
                       </dd>
                     </div>
@@ -156,23 +193,25 @@ function About() {
         </div>
 
         <div>
-          <h3 className="mb-5 text-sm font-bold text-brand dark:text-blue-400">
+          <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-brand dark:text-blue-400">
             {t("about.expTitle")}
           </h3>
           <Parallax speed={0.04}>
-            <ol className="space-y-6 border-l border-line/70 pl-5 dark:border-line/40">
+            <ol className="space-y-5 border-l border-line/70 pl-5 dark:border-line/40">
               {profile.experience.map((item) => (
-                <li key={item.org} className="relative">
+                <li key={item.org} className="relative group">
                   <span
-                    className="absolute top-1.5 -left-[26px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs dark:border-slate-900"
+                    className="absolute top-1.5 -left-[26px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs transition-transform group-hover:scale-125 dark:border-slate-900"
                     aria-hidden="true"
                   />
-                  <p className="text-xs font-semibold text-muted">
-                    {item.period} · {item.place}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted">
+                      {item.period} · {item.place}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm font-bold text-ink">{item.role}</p>
-                  <p className="text-sm font-medium text-brand dark:text-blue-400">{item.org}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-body">{item.desc}</p>
+                  <p className="text-xs font-semibold text-brand dark:text-blue-400">{item.org}</p>
+                  <p className="mt-1 text-xs sm:text-sm leading-relaxed text-body">{item.desc}</p>
                 </li>
               ))}
             </ol>
@@ -347,9 +386,9 @@ function Footer() {
           <p className="text-xs text-body mt-0.5">© {new Date().getFullYear()} {profile.name}. Mojokerto, Indonesia.</p>
         </div>
         <div className="flex items-center gap-3 text-xs text-body">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-ink dark:border-line dark:bg-slate-900 dark:text-slate-200">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/90 px-3 py-1 text-xs font-semibold text-ink shadow-2xs backdrop-blur-xs dark:border-line dark:bg-slate-900/90 dark:text-slate-200">
             <span className="size-1.5 rounded-full bg-emerald-500" />
-            <span>{views.toLocaleString()} {t("contact.views")}</span>
+            <span suppressHydrationWarning>{views.toLocaleString("id-ID")} {t("contact.views")}</span>
           </span>
           <span aria-hidden="true" className="text-line">•</span>
           <span>Next.js 16 + Tailwind CSS</span>
@@ -373,19 +412,19 @@ export default function Home() {
           lineColor={isDark ? "#202638" : "#dcdce8"}
           hoverColor={isDark ? "#3b82f6" : "#1b45c4"}
           hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
-          fillOpacity={isDark ? 0.08 : 0.04}
-          cellSize={44}
-          speed={0.15}
-          lineWidth={0.75}
-          radius={1}
-          trail={0.4}
-          glow={isDark ? 0.2 : 0.1}
+          fillOpacity={isDark ? 0.18 : 0.1}
+          cellSize={40}
+          speed={0.22}
+          lineWidth={1}
+          radius={1.5}
+          trail={0.55}
+          glow={isDark ? 0.38 : 0.22}
           fade={1}
           clickCascade
           intro
         />
-        {/* Lapisan peredam gradien agar teks penjelasan selalu kontras & nyaman dibaca */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(238,242,255,0.45),rgba(255,255,255,0.65)_70%)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(30,41,59,0.35),rgba(8,9,14,0.75)_70%)] pointer-events-none" />
+        {/* Lapisan peredam gradien ambient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(238,242,255,0.35),rgba(255,255,255,0.5)_70%)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(30,41,59,0.3),rgba(8,9,14,0.65)_70%)] pointer-events-none" />
       </div>
       <Header />
       <PortfolioPillNav />

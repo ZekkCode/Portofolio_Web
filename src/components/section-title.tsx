@@ -7,12 +7,12 @@ export function SectionTitle({
   eyebrow?: string;
 }) {
   return (
-    <div className="mb-10 max-w-2xl">
-      <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-ink leading-[1.1]">
+    <div className="mb-8 max-w-2xl">
+      <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-ink leading-[1.15]">
         {title}
       </h2>
       {desc && (
-        <p className="mt-3 text-base sm:text-lg leading-relaxed text-body">
+        <p className="mt-2.5 text-sm sm:text-base leading-relaxed text-body">
           {desc}
         </p>
       )}

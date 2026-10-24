@@ -5,17 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 const VIEWS_CACHE_KEY = "zekk:views:cache";
 const DEFAULT_VIEWS = 1420;
 
-let currentViews: number = (() => {
-  if (typeof window !== "undefined") {
-    try {
-      const cached = window.localStorage.getItem(VIEWS_CACHE_KEY);
-      if (cached && !isNaN(Number(cached))) return Number(cached);
-    } catch {
-      // ignore
-    }
-  }
-  return DEFAULT_VIEWS;
-})();
+let currentViews: number = DEFAULT_VIEWS;
 
 let fetchPromise: Promise<number> | null = null;
 const subscribers = new Set<() => void>();
@@ -89,6 +79,16 @@ export function usePageViews() {
 
   useEffect(() => {
     let active = true;
+    try {
+      const cached = window.localStorage.getItem(VIEWS_CACHE_KEY);
+      if (cached && !isNaN(Number(cached)) && Number(cached) !== currentViews) {
+        currentViews = Number(cached);
+        notify();
+      }
+    } catch {
+      // ignore
+    }
+
     void fetchViewsOnce().finally(() => {
       if (active) setLoading(false);
     });

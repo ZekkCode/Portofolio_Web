@@ -30,16 +30,17 @@ export function ProjectsSection() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="max-w-2xl">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand dark:text-blue-400">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand/5 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand dark:border-brand/35 dark:bg-brand/10 dark:text-blue-400">
+                          <span className="size-1.5 rounded-full bg-brand dark:bg-blue-400 animate-pulse" />
                           Featured Project
                         </span>
                         <span aria-hidden="true" className="text-line">•</span>
-                        <span className="text-xs text-body">Sistem Terintegrasi</span>
+                        <span className="text-xs font-medium text-body">Sistem Terintegrasi</span>
                       </div>
-                      <h3 className="mt-2 font-display text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+                      <h3 className="mt-2.5 font-display text-xl sm:text-2xl font-extrabold text-ink tracking-tight group-hover:text-brand transition-colors">
                         {project.title}
                       </h3>
-                      <p className="mt-3 text-base leading-relaxed text-body">
+                      <p className="mt-2 text-sm leading-relaxed text-body">
                         {project.desc}
                       </p>
                     </div>

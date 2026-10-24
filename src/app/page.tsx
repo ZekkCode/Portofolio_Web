@@ -2,9 +2,7 @@
 
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "next-themes";
 import "@/lib/i18n";
-import { useMounted } from "@/lib/use-mounted";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, SmoothNavLink } from "@/components/parallax";
@@ -13,7 +11,6 @@ import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
 import { SectionTitle } from "@/components/section-title";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
-import ShapeGrid from "@/components/shape-grid";
 import { usePageViews } from "@/lib/use-page-views";
 import { profile } from "@/lib/profile";
 
@@ -67,76 +64,95 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-16 sm:pt-16 sm:pb-24 min-h-[72vh] flex flex-col justify-center"
+      className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-12 sm:pt-14 sm:pb-16"
     >
-      {/* Ambient gradient glow to eliminate empty/barren feeling */}
-      <div className="pointer-events-none absolute -top-12 left-1/2 -z-10 h-72 w-full max-w-3xl -translate-x-1/2 rounded-full bg-gradient-to-tr from-brand/10 via-blue-500/8 to-indigo-500/10 blur-3xl dark:from-brand/20 dark:via-blue-600/15 dark:to-indigo-600/15" />
-
-      <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
+      <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
+        {/* Left Column: Editorial Information */}
         <div className="flex flex-col items-start gap-5 text-left">
-          <Parallax speed={-0.03} align="top" className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/5 px-3 py-1 text-xs font-semibold text-brand backdrop-blur-xs dark:border-brand/30 dark:bg-brand/10 dark:text-blue-400">
+          <Parallax speed={-0.02} align="top" className="space-y-3.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs font-semibold text-body dark:border-line/60 dark:bg-[#111422]/80">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{t("contact.badge")}</span>
+              <span>Mojokerto, Indonesia · Terbuka untuk Kolaborasi</span>
             </div>
 
-            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.1]">
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.08]">
               Zakaria Mujur{" "}
-              <span className="bg-gradient-to-r from-brand via-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-sky-300 dark:to-indigo-400">
+              <span className="text-brand dark:text-blue-400">
                 Prasetyo
               </span>
             </h1>
-            <p className="text-base sm:text-lg font-semibold text-brand dark:text-blue-400">
+            <p className="text-base sm:text-lg font-bold text-ink">
               {t("hero.roles")}
             </p>
           </Parallax>
 
-          <Parallax speed={0.02} align="top" className="space-y-5 w-full max-w-xl">
+          <Parallax speed={0.015} align="top" className="space-y-5 w-full max-w-xl">
             <p className="text-sm sm:text-base leading-relaxed text-body">
               {t("hero.desc")}
             </p>
 
-            {/* Quick Tech Highlights Badge Strip */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {["Next.js 16", "TypeScript", "Tailwind CSS", "Figma", "Three.js"].map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-md border border-line bg-surface/80 px-2.5 py-1 text-[11px] font-medium text-body backdrop-blur-xs dark:border-line/60 dark:bg-[#111422]/80"
-                >
-                  {tech}
-                </span>
-              ))}
+            {/* Editorial Metadata Grid (Substance over decorative pills) */}
+            <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-line/70 bg-surface/70 p-3.5 text-xs dark:border-line/50 dark:bg-[#111422]/70">
+              <div>
+                <span className="block text-[11px] font-semibold text-muted">Lokasi Basis</span>
+                <span className="font-bold text-ink">{profile.location}</span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-semibold text-muted">Praktik Lapangan</span>
+                <span className="font-bold text-brand dark:text-blue-400">Sejak 2020 (6+ Tahun)</span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-semibold text-muted">Domain Keahlian</span>
+                <span className="font-bold text-ink">UI/UX & Frontend Web</span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-semibold text-muted">Pendidikan</span>
+                <span className="font-bold text-ink">Informatika UTM (2024)</span>
+              </div>
             </div>
 
-            <div className="text-xs text-body flex flex-wrap items-center gap-x-3 gap-y-1 font-medium pt-1">
-              <span className="font-semibold text-ink">{profile.site.replace("https://", "")}</span>
-              <span aria-hidden="true" className="text-line">•</span>
-              <span>{profile.location}</span>
-              <span aria-hidden="true" className="text-line">•</span>
-              <span className="text-brand dark:text-blue-400">{t("hero.since")}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <SmoothNavLink
+                href="#proyek"
+                className="rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-ink hover:shadow-md"
+              >
+                {t("hero.projectsBtn")} →
+              </SmoothNavLink>
               <SmoothNavLink
                 href="#cv"
-                className="rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-ink hover:shadow-md"
+                className="rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition hover:border-brand/40 dark:border-line dark:bg-[#111422] dark:text-slate-100"
               >
                 {t("hero.cvBtn")}
               </SmoothNavLink>
-              <SmoothNavLink
-                href="#proyek"
-                className="rounded-full border border-line bg-white/90 px-6 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs backdrop-blur-xs transition hover:border-brand/40 dark:border-line dark:bg-[#111422]/90 dark:text-slate-100"
+              <a
+                href={profile.contact.whatsapp}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-body hover:text-ink transition-colors px-2 py-1"
               >
-                {t("hero.projectsBtn")}
-              </SmoothNavLink>
+                WhatsApp
+              </a>
+              <a
+                href="https://github.com/ZekkCode"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-body hover:text-ink transition-colors px-2 py-1"
+              >
+                GitHub
+              </a>
             </div>
           </Parallax>
         </div>
 
-        <div className="relative flex items-center justify-center lg:justify-end">
-          <Parallax speed={-0.05} align="top">
+        {/* Right Column: Disciplined 3D Card Presentation Frame */}
+        <div className="relative flex flex-col items-center justify-center lg:items-end">
+          <div className="w-full max-w-[320px]">
             <ProfileCardStage />
-          </Parallax>
+            <p className="mt-2 text-center text-[11px] font-medium text-muted">
+              Kartu Profil 3D · Sentuh atau gerakkan kursor untuk interaksi
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -147,7 +163,7 @@ function About() {
   const { t } = useTranslation();
 
   return (
-    <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-16 sm:py-24">
+    <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <SectionTitle
         title={t("about.title")}
         desc={t("about.desc")}
@@ -155,7 +171,7 @@ function About() {
 
       <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <Parallax speed={-0.02}>
+          <Parallax speed={-0.015}>
             <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
               {profile.bio.map((par) => (
                 <p key={par.slice(0, 24)}>{par}</p>
@@ -163,11 +179,11 @@ function About() {
             </div>
           </Parallax>
 
-          {/* Rich Stats Cards Grid with Glow on Hover */}
-          <Parallax speed={0.02}>
+          {/* Grounded Metric Cards */}
+          <Parallax speed={0.015}>
             <div className="mt-8">
               <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">
-                Rekam Jejak & Pengalaman
+                Rekam Jejak & Pengalaman Terverifikasi
               </h4>
               <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {profile.stats.map((stat, idx) => {
@@ -175,7 +191,7 @@ function About() {
                   return (
                     <div
                       key={stat.label}
-                      className="group relative overflow-hidden rounded-2xl border border-line/80 bg-white/90 p-4 shadow-2xs backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]/90"
+                      className="group relative overflow-hidden rounded-2xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
                     >
                       <dt className="sr-only">{stat.label}</dt>
                       <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
@@ -196,8 +212,8 @@ function About() {
           <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-brand dark:text-blue-400">
             {t("about.expTitle")}
           </h3>
-          <Parallax speed={0.04}>
-            <ol className="space-y-5 border-l border-line/70 pl-5 dark:border-line/40">
+          <Parallax speed={0.03}>
+            <ol className="space-y-6 border-l border-line/70 pl-5 dark:border-line/40">
               {profile.experience.map((item) => (
                 <li key={item.org} className="relative group">
                   <span
@@ -226,34 +242,110 @@ function Stack() {
   const { t } = useTranslation();
   const duplicatedStack = [...profile.stack, ...profile.stack];
 
+  const disciplines = [
+    {
+      category: "UI/UX & Desain Produk",
+      desc: "Perancangan sistem antarmuka, wireframing, dan prototipe interaktif.",
+      tools: ["Figma", "Adobe XD"],
+      skills: ["Design System", "User Flows", "Interactive Prototype", "Autolayout"],
+    },
+    {
+      category: "Rekayasa Web Frontend",
+      desc: "Implementasi antarmuka performa tinggi, aksesibilitas, dan tipe data ketat.",
+      tools: ["Next.js", "React", "TypeScript", "TailwindCSS"],
+      skills: ["App Router", "State Synchronization", "Fluid Styling", "GSAP & Lenis"],
+    },
+    {
+      category: "Interaksi 3D & Visual Kreatif",
+      desc: "Eksplorasi canvas Three.js, aset grafis vektor, dan visual pendukung.",
+      tools: ["Illustrator", "Photoshop", "CapCut", "Filmora"],
+      skills: ["Three.js WebGL", "Vector Branding", "Raster Assets", "Motion Teaser"],
+    },
+    {
+      category: "Arsitektur Sistem & Perangkat",
+      desc: "Manajemen repositori, query basis data relasional, dan integrasi API.",
+      tools: ["MySQL", "GitHub"],
+      skills: ["Git Versioning", "Relational Schema", "Python Scripts", "IT Support"],
+    },
+  ];
+
   return (
-    <section id="stack" className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-20 sm:py-28 overflow-hidden">
-      <div className="mx-auto max-w-5xl">
-        <SectionTitle
-          title={t("stack.title")}
-          desc={t("stack.desc")}
-        />
+    <section id="stack" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <SectionTitle
+        title={t("stack.title")}
+        desc={t("stack.desc")}
+      />
+
+      {/* Discipline-Grouped Taxonomy Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 mb-8">
+        {disciplines.map((item) => (
+          <div
+            key={item.category}
+            className="rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
+          >
+            <h3 className="font-display text-base font-bold text-ink">
+              {item.category}
+            </h3>
+            <p className="mt-1 text-xs text-body leading-relaxed">
+              {item.desc}
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {item.tools.map((toolName) => {
+                const tool = profile.stack.find((s) => s.name === toolName);
+                if (!tool) return null;
+                return (
+                  <span
+                    key={tool.name}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-xs font-semibold text-ink dark:border-line/60 dark:bg-slate-900"
+                  >
+                    <Image
+                      src={tool.icon}
+                      alt={tool.name}
+                      width={16}
+                      height={16}
+                      className="size-4 shrink-0 object-contain"
+                    />
+                    <span>{tool.name}</span>
+                  </span>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line/50 pt-3 dark:border-line/30">
+              {item.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800/80 dark:text-slate-400"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <Parallax speed={0.03} className="relative mt-4 w-full overflow-hidden py-4">
-        {/* Left & Right gradient fade masks */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
+      {/* Seamless Ribbon Ticker */}
+      <Parallax speed={0.02} className="relative w-full overflow-hidden rounded-2xl border border-line/60 bg-surface/60 py-3 dark:border-line/40 dark:bg-[#111422]/60">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
 
-        <div className="animate-marquee flex items-center gap-4 py-2">
+        <div className="animate-marquee flex items-center gap-3">
           {duplicatedStack.map((tool, idx) => (
             <div
               key={`${tool.name}-${idx}`}
-              className="flex shrink-0 items-center gap-3 rounded-full border border-line bg-white/95 px-4 py-2.5 text-sm font-semibold text-ink shadow-2xs dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-200"
+              aria-hidden={idx >= profile.stack.length ? "true" : undefined}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-ink shadow-2xs dark:border-line/60 dark:bg-[#151928] dark:text-slate-200"
             >
               <Image
                 src={tool.icon}
                 alt={tool.name}
-                width={22}
-                height={22}
-                className="size-5.5 shrink-0 object-contain"
+                width={18}
+                height={18}
+                className="size-4 shrink-0 object-contain"
               />
-              <span className="whitespace-nowrap font-medium tracking-tight">
+              <span className="whitespace-nowrap font-medium">
                 {tool.name}
               </span>
             </div>
@@ -268,8 +360,8 @@ function Contact() {
   const { t } = useTranslation();
 
   return (
-    <section id="kontak" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
-      <Parallax speed={0.03} className="w-full">
+    <section id="kontak" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <Parallax speed={0.02} className="w-full">
         <div className="relative overflow-hidden rounded-3xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
           <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
             {/* KIRI: Lanyard 3D Stage */}
@@ -283,7 +375,7 @@ function Contact() {
               </div>
 
               <div className="relative my-auto flex items-center justify-center py-4">
-                <LanyardStage className="h-[440px] sm:h-[500px] lg:h-[520px]" />
+                <LanyardStage className="h-[400px] sm:h-[460px] lg:h-[480px]" />
               </div>
 
               <div className="border-t border-line/50 pt-3 text-center text-xs text-body dark:border-line/30">
@@ -303,7 +395,7 @@ function Contact() {
                   <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
                     {t("contact.title")}
                   </h2>
-                  <p className="mt-3 text-base leading-relaxed text-body">
+                  <p className="mt-3 text-sm leading-relaxed text-body">
                     {t("contact.desc")}
                   </p>
                 </div>
@@ -399,33 +491,8 @@ function Footer() {
 }
 
 export default function Home() {
-  const { resolvedTheme } = useTheme();
-  const mounted = useMounted();
-  const isDark = mounted && resolvedTheme === "dark";
-
   return (
     <>
-      <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
-        <ShapeGrid
-          shape="square"
-          direction="diagonal"
-          lineColor={isDark ? "#202638" : "#dcdce8"}
-          hoverColor={isDark ? "#3b82f6" : "#1b45c4"}
-          hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
-          fillOpacity={isDark ? 0.18 : 0.1}
-          cellSize={40}
-          speed={0.22}
-          lineWidth={1}
-          radius={1.5}
-          trail={0.55}
-          glow={isDark ? 0.38 : 0.22}
-          fade={1}
-          clickCascade
-          intro
-        />
-        {/* Lapisan peredam gradien ambient */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(238,242,255,0.35),rgba(255,255,255,0.5)_70%)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(30,41,59,0.3),rgba(8,9,14,0.65)_70%)] pointer-events-none" />
-      </div>
       <Header />
       <PortfolioPillNav />
       <main>
@@ -440,4 +507,3 @@ export default function Home() {
     </>
   );
 }
-

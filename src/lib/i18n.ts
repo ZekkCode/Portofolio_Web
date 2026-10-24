@@ -16,17 +16,6 @@ if (!i18n.isInitialized) {
     fallbackLng: "id",
     interpolation: { escapeValue: false },
   });
-
-  if (typeof window !== "undefined") {
-    try {
-      const saved = window.localStorage.getItem(LANG_KEY);
-      if (saved === "en" || saved === "id") {
-        void i18n.changeLanguage(saved);
-      }
-    } catch {
-      // ignore
-    }
-  }
 }
 
 export const setLanguage = (lang: "id" | "en") => {
@@ -37,6 +26,16 @@ export const setLanguage = (lang: "id" | "en") => {
     } catch {
       // ignore
     }
+  }
+};
+
+export const getSavedLanguage = (): "id" | "en" => {
+  if (typeof window === "undefined") return "id";
+  try {
+    const saved = window.localStorage.getItem(LANG_KEY);
+    return saved === "en" ? "en" : "id";
+  } catch {
+    return "id";
   }
 };
 

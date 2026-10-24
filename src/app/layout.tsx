@@ -211,13 +211,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable}`}>
-      <body className="antialiased">
+      <head>
         <script
-          id="structured-data"
           type="application/ld+json"
-          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+      </head>
+      <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <SmoothScroll>{children}</SmoothScroll>
         </ThemeProvider>

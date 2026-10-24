@@ -56,6 +56,10 @@ export type Project = {
   desc: string;
   tags: string[];
   repo: string;
+  role?: string;
+  problem?: string;
+  highlight?: string;
+  outcome?: string;
 };
 
 export type SiteConfig = {
@@ -117,6 +121,10 @@ export const defaultProjects: Project[] = profile.projects.map((project, index) 
   desc: project.desc,
   tags: [...project.tags],
   repo: project.repo,
+  role: project.role,
+  problem: project.problem,
+  highlight: project.highlight,
+  outcome: project.outcome,
 }));
 
 export const defaultSiteConfig: SiteConfig = {
@@ -148,13 +156,20 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   const projects = Array.isArray(raw.projects)
     ? raw.projects
         .filter((item) => item && typeof item.title === "string")
-        .map((item, index) => ({
-          id: item.id || `project-${index + 1}`,
-          title: item.title,
-          desc: item.desc ?? "",
-          tags: Array.isArray(item.tags) ? item.tags : [],
-          repo: item.repo ?? "",
-        }))
+        .map((item, index) => {
+          const fallback = defaultProjects[index] || defaultProjects[0];
+          return {
+            id: item.id || `project-${index + 1}`,
+            title: item.title,
+            desc: item.desc ?? "",
+            tags: Array.isArray(item.tags) ? item.tags : [],
+            repo: item.repo ?? "",
+            role: item.role ?? fallback?.role,
+            problem: item.problem ?? fallback?.problem,
+            highlight: item.highlight ?? fallback?.highlight,
+            outcome: item.outcome ?? fallback?.outcome,
+          };
+        })
     : defaultProjects;
   return { lanyard, profileCard, projects: projects.length ? projects : defaultProjects };
 };

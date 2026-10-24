@@ -1,8 +1,7 @@
-"use client";
-
+import { useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
-import { setLanguage } from "@/lib/i18n";
+import { getSavedLanguage, setLanguage } from "@/lib/i18n";
 import { useMounted } from "@/lib/use-mounted";
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
@@ -70,6 +69,13 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
 export function LanguageToggle({ className = "" }: { className?: string }) {
   const { i18n } = useTranslation();
   const mounted = useMounted();
+
+  useEffect(() => {
+    const saved = getSavedLanguage();
+    if (saved && !i18n.language?.startsWith(saved)) {
+      void i18n.changeLanguage(saved);
+    }
+  }, [i18n]);
 
   const currentLang = mounted ? (i18n.language?.startsWith("en") ? "en" : "id") : "id";
 

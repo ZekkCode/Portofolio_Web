@@ -44,6 +44,16 @@ export function PortfolioPillNav() {
   const mounted = useMounted();
   const activeSection = useActiveSection();
   const scrollTo = useSmoothScrollTo();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 80);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
 
@@ -76,8 +86,12 @@ export function PortfolioPillNav() {
 
   return (
     <>
-      {/* DESKTOP: Floating at bottom center */}
-      <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 md:flex">
+      {/* DESKTOP: Floating at bottom center (reveals when scrolled) */}
+      <div
+        className={`pointer-events-none fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 md:flex transition-all duration-300 ${
+          scrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+        }`}
+      >
         <div className="pointer-events-auto">
           <PillNav
             logo={

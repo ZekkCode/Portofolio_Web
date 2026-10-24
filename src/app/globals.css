@@ -8,16 +8,22 @@
    =========================================================== */
 :root {
   --color-ink: #0a0a14;
-  --color-body: #52526b;
-  --color-line: #dcdce8;
+  --color-body: #4b5263;
+  --color-muted: #64748b;
+  --color-line: #e2e4ed;
+  --color-surface: #f8fafc;
   --bg-page: #ffffff;
+  --bg-section-alt: #f8fafc;
 }
 
 .dark {
   --color-ink: #f8fafc;
   --color-body: #94a3b8;
-  --color-line: #262e40;
+  --color-muted: #64748b;
+  --color-line: #202738;
+  --color-surface: #0e121d;
   --bg-page: #08090e;
+  --bg-section-alt: #0b0e17;
 }
 
 @theme {
@@ -26,7 +32,9 @@
 
   --color-ink: var(--color-ink);
   --color-body: var(--color-body);
+  --color-muted: var(--color-muted);
   --color-line: var(--color-line);
+  --color-surface: var(--color-surface);
   --color-brand: #1b45c4;
   --color-brand-light: #2f6fe0;
   --color-brand-ink: #123a9e;
@@ -43,7 +51,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   ::selection {
@@ -70,46 +78,36 @@
   animation-play-state: paused;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-marquee {
-    animation: none;
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-
-
 /* ===========================================================
-   GRID BACKGROUND: CSS only, tanpa canvas
+   ENTRANCE & SCROLL REVEAL ANIMATIONS
    =========================================================== */
-.grid-bg {
-  position: fixed;
-  inset: -1px;
-  z-index: -1;
-  pointer-events: none;
-  background-color: var(--bg-page);
-  background-image:
-    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
-  background-size: var(--grid-size, 24px) var(--grid-size, 24px);
-  animation: grid-drift 22s linear infinite;
-}
-
-.grid-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, transparent 55%, var(--bg-page) 100%);
-}
-
-@keyframes grid-drift {
-  from { background-position: 0 0, 0 0; }
-  to {
-    background-position: var(--grid-size, 24px) var(--grid-size, 24px),
-      var(--grid-size, 24px) var(--grid-size, 24px);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Scroll reveal utility classes */
+.reveal-item {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-item.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ===========================================================
@@ -117,9 +115,20 @@
    =========================================================== */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .grid-bg { animation: none; }
-}
-
-@media (max-width: 620px) {
-  .grid-bg { --grid-size: 18px; }
+  .animate-marquee {
+    animation: none;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .reveal-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .animate-fade-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

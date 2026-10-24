@@ -94,7 +94,7 @@ export function PortfolioPillNav() {
             itemStyle="plain"
             hoverEffect="glide"
             indicator="pill"
-            surface="glass"
+            surface="solid"
             theme={navTheme}
             size="md"
             highlightColor="#1b45c4"
@@ -115,7 +115,7 @@ export function PortfolioPillNav() {
           activeHref={activeSection}
           onItemClick={handleItemClick}
           collapse="always"
-          surface="glass"
+          surface="solid"
           theme={navTheme}
           size="md"
           highlightColor="#1b45c4"

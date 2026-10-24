@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { profile } from "@/lib/profile";
 import "./globals.css";
 
-const fontDisplay = Plus_Jakarta_Sans({
+const fontDisplay = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  weight: ["700", "800"],
+  weight: ["500", "700"],
 });
 
 const fontBody = Plus_Jakarta_Sans({

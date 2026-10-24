@@ -110,7 +110,6 @@ export function CvFolderSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleKey>("all");
   const [folderMode, setFolderMode] = useState<"flap" | "book">("flap");
-  const [folderVariant, setFolderVariant] = useState<"solid" | "glass">("glass");
   const [isFolderOpen, setIsFolderOpen] = useState(true);
 
   const isDark = mounted && resolvedTheme === "dark";
@@ -151,30 +150,12 @@ export function CvFolderSection() {
       />
 
       {/* Main Interactive Stage Box */}
-      <div className="relative mt-8 overflow-hidden rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-10 shadow-xs backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/90">
-        {/* Decorative Grid Lines */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
-          style={{
-            backgroundImage: "radial-gradient(#0a0a14 1px, transparent 1px)",
-            backgroundSize: "20px 20px",
-          }}
-          aria-hidden="true"
-        />
-
+      <div className="relative mt-8 overflow-hidden rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-10 shadow-xs dark:border-line/60 dark:bg-[#111422]/90">
         {/* Top Controls Bar */}
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pb-5 dark:border-line/40">
-          <div className="flex items-center gap-2 rounded-full border border-line/80 bg-white/90 px-3.5 py-1.5 shadow-2xs backdrop-blur-xs dark:border-line/50 dark:bg-[#191e32]">
-            <span
-              className={`size-2 rounded-full transition-colors ${
-                isFolderOpen ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-              }`}
-              aria-hidden="true"
-            />
-            <p className="text-xs font-semibold text-ink">
-              {t("cv.badge")}
-            </p>
-            <span className="hidden sm:inline text-xs text-body">
+          <div className="flex items-center gap-2 text-xs font-semibold text-ink">
+            <span>{t("cv.badge")}</span>
+            <span className="hidden sm:inline font-normal text-body">
               {t("cv.instruction")}
             </span>
           </div>
@@ -185,7 +166,7 @@ export function CvFolderSection() {
               <button
                 type="button"
                 onClick={() => setFolderMode("flap")}
-                className={`rounded-full px-2.5 py-1 text-xs transition ${
+                className={`rounded-full px-3 py-1 text-xs transition ${
                   folderMode === "flap"
                     ? "bg-brand text-white font-semibold shadow-xs"
                     : "hover:text-ink"
@@ -196,39 +177,13 @@ export function CvFolderSection() {
               <button
                 type="button"
                 onClick={() => setFolderMode("book")}
-                className={`rounded-full px-2.5 py-1 text-xs transition ${
+                className={`rounded-full px-3 py-1 text-xs transition ${
                   folderMode === "book"
                     ? "bg-brand text-white font-semibold shadow-xs"
                     : "hover:text-ink"
                 }`}
               >
                 Buku
-              </button>
-            </div>
-
-            {/* Variant Switch: Glass vs Solid */}
-            <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
-              <button
-                type="button"
-                onClick={() => setFolderVariant("glass")}
-                className={`rounded-full px-2.5 py-1 text-xs transition ${
-                  folderVariant === "glass"
-                    ? "bg-brand text-white font-semibold shadow-xs"
-                    : "hover:text-ink"
-                }`}
-              >
-                Kaca
-              </button>
-              <button
-                type="button"
-                onClick={() => setFolderVariant("solid")}
-                className={`rounded-full px-2.5 py-1 text-xs transition ${
-                  folderVariant === "solid"
-                    ? "bg-brand text-white font-semibold shadow-xs"
-                    : "hover:text-ink"
-                }`}
-              >
-                Solid
               </button>
             </div>
 
@@ -262,7 +217,7 @@ export function CvFolderSection() {
               label="CV / Zekk"
               color={isDark ? "#2563eb" : "#1b45c4"}
               mode={folderMode}
-              variant={folderVariant}
+              variant="glass"
               open={isFolderOpen}
               onOpenChange={setIsFolderOpen}
               size={1.25}

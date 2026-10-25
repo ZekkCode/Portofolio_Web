@@ -10,6 +10,7 @@ interface ProfileCardProps {
   radius?: number; holo?: number; glare?: number; enableTilt?: boolean;
   tiltStrength?: number; parallax?: number; enableMobileTilt?: boolean;
   mobileTiltSensitivity?: number; intro?: boolean; className?: string;
+  imageFit?: 'cover' | 'contain';
 }
 interface Engine { aim:(nx:number,ny:number,on?:boolean)=>void; release:()=>void; write:()=>void; }
 type OrientationPermission = { requestPermission?: () => Promise<PermissionState> };
@@ -32,7 +33,7 @@ const HOLO_STYLE:CSSProperties={backgroundImage:`${SPECTRUM},${BARS},${FALLOFF}`
 const GLOW_STYLE:CSSProperties={backgroundImage:'linear-gradient(45deg,hsl(176,100%,76%),hsl(228,100%,74%),hsl(260,100%,76%),hsl(2,100%,73%),hsl(53,100%,69%),hsl(93,100%,69%)),radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsl(0,0%,70%) 0%,hsla(0,0%,30%,0.2) 90%),var(--pc-grain)',backgroundSize:'250% 250%,100% 100%,220px 220px',backgroundPosition:'var(--pc-pointer-x) var(--pc-pointer-y),center,0 0',backgroundBlendMode:'color-dodge',filter:'brightness(calc(2 - var(--pc-reach))) contrast(calc(var(--pc-reach) + 2)) saturate(calc(0.5 + var(--pc-reach)))',mixBlendMode:'luminosity',opacity:'calc(var(--pc-active) * var(--pc-holo-detail))'};
 const SHIFT_STYLE:CSSProperties={backgroundImage:`${SPECTRUM},${BARS},${FALLOFF}`,backgroundPosition:'0 var(--pc-band-y),calc(var(--pc-band-x) * 0.4) calc(var(--pc-band-y) * 0.5),center',backgroundSize:'200% 300%,700% 700%,100% 100%',backgroundBlendMode:'color,hard-light',mixBlendMode:'difference',filter:'brightness(0.8) contrast(1.5)',opacity:'calc(var(--pc-active) * var(--pc-holo-detail))'};
 const PHOTO_STYLE:CSSProperties={inset:'calc(var(--pc-parallax) * -1)',width:'calc(100% + var(--pc-parallax) * 2)',height:'calc(100% + var(--pc-parallax) * 2)',transform:'translate3d(var(--pc-shift-x),var(--pc-shift-y),0)'};
-const SCRIM_STYLE:CSSProperties={background:'linear-gradient(to top,rgba(0,0,0,0.6) 0%,rgba(0,0,0,0.57) 6%,rgba(0,0,0,0.5) 12%,rgba(0,0,0,0.4) 19%,rgba(0,0,0,0.28) 26%,rgba(0,0,0,0.16) 33%,rgba(0,0,0,0.07) 40%,rgba(0,0,0,0.02) 46%,rgba(0,0,0,0) 52%)'};
+const SCRIM_STYLE:CSSProperties={background:'linear-gradient(to top,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.57) 12%,rgba(0,0,0,0.4) 22%,rgba(0,0,0,0.18) 35%,rgba(0,0,0,0) 55%)'};
 const GLARE_STYLE:CSSProperties={background:'radial-gradient(farthest-corner circle at var(--pc-light-x) var(--pc-light-y),rgba(255,255,255,0.8) 0%,rgba(255,255,255,0.36) 20%,rgba(255,255,255,0) 60%)',opacity:'calc(var(--pc-glare) * var(--pc-active))'};
 const SHADE_STYLE:CSSProperties={background:'radial-gradient(farthest-corner circle at var(--pc-light-x) var(--pc-light-y),transparent 30%,var(--pc-shade) 100%)',opacity:'calc(var(--pc-glare) * var(--pc-tilt))'};
 const LAYER='pointer-events-none absolute inset-0 rounded-[inherit]';
@@ -41,8 +42,7 @@ const BODY='relative flex flex-col gap-[10px] rounded-[calc(var(--pc-radius)+10p
 const TILE='relative isolate aspect-[4/5] overflow-hidden rounded-[var(--pc-radius)] [background:var(--pc-backdrop)] [box-shadow:var(--pc-tile-shadow)]';
 const HOLO=`${LAYER} [mix-blend-mode:var(--pc-blend)]`;
 const HOLO_LAYER='absolute inset-0';
-const PHOTO='pointer-events-none absolute select-none object-cover object-bottom';
-const INFO='absolute bottom-[18px] left-5 right-5 text-white';
+const INFO='absolute bottom-[18px] left-5 right-5 text-white z-[6]';
 const NAME='m-0 text-[20px] font-semibold leading-[1.25] tracking-[-0.01em] text-[inherit]';
 const TITLE='mx-0 mb-0 mt-1 text-[14px] leading-[1.45] text-white/78';
 const TILE_RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight)]`;
@@ -58,7 +58,7 @@ const RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-frame-edge),inset_0_1px
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
 const isDark=(color:string):boolean|null=>{const match=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color).trim());if(!match)return null;const hex=match[1].length===3?match[1].replace(/./g,d=>d+d):match[1];const[r,g,b]=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255);return 0.2126*r+0.7152*g+0.0722*b<0.5;};
 
-const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,name='Javi A. Torres',title='Software Engineer',handle='javicodes',status='Online',statusColor='#22c55e',contactText='Contact',showUserInfo=true,onContactClick,theme='dark',backdropColor,radius=16,holo=0.8,glare=0.5,enableTilt=true,tiltStrength=12,parallax=8,enableMobileTilt=false,mobileTiltSensitivity=5,intro=true,className=''}:ProfileCardProps)=>{
+const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='Javi A. Torres',title='Software Engineer',handle='zekksparow',status='Online',statusColor='#22c55e',contactText='Contact',showUserInfo=true,onContactClick,theme='dark',backdropColor,radius=16,holo=0.8,glare=0.5,enableTilt=true,tiltStrength=12,parallax=8,enableMobileTilt=false,mobileTiltSensitivity=5,intro=true,className=''}:ProfileCardProps)=>{
   const rootRef=useRef<HTMLDivElement>(null);
   const engineRef=useRef<Engine|null>(null);
   const settings = { enableTilt, tiltStrength, parallax, mobileTiltSensitivity, intro };
@@ -146,14 +146,43 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,name='Javi A. Torres',tit
           <span className={LAYER} style={SHEEN_STYLE}/>
           <span className={HOLO} style={HOLO_STYLE}><span className={HOLO_LAYER} style={GLOW_STYLE}/><span className={HOLO_LAYER} style={SHIFT_STYLE}/></span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {avatarUrl&&<img className={PHOTO} style={PHOTO_STYLE} src={avatarUrl} alt={name||''} loading="lazy" draggable={false}/>}
+          {avatarUrl ? (
+            <img
+              className={`pointer-events-none absolute select-none ${
+                imageFit === 'contain'
+                  ? 'h-full w-full object-contain object-center p-3'
+                  : 'h-full w-full object-cover object-top'
+              }`}
+              style={PHOTO_STYLE}
+              src={avatarUrl}
+              alt={name||''}
+              loading="lazy"
+              draggable={false}
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center select-none z-[5]">
+              <div className="flex size-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md shadow-inner text-2xl font-black tracking-widest text-white shadow-2xs">
+                {name ? name.split(' ').map((n) => n[0]).slice(0, 2).join('') : 'ZK'}
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1 text-[11px] font-semibold text-white/80 backdrop-blur-xs">
+                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>DEVELOPER BADGE</span>
+              </div>
+            </div>
+          )}
           {(name||title)&&(<><span className={LAYER} style={SCRIM_STYLE}/><div className={INFO}>{name&&<h3 className={NAME}>{name}</h3>}{title&&<p className={TITLE}>{title}</p>}</div></>)}
           <span className={TILE_RIM}/>
         </div>
         {showUserInfo&&(
           <div className={FOOTER}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {miniAvatarUrl&&<span className={AVATAR}><img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/></span>}
+            {miniAvatarUrl ? (
+              <span className={AVATAR}><img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/></span>
+            ) : (
+              <span className="relative flex size-9 flex-none items-center justify-center rounded-full bg-brand/20 border border-brand/40 text-xs font-bold text-brand dark:text-blue-400">
+                {name ? name.charAt(0) : 'Z'}
+              </span>
+            )}
             <div className={META}>{handle&&<span className={HANDLE}>@{handle}</span>}{status&&<span className={STATUS}>{status}</span>}</div>
             {contactText&&<button type="button" className={CONTACT} onClick={onContactClick} aria-label={name?`${contactText} ${name}`:contactText}><MailIcon />{contactText}</button>}
           </div>

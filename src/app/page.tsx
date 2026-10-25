@@ -16,22 +16,29 @@ import { usePageViews } from "@/lib/use-page-views";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import { profile } from "@/lib/profile";
+import { useSiteConfig } from "@/lib/site-store";
 
 function Header() {
   const { t } = useTranslation();
   const { views } = usePageViews();
+  const { headerLogoUrl } = useSiteConfig();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur-md dark:border-line dark:bg-[#08090e]/95">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-5">
         <SmoothNavLink href="#atas" className="flex items-center gap-2.5">
-          <Image
-            src={profile.avatar}
-            alt={profile.brand}
-            width={30}
-            height={30}
-            className="size-7.5 rounded-full object-cover border border-brand/30 shadow-2xs"
-          />
+          {headerLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={headerLogoUrl}
+              alt={profile.brand}
+              className="size-7.5 rounded-full object-cover border border-brand/30 shadow-2xs"
+            />
+          ) : (
+            <div className="flex size-7.5 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-ink text-xs font-black tracking-wider text-white shadow-2xs">
+              {profile.brand ? profile.brand.charAt(0) : "Z"}
+            </div>
+          )}
           <span className="font-display text-base font-bold tracking-tight text-ink">
             {profile.brand}
           </span>

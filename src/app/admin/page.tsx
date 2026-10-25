@@ -255,15 +255,23 @@ function ProfileCardPreview({ config }: { config: ProfileCardConfig }) {
       avatarUrl={config.avatarUrl || undefined}
       iconUrl={config.iconUrl || undefined}
       miniAvatarUrl={config.miniAvatarUrl || undefined}
+      imageFit={config.imageFit || "contain"}
       backdropColor={config.backdropColor || undefined}
     />
   );
 }
 
 
-function ProfileCardTab({ config, inputClass, setProfileCard }: {
-  config: SiteConfig; inputClass: string;
+function ProfileCardTab({
+  config,
+  inputClass,
+  setProfileCard,
+  setHeaderLogoUrl,
+}: {
+  config: SiteConfig;
+  inputClass: string;
   setProfileCard: (key: keyof ProfileCardConfig, value: unknown) => void;
+  setHeaderLogoUrl: (value: string) => void;
 }) {
   const pc = config.profileCard;
   const F = Control;
@@ -275,6 +283,103 @@ function ProfileCardTab({ config, inputClass, setProfileCard }: {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div className="space-y-5">
         <section className="rounded-2xl border border-line bg-white/85 p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
+              Logo Header (Navbar)
+            </h2>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+              Terpisah dari Hero
+            </span>
+          </div>
+          <p className="mb-3 text-xs leading-relaxed text-body">
+            Foto atau ikon logo brand yang tampil di sudut kiri atas navbar header situs.
+            Jika dihapus atau dikosongkan, navbar akan otomatis menampilkan badge inisial brand secara rapi tanpa foto statis.
+          </p>
+          <div className="pt-2">
+            <F
+              field={{
+                key: K,
+                label: "Foto Logo Header",
+                kind: "image",
+                hint: "Rasio 1:1 persegi atau lingkaran (mis. 200×200)",
+              }}
+              value={config.headerLogoUrl}
+              onChange={(v) => setHeaderLogoUrl(String(v))}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-white/85 p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
+              Foto Hero (Profile Card)
+            </h2>
+            <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
+              Kartu 3D Hero
+            </span>
+          </div>
+          <p className="mb-3 text-xs leading-relaxed text-body">
+            Foto potret utama di kartu 3D hero. Jika dihapus (klik tombol Hapus), kartu akan otomatis beralih ke &quot;DEVELOPER BADGE&quot; monokromatik modern yang bersih dan minimalis tanpa foto.
+          </p>
+          <div className="divide-y divide-line/70">
+            <div className="py-2">
+              <F
+                field={{
+                  key: K,
+                  label: "Foto Avatar Hero",
+                  kind: "image",
+                  hint: "Foto potret diri / ilustrasi",
+                }}
+                value={pc.avatarUrl}
+                onChange={(v) => setProfileCard("avatarUrl", v)}
+              />
+            </div>
+            <div className="py-2.5">
+              <label className="flex items-center justify-between gap-4 py-1.5">
+                <div>
+                  <span className="text-sm font-medium text-ink">Kerapian / Fit Foto Hero</span>
+                  <p className="text-[11px] text-body">
+                    Pilih &apos;contain&apos; agar foto tidak terlalu zoom dan tidak terpotong.
+                  </p>
+                </div>
+                <select
+                  value={pc.imageFit || "contain"}
+                  onChange={(e) => setProfileCard("imageFit", e.target.value)}
+                  className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink outline-none focus:border-brand"
+                >
+                  <option value="contain">Contain (Rapi, Utuh, Tidak Terpotong)</option>
+                  <option value="cover">Cover (Penuh / Zoom)</option>
+                </select>
+              </label>
+            </div>
+            <div className="py-2">
+              <F
+                field={{
+                  key: K,
+                  label: "Icon Pattern Hologram",
+                  kind: "image",
+                  hint: "Pola motif hologram watermark kartu",
+                }}
+                value={pc.iconUrl}
+                onChange={(v) => setProfileCard("iconUrl", v)}
+              />
+            </div>
+            <div className="py-2">
+              <F
+                field={{
+                  key: K,
+                  label: "Mini Avatar (Footer Kartu)",
+                  kind: "image",
+                  hint: "Kosongkan untuk menampilkan inisial",
+                }}
+                value={pc.miniAvatarUrl}
+                onChange={(v) => setProfileCard("miniAvatarUrl", v)}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-white/85 p-5">
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand">Identitas</h2>
           <div className="divide-y divide-line/70">
             {([["name","Nama"],["title","Title / Role"],["handle","Handle (tanpa @)"],["status","Status"],["contactText","Teks tombol"]] as [keyof ProfileCardConfig, string][]).map(([key, label]) => (
@@ -282,14 +387,7 @@ function ProfileCardTab({ config, inputClass, setProfileCard }: {
             ))}
           </div>
         </section>
-        <section className="rounded-2xl border border-line bg-white/85 p-5">
-          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand">Gambar</h2>
-          <div className="divide-y divide-line/70">
-            <div className="py-2"><F field={{key:K,label:"Avatar",kind:"image",hint:"Rasio potret"}} value={pc.avatarUrl} onChange={(v)=>setProfileCard("avatarUrl",v)}/></div>
-            <div className="py-2"><F field={{key:K,label:"Icon pattern",kind:"image",hint:"Pola logo"}} value={pc.iconUrl} onChange={(v)=>setProfileCard("iconUrl",v)}/></div>
-            <div className="py-2"><F field={{key:K,label:"Mini avatar",kind:"image",hint:"Kosong=hidden"}} value={pc.miniAvatarUrl} onChange={(v)=>setProfileCard("miniAvatarUrl",v)}/></div>
-          </div>
-        </section>
+
         <section className="rounded-2xl border border-line bg-white/85 p-5">
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand">Tampilan</h2>
           <div className="divide-y divide-line/70">
@@ -300,6 +398,7 @@ function ProfileCardTab({ config, inputClass, setProfileCard }: {
             <div className="py-2"><F field={{key:T,label:"Footer info",kind:"toggle"}} value={pc.showUserInfo} onChange={(v)=>setProfileCard("showUserInfo",v)}/></div>
           </div>
         </section>
+
         <section className="rounded-2xl border border-line bg-white/85 p-5">
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand">Efek</h2>
           <div className="divide-y divide-line/70">
@@ -342,6 +441,9 @@ export default function AdminPage() {
 
   const setLanyard = (key: keyof LanyardConfig, value: unknown) =>
     setDraft({ ...config, lanyard: { ...config.lanyard, [key]: value } });
+
+  const setHeaderLogoUrl = (value: string) =>
+    setDraft({ ...config, headerLogoUrl: value });
 
   const setProfileCard = (key: keyof ProfileCardConfig, value: unknown) =>
     setDraft({ ...config, profileCard: { ...config.profileCard, [key]: value } });
@@ -475,7 +577,7 @@ export default function AdminPage() {
               {item === "lanyard"
                 ? "Lanyard"
                 : item === "profileCard"
-                ? "Profile Card"
+                ? "Header & Profile Card"
                 : item === "proyek"
                 ? "Proyek"
                 : "Berkas CV / PDF"}
@@ -525,7 +627,12 @@ export default function AdminPage() {
             </div>
           </div>
         ) : tab === "profileCard" ? (
-          <ProfileCardTab config={config} inputClass={inputClass} setProfileCard={setProfileCard} />
+          <ProfileCardTab
+            config={config}
+            inputClass={inputClass}
+            setProfileCard={setProfileCard}
+            setHeaderLogoUrl={setHeaderLogoUrl}
+          />
         ) : (
           <div className="space-y-4">
             {config.projects.map((project, index) => (

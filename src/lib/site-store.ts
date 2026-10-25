@@ -30,6 +30,7 @@ export type ProfileCardConfig = {
   avatarUrl: string;
   iconUrl: string;
   miniAvatarUrl: string;
+  imageFit?: "cover" | "contain";
   name: string;
   title: string;
   handle: string;
@@ -74,6 +75,7 @@ export type CvDocConfig = {
 };
 
 export type SiteConfig = {
+  headerLogoUrl: string;
   lanyard: LanyardConfig;
   profileCard: ProfileCardConfig;
   projects: Project[];
@@ -104,9 +106,10 @@ export const defaultLanyard: LanyardConfig = {
 };
 
 export const defaultProfileCard: ProfileCardConfig = {
-  avatarUrl: "/profile.webp",
+  avatarUrl: "",
   iconUrl: "",
-  miniAvatarUrl: "/profile.webp",
+  miniAvatarUrl: "",
+  imageFit: "contain",
   name: profile.name,
   title: profile.roles,
   handle: "zekksparow",
@@ -183,6 +186,7 @@ export const defaultCvDocs: CvDocConfig[] = [
 ];
 
 export const defaultSiteConfig: SiteConfig = {
+  headerLogoUrl: "",
   lanyard: defaultLanyard,
   profileCard: defaultProfileCard,
   projects: defaultProjects,
@@ -197,18 +201,21 @@ const listeners = new Set<() => void>();
 
 export const normalizeConfig = (input: unknown): SiteConfig => {
   const raw = (input ?? {}) as Partial<SiteConfig>;
+  const headerLogoUrl = typeof raw.headerLogoUrl === "string" ? raw.headerLogoUrl : "";
   const rawLanyard = raw.lanyard ? { ...raw.lanyard } : undefined;
   if (rawLanyard && (rawLanyard.size === 0.58 || rawLanyard.size === 0.6)) {
     rawLanyard.size = defaultLanyard.size;
   }
   const lanyard = { ...defaultLanyard, ...(rawLanyard ?? {}) } as LanyardConfig;
-  const profileCard = { ...defaultProfileCard, ...(raw.profileCard ?? {}) } as ProfileCardConfig;
-  if (!profileCard.avatarUrl) {
-    profileCard.avatarUrl = defaultProfileCard.avatarUrl;
-  }
-  if (!profileCard.miniAvatarUrl) {
-    profileCard.miniAvatarUrl = defaultProfileCard.miniAvatarUrl;
-  }
+  const rawProfileCard = (raw.profileCard ?? {}) as Partial<ProfileCardConfig>;
+  const profileCard = {
+    ...defaultProfileCard,
+    ...rawProfileCard,
+    avatarUrl: typeof rawProfileCard.avatarUrl === "string" ? rawProfileCard.avatarUrl : "",
+    miniAvatarUrl: typeof rawProfileCard.miniAvatarUrl === "string" ? rawProfileCard.miniAvatarUrl : "",
+    imageFit: rawProfileCard.imageFit === "cover" ? "cover" : "contain",
+  } as ProfileCardConfig;
+
   const projects = Array.isArray(raw.projects)
     ? raw.projects
         .filter((item) => item && typeof item.title === "string")
@@ -244,7 +251,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       })
     : defaultCvDocs;
 
-  return { lanyard, profileCard, projects: projects.length ? projects : defaultProjects, cvDocs };
+  return { headerLogoUrl, lanyard, profileCard, projects: projects.length ? projects : defaultProjects, cvDocs };
 };
 
 export const readConfig = (): SiteConfig => {

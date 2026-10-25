@@ -8,96 +8,23 @@ import Folder, { type FolderEntry } from "@/components/folder";
 import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-preview-modal";
 import { Parallax } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
+import { useSiteConfig } from "@/lib/site-store";
 
-interface RoleCardProps {
-  roleKey: Exclude<RoleKey, "all">;
-  onOpen: () => void;
-}
-
-function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
-  const detail = ROLE_DETAILS[roleKey];
-
+function DemoWhitePaper({ onClick }: { onClick: () => void }) {
   return (
     <div
       onClick={(e) => {
         e.stopPropagation();
-        onOpen();
+        onClick();
       }}
-      className="relative flex h-full w-full flex-col justify-between overflow-hidden p-3 text-left select-none transition-colors border border-slate-200/70"
+      className="relative h-full w-full rounded-[2px] border border-slate-200/90 bg-white shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer select-none"
       style={{
-        background: "linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%)",
+        background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
       }}
+      title="Buka pratinjau dokumen PDF"
     >
-      {/* Top Accent Stripe */}
-      <div
-        className="absolute top-0 left-0 right-0 h-1.5"
-        style={{ backgroundColor: detail.color }}
-      />
-
-      {/* Header Info */}
-      <div className="pt-1.5">
-        <div className="flex items-center justify-between gap-1">
-          <span className="text-xs font-semibold text-slate-500">
-            Curriculum Vitae
-          </span>
-          <span
-            className="rounded px-2 py-0.5 text-xs font-semibold text-white"
-            style={{ backgroundColor: detail.color }}
-          >
-            {detail.title}
-          </span>
-        </div>
-
-        <div className="mt-2 flex items-center gap-2">
-          <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white font-black text-xs"
-            style={{ backgroundColor: detail.color }}
-          >
-            {detail.title.charAt(0)}
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-bold text-slate-900 leading-tight text-xs truncate">
-              Zakaria Mujur P.
-            </h4>
-            <p className="text-xs font-medium text-slate-500 truncate">
-              {detail.subtitle}
-            </p>
-          </div>
-        </div>
-
-        {/* Mini simulated CV separator */}
-        <div className="my-2 h-px w-full bg-slate-200/80" />
-
-        {/* Skill tags */}
-        <div className="flex flex-wrap gap-1">
-          {detail.tools.slice(0, 3).map((tool) => (
-            <span
-              key={tool}
-              className="rounded bg-slate-100 border border-slate-200/60 px-2 py-0.5 text-xs font-medium text-slate-700 leading-none"
-            >
-              {tool}
-            </span>
-          ))}
-        </div>
-
-        {/* Mini highlight bullet */}
-        <p className="mt-2 text-xs leading-snug text-slate-600 line-clamp-3">
-          {detail.desc}
-        </p>
-      </div>
-
-      {/* Footer Callout */}
-      <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-500">
-          zekktech.biz.id
-        </span>
-        <span
-          className="inline-flex items-center gap-0.5 text-xs font-semibold hover:underline"
-          style={{ color: detail.color }}
-        >
-          Lihat Profil →
-        </span>
-      </div>
+      {/* Lembar kertas putih bersih - tanpa elemen teks/badge bertumpuk */}
+      <div className="absolute inset-2.5 rounded-[1px] border border-slate-100/70 pointer-events-none" />
     </div>
   );
 }
@@ -105,6 +32,7 @@ function RoleCvPaper({ roleKey, onOpen }: RoleCardProps) {
 export function CvFolderSection() {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
+  const { cvDocs } = useSiteConfig();
   const mounted = useMounted();
   const sectionRef = useRef<HTMLElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -139,7 +67,7 @@ export function CvFolderSection() {
   const roleKeys: Exclude<RoleKey, "all">[] = ["graphic", "uiux", "frontend", "itsupport"];
 
   const folderItems: FolderEntry[] = roleKeys.map((key) => ({
-    content: <RoleCvPaper roleKey={key} onOpen={() => openPreview(key)} />,
+    content: <DemoWhitePaper onClick={() => openPreview(key)} />,
   }));
 
   return (
@@ -253,6 +181,10 @@ export function CvFolderSection() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {roleKeys.map((key) => {
               const detail = ROLE_DETAILS[key];
+              const doc = cvDocs.find((d) => d.roleKey === key);
+              const title = doc?.title || detail.title;
+              const subtitle = doc?.subtitle || detail.subtitle;
+              const color = doc?.color || detail.color;
               return (
                 <button
                   key={key}
@@ -263,16 +195,16 @@ export function CvFolderSection() {
                   <div className="flex items-center justify-between">
                     <div
                       className="flex size-7 items-center justify-center rounded-lg text-white font-black text-xs"
-                      style={{ backgroundColor: detail.color }}
+                      style={{ backgroundColor: color }}
                     >
-                      {detail.title.charAt(0)}
+                      {title.charAt(0)}
                     </div>
                     <span className="text-xs font-semibold text-slate-400 group-hover:text-brand transition-colors">
                       {t("cv.viewCv")}
                     </span>
                   </div>
-                  <h4 className="mt-2.5 text-sm font-bold text-ink">{detail.title}</h4>
-                  <p className="mt-0.5 text-xs text-body line-clamp-1">{detail.subtitle}</p>
+                  <h4 className="mt-2.5 text-sm font-bold text-ink">{title}</h4>
+                  <p className="mt-0.5 text-xs text-body line-clamp-1">{subtitle}</p>
                 </button>
               );
             })}

@@ -2254,6 +2254,7 @@ const Folder = ({
   return (
     <div
       ref={rootRef}
+      suppressHydrationWarning
       className={`group/folder relative inline-block align-middle select-none [-webkit-tap-highlight-color:transparent] [&[data-dragging]]:cursor-grabbing [&[data-dragging]_*]:cursor-grabbing! ${className}`.trim()}
       data-mode={book ? 'book' : 'flap'}
       data-variant={variant}

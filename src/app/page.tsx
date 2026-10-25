@@ -10,8 +10,11 @@ import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
 import { SectionTitle } from "@/components/section-title";
+import ShapeGrid from "@/components/shape-grid";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
 import { usePageViews } from "@/lib/use-page-views";
+import { useTheme } from "next-themes";
+import { useMounted } from "@/lib/use-mounted";
 import { profile } from "@/lib/profile";
 
 function Header() {
@@ -491,8 +494,33 @@ function Footer() {
 }
 
 export default function Home() {
+  const { resolvedTheme } = useTheme();
+  const mounted = useMounted();
+  const isDark = mounted && resolvedTheme === "dark";
+
   return (
     <>
+      <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
+        <ShapeGrid
+          shape="square"
+          direction="diagonal"
+          lineColor={isDark ? "#202638" : "#dcdce8"}
+          hoverColor={isDark ? "#3b82f6" : "#1b45c4"}
+          hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
+          fillOpacity={isDark ? 0.18 : 0.1}
+          cellSize={40}
+          speed={0.22}
+          lineWidth={1}
+          radius={1.5}
+          trail={0.55}
+          glow={isDark ? 0.38 : 0.22}
+          fade={1}
+          clickCascade
+          intro
+        />
+        {/* Lapisan peredam gradien ambient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(238,242,255,0.35),rgba(255,255,255,0.5)_70%)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(30,41,59,0.3),rgba(8,9,14,0.65)_70%)] pointer-events-none" />
+      </div>
       <Header />
       <PortfolioPillNav />
       <main>

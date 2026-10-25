@@ -12,8 +12,10 @@ import {
   type LanyardConfig,
   type ProfileCardConfig,
   type Project,
+  type CvDocConfig,
   type SiteConfig,
 } from "@/lib/site-store";
+import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
 
@@ -102,6 +104,14 @@ const readImage = (file: File, max = 1400) =>
       reject(new Error("Gagal membaca gambar"));
     };
     image.src = url;
+  });
+
+const readPdfFile = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Gagal membaca PDF"));
+    reader.readAsDataURL(file);
   });
 
 function Control({
@@ -318,8 +328,10 @@ function ProfileCardTab({ config, inputClass, setProfileCard }: {
 export default function AdminPage() {
   const stored = useSiteConfig();
   const [draft, setDraft] = useState<SiteConfig | null>(null);
-  const [tab, setTab] = useState<"lanyard" | "profileCard" | "proyek">("lanyard");
+  const [tab, setTab] = useState<"lanyard" | "profileCard" | "proyek" | "cv">("lanyard");
   const [status, setStatus] = useState("");
+  const [previewCvModal, setPreviewCvModal] = useState(false);
+  const [previewRole, setPreviewRole] = useState<RoleKey>("frontend");
   const config = draft ?? stored;
 
   useEffect(() => {
@@ -339,6 +351,14 @@ export default function AdminPage() {
       ...config,
       projects: config.projects.map((project) =>
         project.id === id ? { ...project, ...patch } : project
+      ),
+    });
+
+  const setCvDoc = (id: string, patch: Partial<CvDocConfig>) =>
+    setDraft({
+      ...config,
+      cvDocs: (config.cvDocs || []).map((doc) =>
+        doc.id === id ? { ...doc, ...patch } : doc
       ),
     });
 
@@ -441,7 +461,7 @@ export default function AdminPage() {
 
       <main className="mx-auto max-w-6xl px-5 py-8">
         <div className="mb-6 flex items-center gap-2">
-          {(["lanyard", "profileCard", "proyek"] as const).map((item) => (
+          {(["lanyard", "profileCard", "proyek", "cv"] as const).map((item) => (
             <button
               key={item}
               type="button"
@@ -452,7 +472,13 @@ export default function AdminPage() {
                   : "border border-line text-body hover:border-ink/30 hover:text-ink"
               }`}
             >
-              {item === "lanyard" ? "Lanyard" : item === "profileCard" ? "Profile Card" : "Proyek"}
+              {item === "lanyard"
+                ? "Lanyard"
+                : item === "profileCard"
+                ? "Profile Card"
+                : item === "proyek"
+                ? "Proyek"
+                : "Berkas CV / PDF"}
             </button>
           ))}
           {status && <span className="ml-2 text-xs text-brand">{status}</span>}
@@ -570,6 +596,206 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === "cv" && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-line bg-white/90 p-5 sm:p-6 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pb-4">
+                <div>
+                  <h2 className="text-base font-bold text-ink">Konfigurasi Berkas CV & Dokumen PDF</h2>
+                  <p className="text-xs text-body mt-0.5">
+                    Ganti tautan berkas PDF, unggah berkas PDF/gambar halaman, dan atur jumlah halaman yang dapat digeser di modal pratinjau.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewRole("all");
+                    setPreviewCvModal(true);
+                  }}
+                  className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-ink"
+                >
+                  Tes Modal Geser PDF →
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-6 md:grid-cols-2">
+                {(config.cvDocs || []).map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex flex-col justify-between rounded-2xl border border-line/80 bg-slate-50/60 p-5 shadow-2xs"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-line/60 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="size-3.5 rounded-full"
+                            style={{ backgroundColor: doc.color }}
+                          />
+                          <h3 className="font-bold text-sm text-ink">{doc.title}</h3>
+                        </div>
+                        <span className="font-mono text-[11px] text-body">
+                          {doc.roleKey}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block text-xs font-semibold text-body">
+                          Judul Tampilan
+                          <input
+                            value={doc.title}
+                            onChange={(e) => setCvDoc(doc.id, { title: e.target.value })}
+                            className={`${inputClass} mt-1`}
+                          />
+                        </label>
+                        <label className="block text-xs font-semibold text-body">
+                          Warna Aksen
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="color"
+                              value={doc.color}
+                              onChange={(e) => setCvDoc(doc.id, { color: e.target.value })}
+                              className="size-8 rounded-lg border border-line cursor-pointer"
+                            />
+                            <input
+                              value={doc.color}
+                              onChange={(e) => setCvDoc(doc.id, { color: e.target.value })}
+                              className={`${inputClass}`}
+                            />
+                          </div>
+                        </label>
+                      </div>
+
+                      <label className="block text-xs font-semibold text-body">
+                        Sub-Judul / Spesialisasi
+                        <input
+                          value={doc.subtitle}
+                          onChange={(e) => setCvDoc(doc.id, { subtitle: e.target.value })}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+
+                      <label className="block text-xs font-semibold text-body">
+                        Path / URL Berkas PDF (mis. /cv/cv-frontend.pdf atau link online)
+                        <input
+                          value={doc.pdfUrl || ""}
+                          placeholder="Kosongkan untuk memakai demo kertas interaktif"
+                          onChange={(e) => setCvDoc(doc.id, { pdfUrl: e.target.value })}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+
+                      <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                        <div>
+                          <span className="block text-xs font-semibold text-body">Unggah Berkas PDF</span>
+                          <label className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-line bg-white px-3 py-2 text-xs font-semibold text-brand hover:border-brand">
+                            <span>{doc.pdfUrl?.startsWith("data:") ? "PDF Terunggah (Ubah)" : "Pilih File .pdf"}</span>
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const base64 = await readPdfFile(file);
+                                  setCvDoc(doc.id, { pdfUrl: base64 });
+                                  setStatus(`PDF ${doc.title} berhasil diunggah`);
+                                } catch {
+                                  setStatus("Gagal memuat file PDF");
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+
+                        <label className="block text-xs font-semibold text-body">
+                          Jumlah Halaman Dokumen
+                          <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={doc.pageCount || 2}
+                            onChange={(e) => setCvDoc(doc.id, { pageCount: Number(e.target.value) })}
+                            className={`${inputClass} mt-1`}
+                          />
+                        </label>
+                      </div>
+
+                      <div>
+                        <span className="block text-xs font-semibold text-body">
+                          Unggah Gambar Halaman (Slide Pratinjau)
+                        </span>
+                        <label className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-brand">
+                          <span>
+                            {doc.pages?.length ? `${doc.pages.length} Halaman Terunggah (Tambah)` : "Pilih Gambar Halaman (Multi-Page)"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={async (e) => {
+                              const files = Array.from(e.target.files || []);
+                              if (!files.length) return;
+                              const newPages: string[] = [];
+                              for (const file of files) {
+                                try {
+                                  const img = await readImage(file, 1600);
+                                  newPages.push(img);
+                                } catch {
+                                  // ignore
+                                }
+                              }
+                              setCvDoc(doc.id, {
+                                pages: [...(doc.pages || []), ...newPages],
+                                pageCount: (doc.pages?.length || 0) + newPages.length,
+                              });
+                              setStatus(`${newPages.length} halaman berhasil ditambahkan`);
+                            }}
+                          />
+                        </label>
+                        {doc.pages && doc.pages.length > 0 && (
+                          <div className="mt-2 flex items-center justify-between text-[11px] text-body">
+                            <span>{doc.pages.length} gambar halaman tersimpan</span>
+                            <button
+                              type="button"
+                              onClick={() => setCvDoc(doc.id, { pages: [] })}
+                              className="text-red-500 hover:underline"
+                            >
+                              Hapus Gambar Halaman
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-between border-t border-line/60 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewRole(doc.roleKey);
+                          setPreviewCvModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:underline"
+                      >
+                        Pratinjau / Geser Halaman →
+                      </button>
+                      {doc.pdfUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setCvDoc(doc.id, { pdfUrl: "" })}
+                          className="text-[11px] font-medium text-slate-500 hover:text-red-600"
+                        >
+                          Hapus PDF
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <p className="mt-10 rounded-xl border border-line bg-white/70 p-4 text-[11px] leading-relaxed text-body">
           Perubahan disimpan di <code>localStorage</code> browser ini (tanpa server), jadi hanya
@@ -579,6 +805,12 @@ export default function AdminPage() {
           data apa pun di server.
         </p>
       </main>
+
+      <CvPreviewModal
+        isOpen={previewCvModal}
+        initialRole={previewRole}
+        onClose={() => setPreviewCvModal(false)}
+      />
     </div>
   );
 }

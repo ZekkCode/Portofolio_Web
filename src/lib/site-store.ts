@@ -62,10 +62,22 @@ export type Project = {
   outcome?: string;
 };
 
+export type CvDocConfig = {
+  id: string;
+  roleKey: "graphic" | "uiux" | "frontend" | "itsupport";
+  title: string;
+  subtitle: string;
+  color: string;
+  pdfUrl?: string;
+  pageCount?: number;
+  pages?: string[];
+};
+
 export type SiteConfig = {
   lanyard: LanyardConfig;
   profileCard: ProfileCardConfig;
   projects: Project[];
+  cvDocs: CvDocConfig[];
 };
 
 export const defaultLanyard: LanyardConfig = {
@@ -127,10 +139,54 @@ export const defaultProjects: Project[] = profile.projects.map((project, index) 
   outcome: project.outcome,
 }));
 
+export const defaultCvDocs: CvDocConfig[] = [
+  {
+    id: "cv-graphic",
+    roleKey: "graphic",
+    title: "Desainer Grafis",
+    subtitle: "Multimedia & Visual Identity",
+    color: "#0284c7",
+    pdfUrl: "",
+    pageCount: 2,
+    pages: [],
+  },
+  {
+    id: "cv-uiux",
+    roleKey: "uiux",
+    title: "UI/UX Designer",
+    subtitle: "Product Design & Prototyping",
+    color: "#0284c7",
+    pdfUrl: "",
+    pageCount: 2,
+    pages: [],
+  },
+  {
+    id: "cv-frontend",
+    roleKey: "frontend",
+    title: "Frontend Developer",
+    subtitle: "Next.js, React & 3D Interactive",
+    color: "#1b45c4",
+    pdfUrl: "",
+    pageCount: 3,
+    pages: [],
+  },
+  {
+    id: "cv-itsupport",
+    roleKey: "itsupport",
+    title: "IT Support & Systems",
+    subtitle: "Troubleshooting & Infrastructure",
+    color: "#d97706",
+    pdfUrl: "",
+    pageCount: 2,
+    pages: [],
+  },
+];
+
 export const defaultSiteConfig: SiteConfig = {
   lanyard: defaultLanyard,
   profileCard: defaultProfileCard,
   projects: defaultProjects,
+  cvDocs: defaultCvDocs,
 };
 
 const STORAGE_KEY = "zekk:site:v1";
@@ -171,7 +227,24 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
           };
         })
     : defaultProjects;
-  return { lanyard, profileCard, projects: projects.length ? projects : defaultProjects };
+
+  const cvDocs = Array.isArray(raw.cvDocs) && raw.cvDocs.length > 0
+    ? raw.cvDocs.map((item, index) => {
+        const fallback = defaultCvDocs[index] || defaultCvDocs[0];
+        return {
+          id: item.id || fallback.id,
+          roleKey: item.roleKey || fallback.roleKey,
+          title: item.title || fallback.title,
+          subtitle: item.subtitle || fallback.subtitle,
+          color: item.color || fallback.color,
+          pdfUrl: item.pdfUrl ?? "",
+          pageCount: typeof item.pageCount === "number" ? item.pageCount : fallback.pageCount,
+          pages: Array.isArray(item.pages) ? item.pages : [],
+        } as CvDocConfig;
+      })
+    : defaultCvDocs;
+
+  return { lanyard, profileCard, projects: projects.length ? projects : defaultProjects, cvDocs };
 };
 
 export const readConfig = (): SiteConfig => {

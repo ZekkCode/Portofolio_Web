@@ -1,17 +1,101 @@
 {
   "version": 1,
   "skills": {
+    "anti-ai-slop-writing": {
+      "source": "jalaalrd/anti-ai-slop-writing",
+      "sourceType": "github",
+      "skillPath": "skills/anti-ai-slop-writing/SKILL.md",
+      "computedHash": "ccee34cea1e48c96cb33eca709eb49eca956349b3e60953d2e4eddd4125f3dad"
+    },
+    "anti-slop": {
+      "source": "elithrar/dotfiles",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/anti-slop/SKILL.md",
+      "computedHash": "426f84f4cb0245ac72970ab7856518fbbd06f3b45ba1f9eef82ceef27d305d0c"
+    },
+    "anti-slop-design": {
+      "source": "wwewtech/anti-slop-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "8895cf7f4817b0ff1c46641b1ff919f7845b89e33eb4008d8d5dff0bcc093243"
+    },
+    "better-icons": {
+      "source": "better-auth/better-icons",
+      "sourceType": "github",
+      "skillPath": "skills/SKILL.md",
+      "computedHash": "b16a2f5830f3db40695fdd58d415a631e9fb6170a0cc5d3b56469d17e53596bc"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "65049e1890f5fedf8f8e1144848f07bcda788e51c22bac78afbd073aeb486725"
     },
+    "gsap-scrolltrigger": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-scrolltrigger/SKILL.md",
+      "computedHash": "358dd3381c74fc4be8db5a94e0cd008bf0fa7c1ccd45999671b0d61b9d9ffd9b"
+    },
+    "migrate-radix-to-base": {
+      "source": "shadcn-ui/ui",
+      "sourceType": "github",
+      "skillPath": "skills/migrate-radix-to-base/SKILL.md",
+      "computedHash": "4fdc31bf287f674ba6bf91a648120f7b34cd7ef370f998f2cc116fed067789c5"
+    },
+    "paper-to-code-components": {
+      "source": "millionco/paper-to-code-components",
+      "sourceType": "ui-skills",
+      "skillPath": "skills/paper-to-code-components/SKILL.md",
+      "computedHash": "55b97590061c7bc9b2a30d2d94fccf61316463a0a99d15d1ea7734bcb6f2ae25"
+    },
+    "seo": {
+      "source": "iannuttall/seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo/SKILL.md",
+      "computedHash": "cc268e5d141c2a356788af7e986b0236d08719922f8659289010f9d46c4997ff"
+    },
+    "shadcn": {
+      "source": "shadcn-ui/ui",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "7859e9a064940a1a0010c992b63e4633c4f5f39ed367a23c16f24029816b1703"
+    },
     "stop-slop": {
       "source": "hardikpandya/stop-slop",
       "sourceType": "github",
       "skillPath": "SKILL.md",
       "computedHash": "09acd38f01d6c643bce871a739141c01a06a04f43d8b55959ef73550476e771c"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "af1844ade632808fc0c15cf2db87daf3b2431c5262dc8a0c3ea7d70880fadf91"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "128fac78002d916c8ca908245d398e634f540d8bcf20915b2b2359aeb18eba59"
+    },
+    "ui-design-brain": {
+      "source": "carmahhawwari/ui-design-brain",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "a51816925376721c7bd63cf8ff97905146f596e481c3c7598bfa0722ca75b1f4"
+    },
+    "ui-styling": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-styling/SKILL.md",
+      "computedHash": "fa6d85097b0c131fb8708a6e7e08aff2af12fd2966cfe0a73bd258dcac99ea5b"
+    },
+    "web-quality-seo": {
+      "source": "addyosmani/web-quality-skills",
+      "sourceType": "github",
+      "skillPath": "skills/seo/SKILL.md",
+      "computedHash": "c8ae9a7efc8dbd2f44041d5ce11d737fd54f29a13fad48e6f79f2095ca4fbeb5"
     }
   }
 }

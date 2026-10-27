@@ -7,22 +7,30 @@ Panduan alur kerja pengembangan, siklus pengujian, konvensi commit, dan otomatis
 ## 1. Alur Siklus Pengembangan Lokal
 
 ```
-[Edit Kode] ──> [Type Check: tsc] ──> [Test Browser: check.mjs] ──> [Build: next build] ──> [Dual Push: master & main]
+[Inisiasi .env.local] ──> [Edit Kode] ──> [Type Check: tsc] ──> [Test Browser: check.mjs] ──> [Build: next build] ──> [Dual Push: master & main]
 ```
 
 ### Langkah-langkah:
-1. **Jalankan Server Lokal**:
+1. **Persiapan Lingkungan (Environment Setup)**:
+   - Salin template variabel lingkungan:
+     ```powershell
+     Copy-Item .env.example .env.local
+     ```
+   - (Opsional jika menggunakan cloud) Isi kredensial Supabase dan Cloudflare R2 sesuai panduan [`DATABASE.md`](./DATABASE.md).
+   - Eksekusi skema [`supabase/schema.sql`](./supabase/schema.sql) di SQL Editor Supabase untuk inisialisasi tabel `site_config` dan `page_views`.
+
+2. **Jalankan Server Lokal**:
    ```powershell
    npm run dev
    # Mengakses http://localhost:3000 (portfolio) & http://localhost:3000/admin (panel kontrol)
    ```
 
-2. **Validasi Tipe Data TypeScript**:
+3. **Validasi Tipe Data TypeScript**:
    ```powershell
    ./node_modules/.bin/tsc --noEmit
    ```
 
-3. **Uji Otomatisasi Browser Headless (`scripts/check.mjs`)**:
+4. **Uji Otomatisasi Browser Headless (`scripts/check.mjs`)**:
    Menjalankan Chrome headless via Chrome DevTools Protocol (CDP) untuk memverifikasi 5 skenario penting:
    - Render canvas 3D lanyard hero.
    - Ketersediaan seluruh kartu proyek dan link GitHub.
@@ -30,7 +38,7 @@ Panduan alur kerja pengembangan, siklus pengujian, konvensi commit, dan otomatis
    - Reaktivitas penulisan state `localStorage` (`zekk:site:v1`).
    - Penambahan proyek baru secara reaktif di halaman utama.
 
-4. **Kompilasi Build Produksi**:
+5. **Kompilasi Build Produksi**:
    ```powershell
    npm run build
    ```

@@ -13,6 +13,8 @@ const chrome =
   [
     "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe",
+    "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/usr/bin/google-chrome",
     "/usr/bin/chromium",

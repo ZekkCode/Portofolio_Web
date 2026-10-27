@@ -96,6 +96,17 @@
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes pupilLook {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-1.2px, 0.3px); }
+  60% { transform: translate(1.2px, -0.3px); }
+  85% { transform: scale(1.1); }
+}
+
+.animate-eye-pupil {
+  animation: pupilLook 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 /* Scroll reveal utility classes */
 .reveal-item {
   opacity: 0;

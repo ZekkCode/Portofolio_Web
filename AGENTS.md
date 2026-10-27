@@ -49,6 +49,13 @@ Repositori ini terhubung dengan deployment otomatis Vercel yang memonitor commit
 - Gunakan `useIsomorphicLayoutEffect` (fallback ke `useEffect` saat SSR) untuk mencegah peringatan hidrasi Next.js.
 - Pastikan interaksi fisik spring/Euler selalu memiliki batas `clamp()` pada `dt`, kecepatan `v`, dan posisi `p` untuk mencegah overflow numerik di WebGL / Three.js.
 
+---
+
+## 5. Konvensi Variabel Lingkungan & Cloud
+- Jangan pernah menuliskan *hardcoded secrets* atau men-commit berkas `.env.local`. Selalu gunakan template [`.env.example`](./.env.example).
+- Setiap integrasi eksternal (Supabase, Cloudflare R2) wajib memiliki mekanisme *graceful fallback* ke mode lokal (`localStorage`, `.views.json`, atau Base64 Data URI) saat variabel lingkungan tidak tersedia.
+
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

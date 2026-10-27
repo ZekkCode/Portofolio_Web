@@ -12,6 +12,7 @@ import { ProjectsSection } from "@/components/projects-section";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
+import { AnimatedEye } from "@/components/animated-eye";
 import { usePageViews } from "@/lib/use-page-views";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
@@ -20,7 +21,7 @@ import { useSiteConfig } from "@/lib/site-store";
 
 function Header() {
   const { t } = useTranslation();
-  const { views } = usePageViews();
+  const { views, isEngaged } = usePageViews();
   const { headerLogoUrl } = useSiteConfig();
 
   return (
@@ -46,11 +47,21 @@ function Header() {
 
         <div className="flex items-center gap-2 sm:gap-2.5 pr-14 md:pr-0">
           <span
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-[11px] font-semibold text-body backdrop-blur-md dark:border-line/60 dark:bg-slate-900/80"
-            title="Total Kunjungan / Page Views"
+            className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md transition-all duration-300 ${
+              isEngaged
+                ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
+                : "border-line bg-surface/90 text-body dark:border-line/60 dark:bg-slate-900/80"
+            }`}
+            title={
+              isEngaged
+                ? "Kunjungan aktif terverifikasi (Engaged View)"
+                : "Validasi kunjungan aktif (15–30 dtk)"
+            }
           >
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span suppressHydrationWarning>{views.toLocaleString("id-ID")} views</span>
+            <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
+            <span suppressHydrationWarning className="font-mono text-[11px] font-bold">
+              {views.toLocaleString("id-ID")}
+            </span>
           </span>
           <LanguageToggle />
           <ThemeToggle />
@@ -477,8 +488,7 @@ function Contact() {
 }
 
 function Footer() {
-  const { t } = useTranslation();
-  const { views } = usePageViews();
+  const { views, isEngaged } = usePageViews();
 
   return (
     <footer className="border-t border-line pb-28 md:pb-36 dark:border-line">
@@ -488,9 +498,18 @@ function Footer() {
           <p className="text-xs text-body mt-0.5">© {new Date().getFullYear()} {profile.name}. Mojokerto, Indonesia.</p>
         </div>
         <div className="flex items-center gap-3 text-xs text-body">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/90 px-3 py-1 text-xs font-semibold text-ink shadow-2xs backdrop-blur-xs dark:border-line dark:bg-slate-900/90 dark:text-slate-200">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            <span suppressHydrationWarning>{views.toLocaleString("id-ID")} {t("contact.views")}</span>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs backdrop-blur-xs transition-all duration-300 ${
+              isEngaged
+                ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
+                : "border-line bg-white/90 text-ink dark:border-line dark:bg-slate-900/90 dark:text-slate-200"
+            }`}
+            title="Kunjungan aktif terverifikasi"
+          >
+            <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
+            <span suppressHydrationWarning className="font-mono text-xs font-bold">
+              {views.toLocaleString("id-ID")}
+            </span>
           </span>
           <span aria-hidden="true" className="text-line">•</span>
           <span>Next.js 16 + Tailwind CSS</span>

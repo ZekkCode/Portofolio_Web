@@ -145,7 +145,7 @@ const jsonLd = {
       url: profile.site,
       name: profile.brand,
       description: "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech)",
-      inLanguage: "id-ID",
+      inLanguage: ["id-ID", "en-US"],
       publisher: {
         "@id": `${profile.site}/#person`,
       },
@@ -156,7 +156,7 @@ const jsonLd = {
       name: profile.name,
       alternateName: [profile.nickname, profile.brand, "zekksparow"],
       url: profile.site,
-      image: `${profile.site}/card.webp`,
+      image: `${profile.site}/opengraph-image`,
       jobTitle: [
         "UI/UX Designer",
         "Frontend Developer",
@@ -165,6 +165,9 @@ const jsonLd = {
       ],
       description: profile.bio[0],
       gender: "Male",
+      email: profile.contact.email,
+      telephone: profile.contact.whatsapp,
+      knowsLanguage: ["id", "en"],
       address: {
         "@type": "PostalAddress",
         addressLocality: "Mojokerto",
@@ -185,6 +188,7 @@ const jsonLd = {
         "Figma",
         "WebGL",
         "Graphic Design",
+        "Search Engine Optimization (SEO)",
       ],
       sameAs: profile.contact.socials.map((s) => s.href),
     },
@@ -202,6 +206,7 @@ const jsonLd = {
       mainEntity: {
         "@id": `${profile.site}/#person`,
       },
+      primaryImageOfPage: `${profile.site}/opengraph-image`,
     },
   ],
 };

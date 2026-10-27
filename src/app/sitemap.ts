@@ -12,40 +12,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
       alternates: {
         languages: {
-          id: `${profile.site}/`,
-          en: `${profile.site}/`,
+          "id-ID": `${profile.site}/`,
+          "en-US": `${profile.site}/`,
         },
       },
-    },
-    {
-      url: `${profile.site}/#tentang`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.9,
-    },
-    {
-      url: `${profile.site}/#cv`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.9,
-    },
-    {
-      url: `${profile.site}/#stack`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${profile.site}/#proyek`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.95,
-    },
-    {
-      url: `${profile.site}/#kontak`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.85,
     },
   ];
 }

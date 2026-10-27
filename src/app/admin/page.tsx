@@ -7,6 +7,7 @@ import ProfileCard from "@/components/profile-card";
 import {
   normalizeConfig,
   resetConfig,
+  saveCloudConfig,
   useSiteConfig,
   writeConfig,
   type LanyardConfig,
@@ -114,6 +115,31 @@ const readPdfFile = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const uploadAsset = async (file: File, folder = "uploads"): Promise<string> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.url) return data.url;
+    }
+  } catch {
+    // fallback ke lokal
+  }
+
+  if (file.type.includes("pdf")) {
+    return readPdfFile(file);
+  }
+  return readImage(file);
+};
+
 function Control({
   field,
   value,
@@ -154,7 +180,8 @@ function Control({
                   const file = event.target.files?.[0];
                   event.target.value = "";
                   if (!file) return;
-                  onChange(await readImage(file));
+                  const url = await uploadAsset(file, "images");
+                  onChange(url);
                 }}
               />
             </label>
@@ -431,11 +458,20 @@ export default function AdminPage() {
   const [status, setStatus] = useState("");
   const [previewCvModal, setPreviewCvModal] = useState(false);
   const [previewRole, setPreviewRole] = useState<RoleKey>("frontend");
+  const [cloudStatus, setCloudStatus] = useState<{ r2: boolean; supabase: boolean } | null>(null);
+  const [syncingCloud, setSyncingCloud] = useState(false);
   const config = draft ?? stored;
 
   useEffect(() => {
+    fetch("/api/upload")
+      .then((res) => res.json())
+      .then((data) => setCloudStatus(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!status) return;
-    const timer = setTimeout(() => setStatus(""), 2600);
+    const timer = setTimeout(() => setStatus(""), 3000);
     return () => clearTimeout(timer);
   }, [status]);
 
@@ -479,9 +515,38 @@ export default function AdminPage() {
       projects: config.projects.filter((project) => project.id !== id),
     });
 
-  const save = () => {
+  const save = async () => {
     writeConfig(config);
-    setStatus("Tersimpan di browser ini");
+    setStatus("Tersimpan di browser");
+    if (cloudStatus?.supabase) {
+      setStatus("Menyimpan ke Supabase Cloud...");
+      const res = await saveCloudConfig(config);
+      if (res.success) {
+        setStatus("Tersimpan di Browser & Supabase Cloud");
+      } else {
+        setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron cloud"})`);
+      }
+    }
+  };
+
+  const pullFromCloud = async () => {
+    setSyncingCloud(true);
+    setStatus("Mengambil data dari Supabase...");
+    try {
+      const res = await fetch("/api/config", { cache: "no-store" });
+      const data = await res.json();
+      if (data.configured && data.config) {
+        setDraft(normalizeConfig(data.config));
+        writeConfig(normalizeConfig(data.config));
+        setStatus("Konfigurasi Supabase berhasil disinkronkan");
+      } else {
+        setStatus(data.message || "Belum ada konfigurasi di cloud");
+      }
+    } catch {
+      setStatus("Gagal terhubung ke API cloud");
+    } finally {
+      setSyncingCloud(false);
+    }
   };
 
   const reset = () => {
@@ -520,9 +585,61 @@ export default function AdminPage() {
             </Link>
             <span className="h-4 w-px bg-line" aria-hidden="true" />
             <span className="font-display text-sm uppercase">Panel Admin</span>
+
+            <div className="hidden md:flex items-center gap-2 ml-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${
+                  cloudStatus?.r2
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-slate-200 bg-slate-100 text-slate-600"
+                }`}
+                title={
+                  cloudStatus?.r2
+                    ? "Cloudflare R2 aktif untuk penyimpanan aset & upload"
+                    : "Cloudflare R2 offline. Atur R2_* di .env.local untuk mengaktifkan Cloudflare R2"
+                }
+              >
+                <span
+                  className={`size-1.5 rounded-full ${
+                    cloudStatus?.r2 ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
+                  }`}
+                />
+                {cloudStatus?.r2 ? "R2 Storage Aktif" : "R2 Offline (Lokal)"}
+              </span>
+
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${
+                  cloudStatus?.supabase
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-slate-200 bg-slate-100 text-slate-600"
+                }`}
+                title={
+                  cloudStatus?.supabase
+                    ? "Supabase PostgreSQL Database aktif untuk sinkronisasi cloud"
+                    : "Supabase offline. Atur SUPABASE_* di .env.local untuk mengaktifkan Cloud Database"
+                }
+              >
+                <span
+                  className={`size-1.5 rounded-full ${
+                    cloudStatus?.supabase ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
+                  }`}
+                />
+                {cloudStatus?.supabase ? "Supabase DB Aktif" : "Supabase Offline (Lokal)"}
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {cloudStatus?.supabase && (
+              <button
+                type="button"
+                onClick={pullFromCloud}
+                disabled={syncingCloud}
+                className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50"
+              >
+                {syncingCloud ? "Menyinkronkan..." : "Tarik Cloud"}
+              </button>
+            )}
             <button
               type="button"
               onClick={exportJson}
@@ -633,7 +750,7 @@ export default function AdminPage() {
             setProfileCard={setProfileCard}
             setHeaderLogoUrl={setHeaderLogoUrl}
           />
-        ) : (
+        ) : tab === "proyek" ? (
           <div className="space-y-4">
             {config.projects.map((project, index) => (
               <div key={project.id} className="rounded-2xl border border-line bg-white/85 p-4">
@@ -701,9 +818,7 @@ export default function AdminPage() {
               + Tambah proyek
             </button>
           </div>
-        )}
-
-        {tab === "cv" && (
+        ) : tab === "cv" ? (
           <div className="space-y-6">
             <div className="rounded-2xl border border-line bg-white/90 p-5 sm:p-6 shadow-2xs">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pb-4">
@@ -804,8 +919,9 @@ export default function AdminPage() {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
                                 try {
-                                  const base64 = await readPdfFile(file);
-                                  setCvDoc(doc.id, { pdfUrl: base64 });
+                                  setStatus("Mengunggah berkas PDF...");
+                                  const url = await uploadAsset(file, "cv-pdf");
+                                  setCvDoc(doc.id, { pdfUrl: url });
                                   setStatus(`PDF ${doc.title} berhasil diunggah`);
                                 } catch {
                                   setStatus("Gagal memuat file PDF");
@@ -844,11 +960,12 @@ export default function AdminPage() {
                             onChange={async (e) => {
                               const files = Array.from(e.target.files || []);
                               if (!files.length) return;
+                              setStatus(`Mengunggah ${files.length} gambar halaman...`);
                               const newPages: string[] = [];
                               for (const file of files) {
                                 try {
-                                  const img = await readImage(file, 1600);
-                                  newPages.push(img);
+                                  const url = await uploadAsset(file, "cv-pages");
+                                  newPages.push(url);
                                 } catch {
                                   // ignore
                                 }
@@ -902,7 +1019,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         <p className="mt-10 rounded-xl border border-line bg-white/70 p-4 text-[11px] leading-relaxed text-body">
           Perubahan disimpan di <code>localStorage</code> browser ini (tanpa server), jadi hanya

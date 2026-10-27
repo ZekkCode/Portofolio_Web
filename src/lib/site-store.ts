@@ -254,6 +254,48 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   return { headerLogoUrl, lanyard, profileCard, projects: projects.length ? projects : defaultProjects, cvDocs };
 };
 
+let cloudSynced = false;
+
+export const syncCloudConfig = async () => {
+  if (typeof window === "undefined") return;
+  try {
+    const res = await fetch("/api/config", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.configured && data.config) {
+      snapshot = normalizeConfig(data.config);
+      hydrated = true;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      } catch {
+        // ignore
+      }
+      emit();
+    }
+  } catch {
+    // network offline, use local cache
+  }
+};
+
+export const saveCloudConfig = async (
+  next: SiteConfig
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    });
+    const data = await res.json();
+    return { success: Boolean(data.success), message: data.message || data.error };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Gagal terhubung ke API cloud",
+    };
+  }
+};
+
 export const readConfig = (): SiteConfig => {
   if (!hydrated && typeof window !== "undefined") {
     hydrated = true;
@@ -262,6 +304,10 @@ export const readConfig = (): SiteConfig => {
       snapshot = raw ? normalizeConfig(JSON.parse(raw)) : defaultSiteConfig;
     } catch {
       snapshot = defaultSiteConfig;
+    }
+    if (!cloudSynced) {
+      cloudSynced = true;
+      void syncCloudConfig();
     }
   }
   return snapshot;

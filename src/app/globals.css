@@ -43,6 +43,7 @@
 @layer base {
   html {
     scroll-padding-top: 5.5rem;
+    scroll-padding-block-start: calc(5rem + env(safe-area-inset-top, 0px));
   }
 
   body {

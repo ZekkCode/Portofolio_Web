@@ -61,6 +61,8 @@ export type Project = {
   problem?: string;
   highlight?: string;
   outcome?: string;
+  image?: string;
+  previewUrl?: string;
 };
 
 export type CvDocConfig = {
@@ -130,17 +132,7 @@ export const defaultProfileCard: ProfileCardConfig = {
   intro: true,
 };
 
-export const defaultProjects: Project[] = profile.projects.map((project, index) => ({
-  id: `seed-${index + 1}`,
-  title: project.title,
-  desc: project.desc,
-  tags: [...project.tags],
-  repo: project.repo,
-  role: project.role,
-  problem: project.problem,
-  highlight: project.highlight,
-  outcome: project.outcome,
-}));
+export const defaultProjects: Project[] = [];
 
 export const defaultCvDocs: CvDocConfig[] = [
   {
@@ -216,24 +208,23 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     imageFit: rawProfileCard.imageFit === "cover" ? "cover" : "contain",
   } as ProfileCardConfig;
 
-  const projects = Array.isArray(raw.projects)
+  const projects: Project[] = Array.isArray(raw.projects)
     ? raw.projects
         .filter((item) => item && typeof item.title === "string")
-        .map((item, index) => {
-          const fallback = defaultProjects[index] || defaultProjects[0];
-          return {
-            id: item.id || `project-${index + 1}`,
-            title: item.title,
-            desc: item.desc ?? "",
-            tags: Array.isArray(item.tags) ? item.tags : [],
-            repo: item.repo ?? "",
-            role: item.role ?? fallback?.role,
-            problem: item.problem ?? fallback?.problem,
-            highlight: item.highlight ?? fallback?.highlight,
-            outcome: item.outcome ?? fallback?.outcome,
-          };
-        })
-    : defaultProjects;
+        .map((item, index) => ({
+          id: item.id || `project-${index + 1}`,
+          title: item.title,
+          desc: item.desc ?? "",
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          repo: item.repo ?? "",
+          role: item.role,
+          problem: item.problem,
+          highlight: item.highlight,
+          outcome: item.outcome,
+          image: typeof item.image === "string" ? item.image : undefined,
+          previewUrl: typeof item.previewUrl === "string" ? item.previewUrl : undefined,
+        }))
+    : [];
 
   const cvDocs = Array.isArray(raw.cvDocs) && raw.cvDocs.length > 0
     ? raw.cvDocs.map((item, index) => {
@@ -251,7 +242,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       })
     : defaultCvDocs;
 
-  return { headerLogoUrl, lanyard, profileCard, projects: projects.length ? projects : defaultProjects, cvDocs };
+  return { headerLogoUrl, lanyard, profileCard, projects, cvDocs };
 };
 
 let cloudSynced = false;
@@ -301,7 +292,16 @@ export const readConfig = (): SiteConfig => {
     hydrated = true;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      snapshot = raw ? normalizeConfig(JSON.parse(raw)) : defaultSiteConfig;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const normalized = normalizeConfig(parsed);
+        const sanitizedProjects = normalized.projects.filter(
+          (project) => !project.id.startsWith("seed-")
+        );
+        snapshot = { ...normalized, projects: sanitizedProjects };
+      } else {
+        snapshot = defaultSiteConfig;
+      }
     } catch {
       snapshot = defaultSiteConfig;
     }

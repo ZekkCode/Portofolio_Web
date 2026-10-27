@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
 
@@ -149,13 +148,13 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     ? currentDoc.pages.length
     : (currentDoc?.pageCount || 2);
 
-  const prevPage = useCallback(() => {
+  const prevPage = () => {
     setCurrentPage((p) => Math.max(0, p - 1));
-  }, []);
+  };
 
-  const nextPage = useCallback(() => {
+  const nextPage = () => {
     setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
-  }, [totalPages]);
+  };
 
   // Keyboard navigation & Escape
   useEffect(() => {
@@ -163,8 +162,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowLeft") prevPage();
-      else if (e.key === "ArrowRight") nextPage();
+      else if (e.key === "ArrowLeft") setCurrentPage((p) => Math.max(0, p - 1));
+      else if (e.key === "ArrowRight") setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
     };
 
     const originalOverflow = document.body.style.overflow;
@@ -175,7 +174,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose, prevPage, nextPage]);
+  }, [isOpen, onClose, totalPages]);
 
   // Reset page when role changes
   const switchRole = (role: RoleKey) => {
@@ -221,7 +220,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       />
 
       {/* Modal Dialog Shell */}
-      <div className="relative flex h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl dark:border-line/60 dark:bg-[#0c0e17]">
+      <div className="relative flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl dark:border-line/60 dark:bg-[#0c0e17]">
         {/* Top Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-white/95 px-4 py-3 backdrop-blur-md sm:px-6 dark:border-line/40 dark:bg-[#0c0e17]/95">
           <div className="flex items-center gap-2.5">
@@ -249,7 +248,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                   type="button"
                   onClick={prevPage}
                   disabled={currentPage === 0}
-                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   title="Halaman Sebelumnya (←)"
                 >
                   <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -263,7 +262,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                   type="button"
                   onClick={nextPage}
                   disabled={currentPage >= totalPages - 1}
-                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   title="Halaman Berikutnya (→)"
                 >
                   <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -278,7 +277,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
               <button
                 type="button"
                 onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
-                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold"
+                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 title="Perkecil (-)"
               >
                 -
@@ -287,7 +286,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
               <button
                 type="button"
                 onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
-                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold"
+                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 title="Perbesar (+)"
               >
                 +
@@ -301,7 +300,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 download
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-brand-ink"
+                className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 Unduh PDF
               </a>
@@ -309,7 +308,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="hidden rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-body transition hover:border-ink/40 hover:text-ink sm:inline-flex items-center gap-1.5 dark:border-line/40 dark:bg-slate-900"
+                className="hidden rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-body transition hover:border-ink/40 hover:text-ink sm:inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
                 title="Cetak / PDF"
               >
                 <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -325,7 +324,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <button
               type="button"
               onClick={onClose}
-              className="flex size-8 sm:size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink dark:border-line/40 dark:bg-slate-900"
+              className="flex size-8 sm:size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
               aria-label="Tutup modal"
             >
               <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -350,7 +349,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 key={key}
                 type="button"
                 onClick={() => switchRole(key)}
-                className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide transition ${
+                className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                   isSelected
                     ? "bg-ink text-white shadow-sm dark:bg-white dark:text-ink"
                     : "border border-line bg-white/80 text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"

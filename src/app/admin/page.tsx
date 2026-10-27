@@ -16,6 +16,7 @@ import {
   type CvDocConfig,
   type SiteConfig,
 } from "@/lib/site-store";
+import { profile } from "@/lib/profile";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
@@ -441,7 +442,7 @@ function ProfileCardTab({
         </section>
       </div>
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <div className="flex items-center justify-center overflow-hidden rounded-2xl border border-line bg-[radial-gradient(circle_at_50%_0%,#1a1a2e,#0f0f23_70%)] p-8" style={{minHeight:520}}>
+        <div className="flex items-center justify-center overflow-hidden rounded-2xl border border-line bg-[radial-gradient(circle_at_50%_0%,#1a1a2e,#0f0f23_70%)] p-4 sm:p-8" style={{minHeight:520}}>
           <ProfileCardPreview config={pc} />
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-body">Arahkan kursor ke kartu untuk melihat efek.</p>
@@ -515,6 +516,22 @@ export default function AdminPage() {
       projects: config.projects.filter((project) => project.id !== id),
     });
 
+  const loadSeedProjects = () => {
+    const seed: Project[] = profile.projects.map((item, index) => ({
+      id: `project-${Date.now()}-${index + 1}`,
+      title: item.title,
+      desc: item.desc,
+      tags: [...item.tags],
+      repo: item.repo,
+      role: item.role,
+      problem: item.problem,
+      highlight: item.highlight,
+      outcome: item.outcome,
+    }));
+    setDraft({ ...config, projects: seed });
+    setStatus("Data proyek profil dimuat ke draft. Klik Simpan untuk menulis ke Supabase.");
+  };
+
   const save = async () => {
     writeConfig(config);
     setStatus("Tersimpan di browser");
@@ -577,10 +594,10 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-[100dvh]">
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+      <header className="sticky top-0 z-40 border-b border-line/70 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-body hover:text-ink">
+            <Link href="/" className="text-sm font-semibold text-body hover:text-ink rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand px-1">
               ← Portofolio
             </Link>
             <span className="h-4 w-px bg-line" aria-hidden="true" />
@@ -629,13 +646,13 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {cloudStatus?.supabase && (
               <button
                 type="button"
                 onClick={pullFromCloud}
                 disabled={syncingCloud}
-                className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50"
+                className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 {syncingCloud ? "Menyinkronkan..." : "Tarik Cloud"}
               </button>
@@ -643,11 +660,11 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={exportJson}
-              className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50"
+              className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               Ekspor
             </button>
-            <label className="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50">
+            <label className="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand/50 focus-within:ring-2 focus-within:ring-brand">
               Impor
               <input
                 type="file"
@@ -663,14 +680,14 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={reset}
-              className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-body hover:border-red-300 hover:text-red-600"
+              className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-body hover:border-red-300 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
             >
               Reset
             </button>
             <button
               type="button"
               onClick={save}
-              className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-brand/25 hover:bg-brand-ink"
+              className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-brand/25 hover:bg-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               Simpan
             </button>
@@ -678,14 +695,14 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-8">
-        <div className="mb-6 flex items-center gap-2">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(["lanyard", "profileCard", "proyek", "cv"] as const).map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setTab(item)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                 tab === item
                   ? "bg-ink text-white"
                   : "border border-line text-body hover:border-ink/30 hover:text-ink"
@@ -752,6 +769,31 @@ export default function AdminPage() {
           />
         ) : tab === "proyek" ? (
           <div className="space-y-4">
+            {config.projects.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-line bg-white/70 p-8 text-center">
+                <p className="text-sm font-bold text-ink">Belum ada proyek di database</p>
+                <p className="mt-1 text-xs text-body max-w-md mx-auto">
+                  Situs saat ini menampilkan keadaan kosong (bebas data demo). Anda dapat menambahkan proyek secara manual atau memuat 7 proyek dari data profil ke draft untuk disimpan ke Supabase.
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={addProject}
+                    className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink"
+                  >
+                    + Tambah proyek
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadSeedProjects}
+                    className="rounded-full border border-line bg-white px-4 py-2 text-xs font-semibold text-body hover:border-brand/50 hover:text-brand"
+                  >
+                    Muat 7 Proyek Profil ke Draft
+                  </button>
+                </div>
+              </div>
+            )}
+
             {config.projects.map((project, index) => (
               <div key={project.id} className="rounded-2xl border border-line bg-white/85 p-4">
                 <div className="mb-3 flex items-center justify-between">
@@ -804,6 +846,24 @@ export default function AdminPage() {
                             .filter(Boolean),
                         })
                       }
+                      className={`${inputClass} mt-1`}
+                    />
+                  </label>
+                  <label className="block text-xs font-semibold text-body">
+                    URL Gambar / Screenshot Pratinjau
+                    <input
+                      value={project.image || ""}
+                      placeholder="https://... atau /projects/preview.png"
+                      onChange={(event) => setProject(project.id, { image: event.target.value })}
+                      className={`${inputClass} mt-1`}
+                    />
+                  </label>
+                  <label className="block text-xs font-semibold text-body">
+                    URL Live Demo (Opsional)
+                    <input
+                      value={project.previewUrl || ""}
+                      placeholder="https://..."
+                      onChange={(event) => setProject(project.id, { previewUrl: event.target.value })}
                       className={`${inputClass} mt-1`}
                     />
                   </label>

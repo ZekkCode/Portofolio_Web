@@ -88,7 +88,7 @@ export function PortfolioPillNav() {
     <>
       {/* DESKTOP: Floating at bottom center (reveals when scrolled) */}
       <div
-        className={`pointer-events-none fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 md:flex transition-all duration-300 ${
+        className={`pointer-events-none fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 hidden -translate-x-1/2 md:flex transition-all duration-300 ${
           scrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
         }`}
       >
@@ -122,8 +122,8 @@ export function PortfolioPillNav() {
         </div>
       </div>
 
-      {/* MOBILE: Positioned on the right */}
-      <div className="fixed top-2.5 right-4 z-50 flex justify-end md:hidden">
+      {/* MOBILE: Positioned on the trailing edge with safe-area top inset */}
+      <div className="fixed top-[calc(0.625rem+env(safe-area-inset-top,0px))] end-4 z-50 flex justify-end md:hidden">
         <PillNav
           items={mobileNavItems}
           activeHref={activeSection}

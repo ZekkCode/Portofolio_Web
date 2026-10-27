@@ -145,8 +145,8 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
         <div className={TILE}>
           <span className={LAYER} style={SHEEN_STYLE}/>
           <span className={HOLO} style={HOLO_STYLE}><span className={HOLO_LAYER} style={GLOW_STYLE}/><span className={HOLO_LAYER} style={SHIFT_STYLE}/></span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               className={`pointer-events-none absolute select-none ${
                 imageFit === 'contain'
@@ -175,9 +175,11 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
         </div>
         {showUserInfo&&(
           <div className={FOOTER}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             {miniAvatarUrl ? (
-              <span className={AVATAR}><img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/></span>
+              <span className={AVATAR}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/>
+              </span>
             ) : (
               <span className="relative flex size-9 flex-none items-center justify-center rounded-full bg-brand/20 border border-brand/40 text-xs font-bold text-brand dark:text-blue-400">
                 {name ? name.charAt(0) : 'Z'}

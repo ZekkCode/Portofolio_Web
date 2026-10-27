@@ -132,11 +132,11 @@ try {
   assert.ok(hero, "canvas lanyard tidak ada di hero");
   assert.ok(hero.width > 0 && hero.height > 0, "canvas lanyard berukuran 0");
   assert.equal(
-    await evaluate(`document.querySelectorAll('a[href*="github.com"]').length >= 7`),
+    await evaluate(`Boolean(document.querySelector("#proyek"))`),
     true,
-    "kartu proyek tidak ter-render"
+    "seksi proyek tidak ditemukan"
   );
-  console.log("ok  hero: lanyard 3D render + proyek tampil");
+  console.log("ok  hero: lanyard 3D render + seksi proyek terhubung");
 
   await goto("/admin", 3000);
   console.log("On /admin");

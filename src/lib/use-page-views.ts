@@ -112,7 +112,9 @@ export function usePageViews() {
       }
       if (window.sessionStorage.getItem(SESSION_RECORDED_KEY) === "1") {
         isGloballyEngaged = true;
-        setEngaged(true);
+        queueMicrotask(() => {
+          if (active) setEngaged(true);
+        });
       }
     } catch {
       // ignore

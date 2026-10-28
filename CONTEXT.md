@@ -50,8 +50,7 @@ src/
 │   ├── shape-grid.tsx        # Background grid canvas interaktif dengan efek click riak gelombang
 │   ├── smooth-scroll.tsx     # Provider Lenis smooth scroll global + ScrollTrigger bridge
 │   ├── theme-language-toggle.tsx # Tombol toggle Dark/Light mode & switch bahasa ID/EN
-│   ├── theme-provider.tsx    # Provider NextThemes untuk tema gelap/terang
-│   └── workflow-section.tsx  # 4 langkah alur eksekusi kerja terstruktur
+│   └── theme-provider.tsx    # Provider NextThemes untuk tema gelap/terang
 ├── lib/
 │   ├── i18n.ts               # Inisialisasi react-i18next klien & utilitas persistensi bahasa
 │   ├── profile.ts            # Data master profil, biografi, riwayat organisasi, stack, proyek
@@ -113,5 +112,7 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
    - `PortfolioPillNav` secara otomatis menghilang saat scroll mencapai area footer bawah.
    - Footer menampilkan typographic signature "zakaria mp" menggunakan font pixel (`Pixelify_Sans`) dengan gradien memudar transparan ke bawah.
 6. **Navigasi Anchor Hash & Pintasan Scroll to Top**:
-   - Setiap seksi memiliki anchor independen (`#about`, `#proyek`, `#faq`, `#services`, `#workflow`, `#certificates`, dll.).
+   - Setiap seksi memiliki anchor independen (`#about`, `#proyek`, `#faq`, `#services`, `#certificates`, dll.).
    - Komponen `ScrollToTop` floating di sudut kanan bawah terhubung ke smooth scroll Lenis.
+7. **Bebas dari Seksi Cara Kerja**:
+   - Situs portofolio personal tidak memuat seksi "Cara Kerja / Workflow". Semua konten fokus pada kredensial, keahlian, dan showcase karya nyata.

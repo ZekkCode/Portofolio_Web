@@ -11,7 +11,6 @@ import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
 import { ServicesSection } from "@/components/services-section";
 import { CertificatesSection } from "@/components/certificates-section";
-import { WorkflowSection } from "@/components/workflow-section";
 import { FaqSection } from "@/components/faq-section";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
@@ -569,7 +568,6 @@ export default function Home() {
         <Stack />
         <ProjectsSection />
         <CertificatesSection />
-        <WorkflowSection />
         <FaqSection />
         <Contact />
       </main>

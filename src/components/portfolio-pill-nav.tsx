@@ -20,7 +20,6 @@ function useActiveSection() {
       "stack",
       "proyek",
       "certificates",
-      "workflow",
       "faq",
       "kontak",
     ];

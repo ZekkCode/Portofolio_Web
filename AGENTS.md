@@ -80,7 +80,6 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
    - `#tentang`: Biografi, riwayat kerja/organisasi, dan statistik otentik.
    - `#cv`: Interactive 3D Folder (GSAP ScrollTrigger controlled).
    - `#services`: 4 Pilar Layanan (UI/UX, Frontend, Creative Media, IT Support).
-   - `#workflow`: 4 Langkah Eksekusi Alur Kerja.
    - `#certificates`: Grid Kredensial & Sertifikasi Terverifikasi.
    - `#stack`: Kategori Alat, Bahasa, dan Platform.
    - `#proyek`: Grid Proyek Dinamis.
@@ -102,11 +101,12 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
      - `#stack` / `#tech-stack`
      - `#proyek` / `#projects`
      - `#certificates` / `#sertifikasi`
-     - `#workflow` / `#alur-kerja`
      - `#faq` / `#tanya-jawab`
      - `#kontak` / `#contact`
 10. **Tombol Pintasan Scroll to Top**:
    - Tombol pintasan floating melayang di sudut kanan bawah (`ScrollToTop`) muncul otomatis saat scroll melewati 320px untuk memudahkan navigasi cepat kembali ke atas.
+11. **Dilarang Menampilkan Seksi Cara Kerja / Workflow**:
+   - Repositori ini merupakan situs portofolio personal, bukan web agensi korporat. Dilarang keras memunculkan kembali seksi "Cara Kerja", "Workflow", "Process", atau alur kerja 4 langkah di halaman utama.
 
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -9,6 +9,12 @@ import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-prev
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig } from "@/lib/site-store";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 function DemoWhitePaper({ roleKey, onClick }: { roleKey: Exclude<RoleKey, "all">; onClick: () => void }) {
   const { t } = useTranslation();
@@ -91,10 +97,11 @@ export function CvFolderSection() {
   const { cvDocs } = useSiteConfig();
   const mounted = useMounted();
   const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleKey>("all");
   const [folderMode, setFolderMode] = useState<"flap" | "book">("flap");
-  const [isFolderOpen, setIsFolderOpen] = useState(true);
+  const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const isDark = mounted && resolvedTheme === "dark";
@@ -106,21 +113,33 @@ export function CvFolderSection() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Auto-buka saat section terlihat di layar
+  // GSAP ScrollTrigger: tutup di atas, buka otomatis di tengah, tutup saat scroll lewat ke bawah
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry?.isIntersecting) {
-          setIsFolderOpen(true);
-        }
-      },
-      { threshold: 0.12 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const el = stageRef.current;
+    if (!el || typeof window === "undefined") return;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setIsFolderOpen(true);
+      return;
+    }
+
+    const trigger = ScrollTrigger.create({
+      trigger: el,
+      start: "top 62%",
+      end: "bottom 32%",
+      onEnter: () => setIsFolderOpen(true),
+      onLeave: () => setIsFolderOpen(false),
+      onEnterBack: () => setIsFolderOpen(true),
+      onLeaveBack: () => setIsFolderOpen(false),
+    });
+
+    if (trigger.isActive) {
+      setIsFolderOpen(true);
+    }
+
+    return () => {
+      trigger.kill();
+    };
   }, []);
 
   const openPreview = (role: RoleKey) => {
@@ -144,7 +163,10 @@ export function CvFolderSection() {
       </ScrollReveal>
 
       {/* Main Interactive Stage Box */}
-      <div className="relative mt-8 overflow-hidden rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-10 shadow-xs dark:border-line/60 dark:bg-[#111422]/90">
+      <div
+        ref={stageRef}
+        className="relative mt-8 overflow-hidden rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-10 shadow-xs dark:border-line/60 dark:bg-[#111422]/90"
+      >
         {/* Top Controls Bar */}
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pb-5 dark:border-line/40">
           <div className="flex items-center gap-2 text-xs font-semibold text-ink">

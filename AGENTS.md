@@ -55,6 +55,38 @@ Repositori ini terhubung dengan deployment otomatis Vercel yang memonitor commit
 - Jangan pernah menuliskan *hardcoded secrets* atau men-commit berkas `.env.local`. Selalu gunakan template [`.env.example`](./.env.example).
 - Setiap integrasi eksternal (Supabase, Cloudflare R2) wajib memiliki mekanisme *graceful fallback* ke mode lokal (`localStorage`, `.views.json`, atau Base64 Data URI) saat variabel lingkungan tidak tersedia.
 
+---
+
+## 6. Aturan Khusus & Anti-Halusinasi Proyek (Wajib Diikuti)
+Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan dilarang keras diubah, dibalikkan, atau dihalusinasikan kembali di sesi manapun:
+1. **CV Folder Interaktif (GSAP ScrollTrigger)**:
+   - Status awal saat dimuat di atas: `isFolderOpen: false` (tertutup rapi).
+   - Saat di-scroll ke bawah: Terbuka secara otomatis saat stage memasuki tengah viewport (`onEnter: open`).
+   - Saat di-scroll melewati ke bawah (melewati seksi CV): Menutup kembali secara otomatis (`onLeave: close`).
+   - Saat di-scroll balik ke atas: Terbuka kembali saat masuk ke tengah (`onEnterBack: open`).
+   - Saat di-scroll terus ke atas menuju Hero/About: Menutup kembali (`onLeaveBack: close`).
+   - Dilarang kembali ke `IntersectionObserver` satu arah yang hanya membuka tanpa menutup.
+2. **Kondisi Data Proyek (Zero Slop / No Dummy Seed)**:
+   - `defaultProjects` pada `src/lib/site-store.ts` wajib berupa array kosong `[]` jika belum diinput dari Supabase / panel admin.
+   - Dilarang keras memunculkan proyek dummy/seed otomatis ke tampilan user tanpa instruksi eksplisit.
+   - Jika belum ada data proyek di database, seksi proyek harus tetap menampilkan status "Belum Ada Proyek yang Ditampilkan" yang bersih dan elegan.
+3. **Dilarang Menampilkan "Hero Repo / Featured Flagship"**:
+   - Seksi proyek dilarang menampilkan kartu banner repo raksasa di atas grid. Semua proyek wajib tampil dalam grid kartu yang seragam dan bersih.
+4. **Anti-Slop Copywriting & UI**:
+   - Dilarang menambah micro-label bising, badge berlebihan, tag-cloud menumpuk, atau copy corporate AI slop.
+   - Bahasa wajib otentik, ringkas, profesional, dan mencerminkan persona Zakaria Mujur P. (ZekkTech).
+5. **Daftar Seksi Halaman Utama yang Terpasang**:
+   - `#hero`: Kartu 3D Lanyard & Hologram Profile Card.
+   - `#tentang`: Biografi, riwayat kerja/organisasi, dan statistik otentik.
+   - `#cv`: Interactive 3D Folder (GSAP ScrollTrigger controlled).
+   - `#services`: 4 Pilar Layanan (UI/UX, Frontend, Creative Media, IT Support).
+   - `#workflow`: 4 Langkah Eksekusi Alur Kerja.
+   - `#certificates`: Grid Kredensial & Sertifikasi Terverifikasi.
+   - `#stack`: Kategori Alat, Bahasa, dan Platform.
+   - `#proyek`: Grid Proyek Dinamis.
+   - `#faq`: FAQ Accordion esensial.
+   - `#kontak` & Footer: Form kontak langsung dan media sosial.
+
 
 <!-- BEGIN:nextjs-agent-rules -->
 

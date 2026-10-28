@@ -30,8 +30,10 @@ src/
 │   ├── sitemap.ts            # Dynamic sitemap.xml dengan priority, changefreq & hreflang
 │   └── globals.css           # Tailwind v4 theme tokens, dark mode variables & CSS grid drift
 ├── components/
-│   ├── cv-folder-section.tsx # Integrasi folder interaktif dengan dokumen 4 role karier
+│   ├── certificates-section.tsx # Grid kredensial & sertifikasi terverifikasi
+│   ├── cv-folder-section.tsx # Integrasi folder interaktif 4 role karier dikontrol GSAP ScrollTrigger
 │   ├── cv-preview-modal.tsx  # Modal detail dokumen CV multi-page + link download PDF
+│   ├── faq-section.tsx       # FAQ Accordion esensial alur kerja & teknologi
 │   ├── folder.tsx            # Komponen Folder WebGL2 refraction (React Bits)
 │   ├── grid-background.tsx   # Ambient background lighting & aesthetic grid
 │   ├── lanyard.tsx           # Simulasi kartu 3D lanyard fisik dengan Three.js
@@ -41,12 +43,14 @@ src/
 │   ├── portfolio-pill-nav.tsx# Navigasi desktop (dock bawah tengah) & mobile (drawer kanan atas)
 │   ├── profile-card.tsx      # Kartu profil hologram 3D tilt
 │   ├── profile-card-stage.tsx# Stage interaktif untuk profile card hero
-│   ├── projects-section.tsx  # Grid kartu proyek showcase dengan link GitHub
+│   ├── projects-section.tsx  # Grid kartu proyek showcase seragam tanpa hero banner
 │   ├── section-title.tsx     # Komponen judul section editorial anti-slop
+│   ├── services-section.tsx  # 4 pilar penawaran layanan & kapabilitas teknis
 │   ├── shape-grid.tsx        # Background grid canvas interaktif dengan efek click riak gelombang
-│   ├── smooth-scroll.tsx     # Provider Lenis smooth scroll global
+│   ├── smooth-scroll.tsx     # Provider Lenis smooth scroll global + ScrollTrigger bridge
 │   ├── theme-language-toggle.tsx # Tombol toggle Dark/Light mode & switch bahasa ID/EN
-│   └── theme-provider.tsx    # Provider NextThemes untuk tema gelap/terang
+│   ├── theme-provider.tsx    # Provider NextThemes untuk tema gelap/terang
+│   └── workflow-section.tsx  # 4 langkah alur eksekusi kerja terstruktur
 ├── lib/
 │   ├── i18n.ts               # Inisialisasi react-i18next klien & utilitas persistensi bahasa
 │   ├── profile.ts            # Data master profil, biografi, riwayat organisasi, stack, proyek
@@ -83,3 +87,21 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
    - Tab **Berkas CV**: Kustomisasi judul, deskripsi peran, dan unggah berkas PDF untuk 4 role karier (Frontend, UI/UX, Graphic Design, IT Support).
    - Pengaturan **Logo Header**: Kustomisasi logo avatar pada bilah navigasi atas.
    - Fitur Aksi: **Simpan (Lokal & Cloud)**, **Tarik dari Supabase**, **Ekspor JSON**, **Impor JSON**, dan **Reset ke Default**.
+
+---
+
+## Ketetapan Desain & Aturan Anti-Halusinasi
+
+1. **CV Folder Interaktif**:
+   - Terintegrasi dengan GSAP `ScrollTrigger`.
+   - Di posisi paling atas halaman (Hero): folder tertutup (`isFolderOpen: false`).
+   - Saat di-scroll turun menuju tengah layar: folder terbuka otomatis (`onEnter: open`).
+   - Saat di-scroll melewati ke bawah (melewati seksi CV): folder tertutup kembali (`onLeave: close`).
+   - Saat di-scroll balik naik ke tengah: folder terbuka kembali (`onEnterBack: open`).
+   - Saat di-scroll balik ke atas melewati seksi: folder menutup kembali (`onLeaveBack: close`).
+2. **Kondisi Data Proyek**:
+   - `defaultProjects: []` di `site-store.ts`. Tidak boleh ada mock/dummy/seed otomatis yang dipaksakan jika database kosong.
+   - Tidak ada banner hero repo besar di seksi proyek; proyek ditampilkan dalam format grid kartu seragam yang bersih.
+3. **Anti-Slop Copy & Layout**:
+   - Pertahankan estetika human-crafted, minim noise micro-label, tanpa AI filler copy.
+   - Semua verifikasi wajib dijalankan sebelum menyatakan selesai (`tsc`, `check.mjs`, `build`).

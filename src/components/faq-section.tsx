@@ -12,7 +12,8 @@ export function FaqSection() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="faq" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="tanya-jawab" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle title={t("faq.title")} desc={t("faq.desc")} />
       </ScrollReveal>

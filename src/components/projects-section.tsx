@@ -14,7 +14,9 @@ export function ProjectsSection() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   return (
-    <section id="proyek" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="proyek" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="projects" className="absolute top-0 -mt-24" aria-hidden="true" />
+      <div id="portofolio" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("projects.title")}

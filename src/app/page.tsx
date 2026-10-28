@@ -13,6 +13,7 @@ import { ServicesSection } from "@/components/services-section";
 import { CertificatesSection } from "@/components/certificates-section";
 import { WorkflowSection } from "@/components/workflow-section";
 import { FaqSection } from "@/components/faq-section";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
@@ -90,8 +91,9 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-12 sm:pt-14 sm:pb-16"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-12 sm:pt-14 sm:pb-16"
     >
+      <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
         {/* Left Column: Editorial Information */}
         <div className="flex flex-col items-start gap-5 text-start">
@@ -159,7 +161,9 @@ function About() {
   const { t } = useTranslation();
 
   return (
-    <section id="tentang" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="tentang" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="about" className="absolute top-0 -mt-24" aria-hidden="true" />
+      <div id="about-me" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("about.title")}
@@ -265,7 +269,8 @@ function Stack() {
   ];
 
   return (
-    <section id="stack" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="stack" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="tech-stack" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("stack.title")}
@@ -386,7 +391,8 @@ function Contact() {
   const { t } = useTranslation();
 
   return (
-    <section id="kontak" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="kontak" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full">
         <Parallax speed={0.12} className="w-full">
           <div className="relative overflow-hidden rounded-3xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
@@ -554,6 +560,7 @@ export default function Home() {
       </div>
       <Header />
       <PortfolioPillNav />
+      <ScrollToTop />
       <main>
         <Hero />
         <About />

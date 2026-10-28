@@ -15,7 +15,8 @@ export function WorkflowSection() {
   const { t } = useTranslation();
 
   return (
-    <section className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="workflow" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="alur-kerja" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle title={t("workflow.title")} desc={t("workflow.desc")} />
       </ScrollReveal>

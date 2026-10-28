@@ -44,6 +44,7 @@ src/
 │   ├── profile-card.tsx      # Kartu profil hologram 3D tilt
 │   ├── profile-card-stage.tsx# Stage interaktif untuk profile card hero
 │   ├── projects-section.tsx  # Grid kartu proyek showcase seragam tanpa hero banner
+│   ├── scroll-to-top.tsx     # Tombol pintasan melayang scroll kembali ke atas
 │   ├── section-title.tsx     # Komponen judul section editorial anti-slop
 │   ├── services-section.tsx  # 4 pilar penawaran layanan & kapabilitas teknis
 │   ├── shape-grid.tsx        # Background grid canvas interaktif dengan efek click riak gelombang
@@ -111,3 +112,6 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
 5. **Navbar Bottom Auto-Hide & Watermark Footer**:
    - `PortfolioPillNav` secara otomatis menghilang saat scroll mencapai area footer bawah.
    - Footer menampilkan typographic signature "zakaria mp" menggunakan font pixel (`Pixelify_Sans`) dengan gradien memudar transparan ke bawah.
+6. **Navigasi Anchor Hash & Pintasan Scroll to Top**:
+   - Setiap seksi memiliki anchor independen (`#about`, `#proyek`, `#faq`, `#services`, `#workflow`, `#certificates`, dll.).
+   - Komponen `ScrollToTop` floating di sudut kanan bawah terhubung ke smooth scroll Lenis.

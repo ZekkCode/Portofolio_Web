@@ -158,7 +158,8 @@ export function CvFolderSection() {
   }));
 
   return (
-    <section id="cv" ref={sectionRef} className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
+    <section id="cv" ref={sectionRef} className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
+      <div id="resume" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("cv.title")}

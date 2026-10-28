@@ -93,6 +93,20 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
    - Navbar floating (`PortfolioPillNav`) wajib menghilang otomatis saat scroll mencapai bagian paling bawah halaman (area footer) agar tidak menutupi informasi hak cipta dan metadata.
 8. **Tipografi Watermark Footer**:
    - Teks watermark "zakaria mp" di bagian footer wajib menggunakan font pixel (`Pixelify_Sans` / `--font-pixel`) dengan efek gradien vertikal memudar transparan ke bawah (`bg-clip-text text-transparent bg-gradient-to-b`).
+9. **Standar Anchor Hash Navigation**:
+   - Setiap seksi wajib memiliki ID unik dan alias ramah URL agar dapat dituju secara langsung via hash (`#...`):
+     - `#hero` / `#atas`
+     - `#about` / `#tentang` / `#about-me`
+     - `#services` / `#layanan`
+     - `#cv` / `#resume`
+     - `#stack` / `#tech-stack`
+     - `#proyek` / `#projects`
+     - `#certificates` / `#sertifikasi`
+     - `#workflow` / `#alur-kerja`
+     - `#faq` / `#tanya-jawab`
+     - `#kontak` / `#contact`
+10. **Tombol Pintasan Scroll to Top**:
+   - Tombol pintasan floating melayang di sudut kanan bawah (`ScrollToTop`) muncul otomatis saat scroll melewati 320px untuk memudahkan navigasi cepat kembali ke atas.
 
 
 <!-- BEGIN:nextjs-agent-rules -->

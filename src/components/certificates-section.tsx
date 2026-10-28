@@ -18,7 +18,8 @@ export function CertificatesSection() {
     filter === "all" ? certificates : certificates.filter((c) => c.category === filter);
 
   return (
-    <section id="sertifikasi" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="certificates" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+      <div id="sertifikasi" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("certificates.title")}

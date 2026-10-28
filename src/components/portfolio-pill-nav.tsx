@@ -12,7 +12,18 @@ function useActiveSection() {
   const [active, setActive] = useState<string>("#atas");
 
   useEffect(() => {
-    const sectionIds = ["atas", "tentang", "cv", "stack", "proyek", "kontak"];
+    const sectionIds = [
+      "atas",
+      "tentang",
+      "services",
+      "cv",
+      "stack",
+      "proyek",
+      "certificates",
+      "workflow",
+      "faq",
+      "kontak",
+    ];
     const handleScroll = () => {
       const scrollY = window.scrollY;
       const offset = 180;

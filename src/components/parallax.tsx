@@ -11,21 +11,98 @@ if (typeof window !== "undefined") {
 
 interface ParallaxProps {
   children: ReactNode;
-  speed?: number; // e.g. -0.2 to 0.2 (negative = rises faster, positive = lags behind)
+  speed?: number; // e.g. -0.3 to 0.3 (negative = rises faster, positive = lags behind)
+  offset?: number; // explicit pixel translation override
   align?: "center" | "top"; // "top" for hero/top-of-page elements, "center" for page sections
   className?: string;
   style?: CSSProperties;
   scrub?: boolean | number;
 }
 
+/**
+ * Two-layer Parallax component:
+ * Outer div is the static ScrollTrigger trigger (zero layout shift/jitter).
+ * Inner div receives the smooth scrubbed translateY.
+ */
 export function Parallax({
   children,
-  speed = 0.1,
+  speed = 0.2,
+  offset,
   align = "center",
   className = "",
   style,
-  scrub = true,
+  scrub = 0.7,
 }: ParallaxProps) {
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const trigger = triggerRef.current;
+    const content = contentRef.current;
+    if (!trigger || !content) return;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    // Tangible distance: speed * 550 or explicit pixel offset
+    const distance = typeof offset === "number" ? offset : speed * 550;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        content,
+        {
+          y: align === "top" ? 0 : -distance * 0.5,
+        },
+        {
+          y: align === "top" ? distance : distance * 0.5,
+          ease: "none",
+          scrollTrigger: {
+            trigger,
+            start: align === "top" ? "top top" : "top bottom",
+            end: align === "top" ? "bottom top" : "bottom top",
+            scrub: typeof scrub === "number" ? scrub : 0.7,
+            invalidateOnRefresh: true,
+          },
+        }
+      );
+    }, triggerRef);
+
+    return () => ctx.revert();
+  }, [align, speed, scrub, offset]);
+
+  return (
+    <div ref={triggerRef} className={className} style={style}>
+      <div ref={contentRef} className="will-change-transform h-full w-full">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export interface ScrollRevealProps {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  y?: number;
+  duration?: number;
+  delay?: number;
+  stagger?: number;
+}
+
+/**
+ * ScrollReveal component:
+ * Fades and slides elements upward as they enter the viewport.
+ */
+export function ScrollReveal({
+  children,
+  className = "",
+  style,
+  y = 32,
+  duration = 0.85,
+  delay = 0,
+  stagger = 0,
+}: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,33 +113,34 @@ export function Parallax({
       return;
     }
 
-    const yMovement = speed * 450;
-
     const ctx = gsap.context(() => {
       gsap.fromTo(
         el,
         {
-          y: align === "top" ? 0 : -yMovement * 0.5,
+          opacity: 0,
+          y,
         },
         {
-          y: align === "top" ? yMovement : yMovement * 0.5,
-          ease: "none",
+          opacity: 1,
+          y: 0,
+          duration,
+          delay,
+          stagger,
+          ease: "power2.out",
           scrollTrigger: {
             trigger: el,
-            start: align === "top" ? "top top" : "top bottom",
-            end: align === "top" ? "bottom top" : "bottom top",
-            scrub: scrub === true ? 0.6 : scrub,
-            invalidateOnRefresh: true,
+            start: "top 90%",
+            once: true,
           },
         }
       );
     }, ref);
 
     return () => ctx.revert();
-  }, [align, speed, scrub]);
+  }, [y, duration, delay, stagger]);
 
   return (
-    <div ref={ref} className={`will-change-transform ${className}`} style={style}>
+    <div ref={ref} className={className} style={style}>
       {children}
     </div>
   );
@@ -88,14 +166,16 @@ export function ScrollScrub({
   to = {},
   start = "top bottom",
   end = "bottom top",
-  scrub = true,
+  scrub = 0.7,
   pin = false,
 }: ScrollScrubProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const trigger = triggerRef.current;
+    const content = contentRef.current;
+    if (!trigger || !content) return;
 
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       return;
@@ -103,17 +183,17 @@ export function ScrollScrub({
 
     const ctx = gsap.context(() => {
       const scrollTriggerConfig: ScrollTrigger.Vars = {
-        trigger: el,
+        trigger,
         start,
         end,
-        scrub: scrub === true ? 0.6 : scrub,
+        scrub: typeof scrub === "number" ? scrub : 0.7,
         pin,
         invalidateOnRefresh: true,
       };
 
       if (from) {
         gsap.fromTo(
-          el,
+          content,
           from,
           {
             ...to,
@@ -122,20 +202,22 @@ export function ScrollScrub({
           }
         );
       } else {
-        gsap.to(el, {
+        gsap.to(content, {
           ...to,
           ease: "none",
           scrollTrigger: scrollTriggerConfig,
         });
       }
-    }, ref);
+    }, triggerRef);
 
     return () => ctx.revert();
   }, [from, to, start, end, scrub, pin]);
 
   return (
-    <div ref={ref} className={`will-change-transform ${className}`} style={style}>
-      {children}
+    <div ref={triggerRef} className={className} style={style}>
+      <div ref={contentRef} className="will-change-transform h-full w-full">
+        {children}
+      </div>
     </div>
   );
 }
@@ -149,14 +231,14 @@ interface ParallaxFloatingBadgeProps {
 
 export function ParallaxFloatingBadge({
   label,
-  speed = 0.15,
-  align = "center",
+  speed = -0.2,
+  align = "top",
   className = "",
 }: ParallaxFloatingBadgeProps) {
   return (
     <Parallax speed={speed} align={align} className={`pointer-events-none select-none ${className}`}>
-      <span className="inline-flex items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-ink shadow-sm backdrop-blur-md">
-        <span className="size-1.5 rounded-full bg-brand" aria-hidden="true" />
+      <span className="inline-flex items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-ink shadow-sm backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/95">
+        <span className="size-1.5 rounded-full bg-brand animate-ping" aria-hidden="true" />
         {label}
       </span>
     </Parallax>
@@ -210,4 +292,3 @@ export function SmoothNavLink({
     </a>
   );
 }
-

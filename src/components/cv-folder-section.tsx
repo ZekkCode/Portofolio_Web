@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import Folder, { type FolderEntry } from "@/components/folder";
 import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-preview-modal";
-import { Parallax } from "@/components/parallax";
+import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig } from "@/lib/site-store";
 
@@ -136,10 +136,12 @@ export function CvFolderSection() {
 
   return (
     <section id="cv" ref={sectionRef} className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
-      <SectionTitle
-        title={t("cv.title")}
-        desc={t("cv.desc")}
-      />
+      <ScrollReveal y={24}>
+        <SectionTitle
+          title={t("cv.title")}
+          desc={t("cv.desc")}
+        />
+      </ScrollReveal>
 
       {/* Main Interactive Stage Box */}
       <div className="relative mt-8 overflow-hidden rounded-3xl border border-line/80 bg-white/95 p-6 sm:p-10 shadow-xs dark:border-line/60 dark:bg-[#111422]/90">
@@ -200,7 +202,7 @@ export function CvFolderSection() {
           </div>
         </div>
         {/* Center 3D Folder Container */}
-        <Parallax speed={-0.03}>
+        <Parallax speed={-0.14}>
           <div className="relative z-10 flex min-h-[340px] sm:min-h-[390px] items-center justify-center pt-8 pb-14">
             <Folder
               label="CV / Zekk"
@@ -233,7 +235,7 @@ export function CvFolderSection() {
         </Parallax>
 
         {/* Bottom Role Quick-Access Badges */}
-        <div className="relative z-10 mt-6 border-t border-line/70 pt-6 dark:border-line/40">
+        <ScrollReveal y={20} delay={0.1} className="relative z-10 mt-6 border-t border-line/70 pt-6 dark:border-line/40">
           <div className="mb-4 flex items-center justify-center">
             <span className="rounded-full border border-line/80 bg-white/90 px-4 py-1 text-xs font-medium text-body shadow-2xs backdrop-blur-xs dark:border-line/50 dark:bg-[#191e32]">
               {t("cv.quickAccess")}
@@ -270,7 +272,7 @@ export function CvFolderSection() {
               );
             })}
           </div>
-        </div>
+        </ScrollReveal>
       </div>
 
       {/* CV Preview Modal */}

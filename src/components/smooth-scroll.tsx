@@ -15,10 +15,20 @@ function ScrollTriggerBridge() {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 150);
-    return () => clearTimeout(timer);
+    const handleRefresh = () => ScrollTrigger.refresh();
+
+    window.addEventListener("resize", handleRefresh);
+    window.addEventListener("load", handleRefresh);
+
+    const timer1 = setTimeout(handleRefresh, 150);
+    const timer2 = setTimeout(handleRefresh, 600);
+
+    return () => {
+      window.removeEventListener("resize", handleRefresh);
+      window.removeEventListener("load", handleRefresh);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, []);
 
   return null;

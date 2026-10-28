@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Parallax } from "@/components/parallax";
+import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type Project } from "@/lib/site-store";
 import { RepoPreviewModal } from "@/components/repo-preview-modal";
@@ -17,10 +17,12 @@ export function ProjectsSection() {
 
   return (
     <section id="proyek" className="mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
-      <SectionTitle
-        title={t("projects.title")}
-        desc={t("projects.desc")}
-      />
+      <ScrollReveal y={24}>
+        <SectionTitle
+          title={t("projects.title")}
+          desc={t("projects.desc")}
+        />
+      </ScrollReveal>
 
       {projects.length === 0 ? (
         <Parallax speed={0.015}>
@@ -65,7 +67,7 @@ export function ProjectsSection() {
         <>
           {/* Featured Flagship Case Study */}
           {featured && (
-            <Parallax speed={0.02} className="mb-8">
+            <Parallax speed={0.10} className="mb-10">
               <div className="relative overflow-hidden rounded-3xl border border-line/80 bg-white p-6 sm:p-8 shadow-xs dark:border-line/60 dark:bg-[#111422]">
                 {/* Top Metadata Strip */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/60 pb-4 dark:border-line/40">
@@ -193,7 +195,7 @@ export function ProjectsSection() {
                 return (
                   <Parallax
                     key={project.id}
-                    speed={idx % 2 === 0 ? 0.02 : -0.015}
+                    speed={idx % 2 === 0 ? 0.16 : -0.12}
                     className="flex"
                   >
                     <div className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]">

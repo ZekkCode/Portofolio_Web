@@ -13,7 +13,13 @@ export function getR2Config(): R2Config | null {
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   const bucketName = process.env.R2_BUCKET_NAME;
-  const publicDomain = process.env.R2_PUBLIC_DOMAIN || process.env.NEXT_PUBLIC_R2_URL || "";
+  let publicDomain = (process.env.R2_PUBLIC_DOMAIN || process.env.NEXT_PUBLIC_R2_URL || "")
+    .trim()
+    .replace(/\/$/, "");
+
+  if (publicDomain && !/^https?:\/\//i.test(publicDomain)) {
+    publicDomain = `https://${publicDomain}`;
+  }
 
   if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
     return null;
@@ -24,7 +30,7 @@ export function getR2Config(): R2Config | null {
     accessKeyId,
     secretAccessKey,
     bucketName,
-    publicDomain: publicDomain.replace(/\/$/, ""),
+    publicDomain,
   };
 }
 

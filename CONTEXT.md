@@ -105,3 +105,6 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
 3. **Anti-Slop Copy & Layout**:
    - Pertahankan estetika human-crafted, minim noise micro-label, tanpa AI filler copy.
    - Semua verifikasi wajib dijalankan sebelum menyatakan selesai (`tsc`, `check.mjs`, `build`).
+4. **Standar Ikon**:
+   - Dilarang menyisipkan panah mentah di teks (`→`, `↗`, `->`).
+   - Seluruh indikator navigasi dan link eksternal menggunakan SVG icon resmi dari `lucide-react` (`ArrowRight`, `ArrowUpRight`, `ChevronLeft`, `ChevronRight`).

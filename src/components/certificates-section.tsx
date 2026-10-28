@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowUpRight } from "lucide-react";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { profile } from "@/lib/profile";
@@ -78,7 +79,7 @@ export function CertificatesSection() {
                     className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline dark:text-blue-400"
                   >
                     <span>{t("certificates.viewCredential")}</span>
-                    <span aria-hidden="true">↗</span>
+                    <ArrowUpRight className="size-3" />
                   </a>
                 </div>
               )}

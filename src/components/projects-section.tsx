@@ -6,6 +6,7 @@ import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type Project } from "@/lib/site-store";
 import { RepoPreviewModal } from "@/components/repo-preview-modal";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 
 export function ProjectsSection() {
   const { t } = useTranslation();
@@ -55,7 +56,7 @@ export function ProjectsSection() {
                 className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs font-semibold text-ink shadow-2xs transition hover:border-brand/40 hover:bg-surface active:scale-[0.97] dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928]"
               >
                 <span>{t("projects.adminBtn")}</span>
-                <span aria-hidden="true">→</span>
+                <ArrowRight className="size-3.5" />
               </a>
             </div>
           </div>
@@ -145,7 +146,7 @@ export function ProjectsSection() {
                         className="inline-flex min-h-[38px] items-center gap-1 rounded-full border border-line bg-surface px-3.5 py-1.5 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-800"
                       >
                         <span>{t("projects.previewBtn")}</span>
-                        <span aria-hidden="true">↗</span>
+                        <ArrowUpRight className="size-3.5" />
                       </button>
 
                       {project.repo ? (
@@ -156,7 +157,7 @@ export function ProjectsSection() {
                           className="inline-flex min-h-[38px] items-center gap-1.5 text-xs font-bold text-ink transition-all duration-150 hover:text-brand active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-white dark:hover:text-blue-400"
                         >
                           <span>{t("projects.viewRepo")}</span>
-                          <span aria-hidden="true">→</span>
+                          <ArrowRight className="size-3.5" />
                         </a>
                       ) : (
                         <span className="text-xs text-muted">{t("repoModal.internal")}</span>

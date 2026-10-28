@@ -86,6 +86,9 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
    - `#proyek`: Grid Proyek Dinamis.
    - `#faq`: FAQ Accordion esensial.
    - `#kontak` & Footer: Form kontak langsung dan media sosial.
+6. **Standar Ikon & Anti-Slop Panah**:
+   - Dilarang keras memakai panah unicode buatan manual/AI-slop (seperti `→`, `↗`, `←`, `->`) langsung di dalam string atau markup teks.
+   - Gunakan komponen ikon standar dari `lucide-react` (misal `<ArrowRight />`, `<ArrowUpRight />`, `<ChevronLeft />`, `<ChevronRight />`) dengan proporsi ukuran rapi (`size-3`, `size-3.5`).
 
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -18,6 +18,7 @@ import {
 } from "@/lib/site-store";
 import { profile } from "@/lib/profile";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
+import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
 
@@ -597,8 +598,9 @@ export default function AdminPage() {
       <header className="sticky top-0 z-40 border-b border-line/70 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-semibold text-body hover:text-ink rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand px-1">
-              ← Portofolio
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-body hover:text-ink rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand px-1">
+              <ArrowLeft className="size-3.5" />
+              <span>Portofolio</span>
             </Link>
             <span className="h-4 w-px bg-line" aria-hidden="true" />
             <span className="font-display text-sm uppercase">Panel Admin</span>
@@ -894,9 +896,10 @@ export default function AdminPage() {
                     setPreviewRole("all");
                     setPreviewCvModal(true);
                   }}
-                  className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-ink"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-ink"
                 >
-                  Tes Modal Geser PDF →
+                  <FileText className="size-3.5" />
+                  <span>Tes Modal Geser PDF</span>
                 </button>
               </div>
 
@@ -1060,9 +1063,10 @@ export default function AdminPage() {
                           setPreviewRole(doc.roleKey);
                           setPreviewCvModal(true);
                         }}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline"
                       >
-                        Pratinjau / Geser Halaman →
+                        <span>Pratinjau / Geser Halaman</span>
+                        <ArrowRight className="size-3" />
                       </button>
                       {doc.pdfUrl && (
                         <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
 
@@ -249,11 +250,9 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                   onClick={prevPage}
                   disabled={currentPage === 0}
                   className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  title="Halaman Sebelumnya (←)"
+                  title="Halaman Sebelumnya"
                 >
-                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
+                  <ChevronLeft className="size-3.5" />
                 </button>
                 <span className="font-mono text-[11px] font-semibold text-ink px-1.5">
                   {currentPage + 1} / {totalPages}
@@ -263,11 +262,9 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                   onClick={nextPage}
                   disabled={currentPage >= totalPages - 1}
                   className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  title="Halaman Berikutnya (→)"
+                  title="Halaman Berikutnya"
                 >
-                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  <ChevronRight className="size-3.5" />
                 </button>
               </div>
             )}
@@ -583,9 +580,10 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                                             href={p.url}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="text-[10px] font-semibold text-brand hover:underline"
+                                            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-brand hover:underline"
                                           >
-                                            GitHub Repo →
+                                            <span>GitHub Repo</span>
+                                            <ArrowUpRight className="size-2.5" />
                                           </a>
                                         )}
                                       </div>
@@ -687,7 +685,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                                       rel="noreferrer"
                                       className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline"
                                     >
-                                      https://zekktech.biz.id →
+                                      <span>https://zekktech.biz.id</span>
+                                      <ArrowUpRight className="size-3" />
                                     </a>
                                   </div>
                                 </div>
@@ -737,17 +736,19 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 type="button"
                 onClick={prevPage}
                 disabled={currentPage === 0}
-                className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
               >
-                ← Sebelumnya
+                <ChevronLeft className="size-3.5" />
+                <span>Sebelumnya</span>
               </button>
               <button
                 type="button"
                 onClick={nextPage}
                 disabled={currentPage >= totalPages - 1}
-                className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
               >
-                Selanjutnya →
+                <span>Selanjutnya</span>
+                <ChevronRight className="size-3.5" />
               </button>
             </div>
           </div>

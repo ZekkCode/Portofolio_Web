@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Project } from "@/lib/site-store";
 
 interface RepoPreviewModalProps {
@@ -179,7 +180,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-xs font-semibold text-ink transition hover:border-brand/40 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-slate-900"
               >
                 <span>{t("repoModal.liveDemo")}</span>
-                <span aria-hidden="true">↗</span>
+                <ArrowUpRight className="size-3.5" />
               </a>
             )}
 
@@ -191,7 +192,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2 text-xs font-semibold text-white transition hover:bg-brand-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 <span>{t("repoModal.openGithub")}</span>
-                <span aria-hidden="true">→</span>
+                <ArrowRight className="size-3.5" />
               </a>
             ) : (
               <span className="text-xs text-muted">{t("repoModal.internal")}</span>

@@ -9,6 +9,7 @@ import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-prev
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig } from "@/lib/site-store";
+import { ArrowUpRight } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -85,7 +86,10 @@ function DemoWhitePaper({ roleKey, onClick }: { roleKey: Exclude<RoleKey, "all">
       {/* Mini Document Footer */}
       <div className="flex items-center justify-between border-t border-slate-100/90 pt-1 text-[7px] sm:text-[8px] font-medium text-slate-400">
         <span>{t("cv.previewDoc")}</span>
-        <span className="font-bold text-sky-600">{t("cv.openDoc")}</span>
+        <span className="inline-flex items-center gap-0.5 font-bold text-sky-600">
+          <span>{t("cv.openDoc")}</span>
+          <ArrowUpRight className="size-2.5" />
+        </span>
       </div>
     </div>
   );
@@ -217,9 +221,10 @@ export function CvFolderSection() {
             <button
               type="button"
               onClick={() => openPreview("all")}
-              className="rounded-full bg-ink px-3.5 py-1 text-xs font-semibold text-white transition-all duration-150 hover:bg-black active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-white dark:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1 text-xs font-semibold text-white transition-all duration-150 hover:bg-black active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-white dark:text-ink"
             >
-              {t("cv.openAll")} →
+              <span>{t("cv.openAll")}</span>
+              <ArrowUpRight className="size-3.5" />
             </button>
           </div>
         </div>
@@ -284,8 +289,9 @@ export function CvFolderSection() {
                     >
                       {title.charAt(0)}
                     </div>
-                    <span className="text-xs font-semibold text-slate-400 group-hover:text-brand transition-colors">
-                      {t("cv.viewCv")}
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 group-hover:text-brand transition-colors">
+                      <span>{t("cv.viewCv")}</span>
+                      <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </span>
                   </div>
                   <h4 className="mt-2.5 text-sm font-bold text-ink">{title}</h4>

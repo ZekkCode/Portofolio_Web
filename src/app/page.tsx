@@ -22,6 +22,7 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
+import { ArrowRight } from "lucide-react";
 
 function Header() {
   const { t } = useTranslation();
@@ -131,7 +132,7 @@ function Hero() {
                 className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-surface active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928]"
               >
                 <span>{t("hero.cvBtn")}</span>
-                <span aria-hidden="true">→</span>
+                <ArrowRight className="size-3.5" />
               </SmoothNavLink>
             </div>
           </Parallax>

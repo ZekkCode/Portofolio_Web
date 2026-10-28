@@ -45,14 +45,35 @@ export function PortfolioPillNav() {
   const activeSection = useActiveSection();
   const scrollTo = useSmoothScrollTo();
   const [scrolled, setScrolled] = useState(false);
+  const [atBottom, setAtBottom] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
-      setScrolled(window.scrollY > 80);
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      // Muncul setelah scroll melewati hero (80px)
+      setScrolled(scrollY > 80);
+
+      // Otomatis menghilang saat mencapai area footer di paling bawah halaman
+      const footer = document.querySelector("footer");
+      if (footer) {
+        const rect = footer.getBoundingClientRect();
+        setAtBottom(rect.top <= windowHeight - 40);
+      } else {
+        const remainingDistance = docHeight - (scrollY + windowHeight);
+        setAtBottom(remainingDistance < 140);
+      }
     };
+
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
@@ -86,10 +107,12 @@ export function PortfolioPillNav() {
 
   return (
     <>
-      {/* DESKTOP: Floating at bottom center (reveals when scrolled) */}
+      {/* DESKTOP: Floating at bottom center (reveals when scrolled, hides when reaching bottom footer) */}
       <div
         className={`pointer-events-none fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 hidden -translate-x-1/2 md:flex transition-all duration-300 ${
-          scrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+          scrolled && !atBottom
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8 pointer-events-none"
         }`}
       >
         <div className="pointer-events-auto">

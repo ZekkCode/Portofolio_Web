@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Grotesk, Pixelify_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { profile } from "@/lib/profile";
@@ -17,6 +17,13 @@ const fontBody = Plus_Jakarta_Sans({
   variable: "--font-body",
   display: "swap",
   weight: ["400", "500", "600"],
+});
+
+const fontPixel = Pixelify_Sans({
+  subsets: ["latin"],
+  variable: "--font-pixel",
+  display: "swap",
+  weight: ["600", "700"],
 });
 
 export const viewport: Viewport = {
@@ -216,7 +223,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable}`}>
+    <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
       <head>
         <script
           type="application/ld+json"

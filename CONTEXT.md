@@ -108,3 +108,6 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
 4. **Standar Ikon**:
    - Dilarang menyisipkan panah mentah di teks (`→`, `↗`, `->`).
    - Seluruh indikator navigasi dan link eksternal menggunakan SVG icon resmi dari `lucide-react` (`ArrowRight`, `ArrowUpRight`, `ChevronLeft`, `ChevronRight`).
+5. **Navbar Bottom Auto-Hide & Watermark Footer**:
+   - `PortfolioPillNav` secara otomatis menghilang saat scroll mencapai area footer bawah.
+   - Footer menampilkan typographic signature "zakaria mp" menggunakan font pixel (`Pixelify_Sans`) dengan gradien memudar transparan ke bawah.

@@ -29,6 +29,7 @@
 @theme {
   --font-sans: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-display), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-pixel: var(--font-pixel), "Courier New", monospace;
 
   --color-ink: var(--color-ink);
   --color-body: var(--color-body);

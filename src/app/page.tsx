@@ -486,8 +486,18 @@ function Footer() {
   const { views, isEngaged } = usePageViews();
 
   return (
-    <footer className="border-t border-line pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-36 dark:border-line">
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 py-10 text-sm text-body sm:flex-row">
+    <footer className="relative border-t border-line overflow-hidden pt-12 pb-12 sm:pt-16 sm:pb-16 dark:border-line">
+      {/* Huge Pixelated Signature Watermark: zakaria mp */}
+      <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mb-6 sm:mb-10">
+        <p
+          aria-hidden="true"
+          className="font-pixel text-[13vw] sm:text-[11vw] md:text-[10vw] lg:text-[112px] font-bold leading-none tracking-wider uppercase bg-gradient-to-b from-ink/45 via-ink/15 to-transparent dark:from-white/40 dark:via-white/10 dark:to-transparent bg-clip-text text-transparent"
+        >
+          zakaria mp
+        </p>
+      </div>
+
+      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 border-t border-line/60 pt-8 text-sm text-body sm:flex-row dark:border-line/40">
         <div>
           <p className="font-display text-base font-bold text-ink">{profile.brand}</p>
           <p className="text-xs text-body mt-0.5">© {new Date().getFullYear()} {profile.name}. Mojokerto, Indonesia.</p>

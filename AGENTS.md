@@ -89,6 +89,10 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
 6. **Standar Ikon & Anti-Slop Panah**:
    - Dilarang keras memakai panah unicode buatan manual/AI-slop (seperti `→`, `↗`, `←`, `->`) langsung di dalam string atau markup teks.
    - Gunakan komponen ikon standar dari `lucide-react` (misal `<ArrowRight />`, `<ArrowUpRight />`, `<ChevronLeft />`, `<ChevronRight />`) dengan proporsi ukuran rapi (`size-3`, `size-3.5`).
+7. **Pill Navbar Hiding Behavior**:
+   - Navbar floating (`PortfolioPillNav`) wajib menghilang otomatis saat scroll mencapai bagian paling bawah halaman (area footer) agar tidak menutupi informasi hak cipta dan metadata.
+8. **Tipografi Watermark Footer**:
+   - Teks watermark "zakaria mp" di bagian footer wajib menggunakan font pixel (`Pixelify_Sans` / `--font-pixel`) dengan efek gradien vertikal memudar transparan ke bawah (`bg-clip-text text-transparent bg-gradient-to-b`).
 
 
 <!-- BEGIN:nextjs-agent-rules -->

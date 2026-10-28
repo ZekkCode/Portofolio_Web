@@ -164,10 +164,9 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
               <div className="flex size-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md shadow-inner text-2xl font-black tracking-widest text-white shadow-2xs">
                 {name ? name.split(' ').map((n) => n[0]).slice(0, 2).join('') : 'ZK'}
               </div>
-              <div className="mt-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1 text-[11px] font-semibold text-white/80 backdrop-blur-xs">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>DEVELOPER BADGE</span>
-              </div>
+              <p className="mt-3 font-mono text-[11px] font-bold tracking-wider uppercase text-white/70">
+                {title || 'Portfolio'}
+              </p>
             </div>
           )}
           {(name||title)&&(<><span className={LAYER} style={SCRIM_STYLE}/><div className={INFO}>{name&&<h3 className={NAME}>{name}</h3>}{title&&<p className={TITLE}>{title}</p>}</div></>)}

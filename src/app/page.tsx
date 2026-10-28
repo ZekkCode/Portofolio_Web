@@ -97,11 +97,6 @@ function Hero() {
         {/* Left Column: Editorial Information */}
         <div className="flex flex-col items-start gap-5 text-start">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3.5 py-1 text-xs font-semibold text-body dark:border-line/60 dark:bg-[#111422]/80">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{t("hero.badge")}</span>
-            </div>
-
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.05]">
               Zakaria Mujur Prasetyo
             </h1>
@@ -137,12 +132,6 @@ function Hero() {
 
         {/* Right Column: Disciplined 3D Card Presentation Frame with Living Parallax */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full">
-          <ParallaxFloatingBadge
-            label={t("hero.since")}
-            speed={-0.18}
-            align="top"
-            className="absolute -top-3.5 -end-1 z-20 hidden sm:flex"
-          />
           <Parallax speed={0.24} align="top" className="w-full max-w-[320px]">
             <ProfileCardStage />
           </Parallax>

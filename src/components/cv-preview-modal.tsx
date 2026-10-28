@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, RotateCcw } from "lucide-react";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
+import PaperCrumple from "@/components/paper-crumple";
 
 export type RoleKey = "all" | "graphic" | "uiux" | "frontend" | "itsupport";
 
@@ -132,6 +133,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [zoom, setZoom] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [modalMode, setModalMode] = useState<"doc" | "crumple">("doc");
+  const [crumpleResetKey, setCrumpleResetKey] = useState(0);
 
   if (initialRole !== prevInitialRole) {
     setPrevInitialRole(initialRole);
@@ -242,6 +245,33 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
 
           {/* Navigation Controls: Slide pages, Zoom, Print/Download, Close */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* View Mode Toggle: Dokumen vs Kertas Remas 3D */}
+            <div className="flex rounded-full border border-line bg-slate-100/90 p-0.5 text-xs dark:border-line/50 dark:bg-slate-900/90">
+              <button
+                type="button"
+                onClick={() => setModalMode("doc")}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  modalMode === "doc"
+                    ? "bg-white text-ink shadow-2xs dark:bg-[#191e32] dark:text-white"
+                    : "text-body hover:text-ink"
+                }`}
+              >
+                Dokumen
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalMode("crumple")}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  modalMode === "crumple"
+                    ? "bg-white text-ink shadow-2xs dark:bg-[#191e32] dark:text-white"
+                    : "text-body hover:text-ink"
+                }`}
+              >
+                <Sparkles className="size-3 text-brand" />
+                <span>Remas 3D</span>
+              </button>
+            </div>
+
             {/* Page Slider Controls (Active when multi-page) */}
             {totalPages > 1 && (
               <div className="flex items-center gap-1 rounded-full border border-line bg-slate-100/90 px-2 py-1 text-xs dark:border-line/50 dark:bg-slate-900/90">
@@ -393,8 +423,47 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             </>
           )}
 
-          {/* If custom PDF URL is provided, show embedded PDF */}
-          {currentDoc?.pdfUrl && !currentDoc.pages?.length ? (
+          {/* If 3D Crumple Mode active, render PaperCrumple physics sheet */}
+          {modalMode === "crumple" ? (
+            <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center p-2">
+              <div className="mb-3 flex items-center justify-between w-full max-w-md px-2 text-xs text-body">
+                <div className="flex items-center gap-1.5 font-semibold text-ink">
+                  <Sparkles className="size-3.5 text-brand" />
+                  <span>Simulasi Fisik Remas Kertas 3D • Halaman {currentPage + 1}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCrumpleResetKey((k) => k + 1)}
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] font-semibold text-body hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
+                >
+                  <RotateCcw className="size-3" />
+                  <span>Ratakan</span>
+                </button>
+              </div>
+              <div className="relative w-full overflow-hidden rounded-2xl border border-line bg-white shadow-xl dark:border-line/50 dark:bg-[#0c0e17]">
+                <PaperCrumple
+                  src={currentDoc?.pages?.[currentPage] || `/cv-page-${currentPage + 1}.png`}
+                  alt={`Halaman ${currentPage + 1}`}
+                  width={340}
+                  height={480}
+                  sceneHeight={530}
+                  releaseBehavior="restore"
+                  crumpleAmount={0.85}
+                  crumpleDuration={0.55}
+                  releaseDuration={0.4}
+                  foldCount={6}
+                  foldSharpness={0.6}
+                  wrinkleDepth={0.65}
+                  creaseStrength={0.18}
+                  paperColor="#f8fafc"
+                  paperTexture={0.08}
+                  draggable
+                  returnToOrigin
+                  resetKey={crumpleResetKey}
+                />
+              </div>
+            </div>
+          ) : currentDoc?.pdfUrl && !currentDoc.pages?.length ? (
             <div className="mx-auto flex h-full max-w-4xl flex-col items-center justify-center">
               <iframe
                 src={currentDoc.pdfUrl}

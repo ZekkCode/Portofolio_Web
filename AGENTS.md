@@ -111,6 +111,11 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
 12. **Standar CTA Hero**:
    - Tombol aksi utama hero menggunakan email langsung (`mailto:zakariamujur6@gmail.com`) dengan ikon `<Mail />` (bukan WhatsApp).
    - Tombol sekunder mengarah ke seksi CV dengan label "Folder Berkas Karir".
+13. **Integrasi PaperCrumple & Berkas CV Otentik**:
+   - Berkas CV pada folder 3D dan pratinjau modal menggunakan berkas PDF otentik ATS Zakaria Mujur Prasetyo (`/cv-ats-zakariamp-2025.pdf`) dan render 4 halaman resolusi tinggi (`/cv-page-1.png` s.d. `/cv-page-4.png`).
+   - Dilarang memakai mockup wireframe dummy lines.
+   - Pada tengah stage folder 3D, terpasang tombol melayang ("Lihat CV") dengan tautan langsung membuka pratinjau dokumen modal lengkap.
+   - Dilengkapi komponen interaktif `<PaperCrumple />` dari React Bits (Three.js WebGL physics simulation) sehingga pengunjung dapat meremas, melipat, menarik, dan meratakan lembar CV asli.
 
 
 <!-- BEGIN:nextjs-agent-rules -->

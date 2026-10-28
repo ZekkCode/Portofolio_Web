@@ -119,3 +119,7 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
    - Situs portofolio personal tidak memuat seksi "Cara Kerja / Workflow". Semua konten fokus pada kredensial, keahlian, dan showcase karya nyata.
 8. **CTA Hero**:
    - Tombol utama hero menggunakan email langsung (`mailto:zakariamujur6@gmail.com`) dan tombol sekunder mengarah ke "Folder Berkas Karir" (`#cv`).
+9. **Integrasi PaperCrumple & Berkas CV Otentik**:
+   - Folder 3D dan CV preview modal menggunakan dokumen ATS CV otentik Zakaria Mujur Prasetyo (`/cv-ats-zakariamp-2025.pdf`) dengan render 4 halaman beresolusi tinggi (`/cv-page-1.png` s.d. `/cv-page-4.png`).
+   - Dilengkapi tombol floating melayang di tengah folder ("Lihat CV") untuk membuka modal pratinjau secara instan.
+   - Komponen `<PaperCrumple />` dari React Bits (Three.js WebGL) diintegrasikan untuk memberikan efek simulasi fisik kertas 3D (bisa diremas, ditarik, dan diratakan kembali).

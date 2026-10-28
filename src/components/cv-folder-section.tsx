@@ -6,10 +6,11 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import Folder, { type FolderEntry } from "@/components/folder";
 import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-preview-modal";
+import PaperCrumple from "@/components/paper-crumple";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig } from "@/lib/site-store";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, FileText, Sparkles, FolderClosed, RotateCcw } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -17,77 +18,112 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-function DemoWhitePaper({ roleKey, onClick }: { roleKey: Exclude<RoleKey, "all">; onClick: () => void }) {
-  const { t } = useTranslation();
-  const detail = ROLE_DETAILS[roleKey];
+interface CvPageInfo {
+  page: number;
+  roleKey: Exclude<RoleKey, "all">;
+  title: string;
+  subtitle: string;
+  image: string;
+  color: string;
+}
 
+const CV_PAGES: CvPageInfo[] = [
+  {
+    page: 1,
+    roleKey: "graphic",
+    title: "Profil & Pengalaman",
+    subtitle: "Desain Grafis & Creative Media",
+    image: "/cv-page-1.png",
+    color: "#0284c7",
+  },
+  {
+    page: 2,
+    roleKey: "uiux",
+    title: "Pendidikan & Organisasi",
+    subtitle: "S1 TI UTM (IPK 3.70) • GDGoC",
+    image: "/cv-page-2.png",
+    color: "#0284c7",
+  },
+  {
+    page: 3,
+    roleKey: "frontend",
+    title: "Proyek & Sertifikasi",
+    subtitle: "Trevio, TOEFL & BNSP Grafis",
+    image: "/cv-page-3.png",
+    color: "#1b45c4",
+  },
+  {
+    page: 4,
+    roleKey: "itsupport",
+    title: "Kemampuan & Portofolio",
+    subtitle: "Figma, Adobe, Next.js, Python",
+    image: "/cv-page-4.png",
+    color: "#d97706",
+  },
+];
+
+function CvPdfPaperSheet({
+  page,
+  title,
+  subtitle,
+  image,
+  color,
+  onClick,
+}: {
+  page: number;
+  title: string;
+  subtitle: string;
+  image: string;
+  color: string;
+  onClick: () => void;
+}) {
   return (
     <div
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
-      className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[2px] border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer select-none text-slate-800"
+      className="group relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[3px] border border-slate-200/90 bg-white p-2.5 shadow-2xs transition-all hover:scale-[1.02] hover:border-brand/60 hover:shadow-md active:scale-[0.99] cursor-pointer select-none text-slate-800"
       style={{
         background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
       }}
-      title={`${t("cv.previewDoc")}: ${detail?.title || "Role"}`}
+      title={`Curriculum Vitae — Hal ${page}: ${title}`}
     >
-      {/* Mini Document Header */}
+      {/* Top Document Header */}
       <div>
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
             <span
               className="size-2 rounded-full shrink-0"
-              style={{ backgroundColor: detail?.color || "#1b45c4" }}
+              style={{ backgroundColor: color }}
             />
             <span className="font-mono text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-500">
-              CURRICULUM VITAE
+              ATS CV • HAL {page}
             </span>
           </div>
-          <span className="rounded bg-slate-100 px-1 py-0.2 text-[7px] sm:text-[8px] font-semibold text-slate-600">
-            PDF
+          <span className="rounded bg-sky-50 px-1 py-0.2 text-[7px] sm:text-[8px] font-bold text-sky-700 border border-sky-100">
+            PDF 2025
           </span>
         </div>
 
-        {/* Candidate & Role Title */}
-        <div className="mt-2 text-left">
-          <span className="block font-sans text-[10px] sm:text-[11px] font-extrabold text-slate-900 leading-tight">
-            Zakaria Mujur P.
-          </span>
-          <span
-            className="block font-sans text-[8px] sm:text-[9px] font-bold leading-tight mt-0.5"
-            style={{ color: detail?.color || "#1b45c4" }}
-          >
-            {detail?.title || "Spesialisasi"}
-          </span>
-        </div>
-
-        {/* Micro-Skeleton Wireframe Simulation of Document Content */}
-        <div className="mt-2 space-y-1 text-left">
-          <div className="h-0.8 w-3/4 rounded-full bg-slate-200/80" />
-          <div className="h-0.8 w-full rounded-full bg-slate-100" />
-          <div className="h-0.8 w-5/6 rounded-full bg-slate-100" />
-        </div>
-
-        {/* Skill tags preview */}
-        <div className="mt-2 flex flex-wrap gap-1 text-[7px] sm:text-[8px]">
-          {detail?.skills?.slice(0, 2).map((s) => (
-            <span
-              key={s}
-              className="rounded bg-slate-50 px-1 py-0.5 font-medium text-slate-600 border border-slate-200/60"
-            >
-              {s}
-            </span>
-          ))}
+        {/* Realistic Page Thumbnail Preview */}
+        <div className="relative mt-2 aspect-[1/1.25] w-full overflow-hidden rounded border border-slate-200/80 bg-slate-50 shadow-inner">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image}
+            alt={`CV Hal ${page} - ${title}`}
+            draggable={false}
+            className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
 
       {/* Mini Document Footer */}
-      <div className="flex items-center justify-between border-t border-slate-100/90 pt-1 text-[7px] sm:text-[8px] font-medium text-slate-400">
-        <span>{t("cv.previewDoc")}</span>
-        <span className="inline-flex items-center gap-0.5 font-bold text-sky-600">
-          <span>{t("cv.openDoc")}</span>
+      <div className="mt-1 flex items-center justify-between border-t border-slate-100/90 pt-1 text-[7px] sm:text-[8px] font-medium text-slate-500">
+        <span className="truncate max-w-[110px] font-bold text-slate-800">{title}</span>
+        <span className="inline-flex items-center gap-0.5 font-bold text-brand group-hover:underline">
+          <span>Buka</span>
           <ArrowUpRight className="size-2.5" />
         </span>
       </div>
@@ -107,6 +143,9 @@ export function CvFolderSection() {
   const [folderMode, setFolderMode] = useState<"flap" | "book">("flap");
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [stageView, setStageView] = useState<"folder" | "crumple">("folder");
+  const [activeCrumplePage, setActiveCrumplePage] = useState<number>(1);
+  const [crumpleResetKey, setCrumpleResetKey] = useState<number>(0);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -151,11 +190,20 @@ export function CvFolderSection() {
     setModalOpen(true);
   };
 
-  const roleKeys: Exclude<RoleKey, "all">[] = ["graphic", "uiux", "frontend", "itsupport"];
-
-  const folderItems: FolderEntry[] = roleKeys.map((key) => ({
-    content: <DemoWhitePaper roleKey={key} onClick={() => openPreview(key)} />,
+  const folderItems: FolderEntry[] = CV_PAGES.map((item) => ({
+    content: (
+      <CvPdfPaperSheet
+        page={item.page}
+        title={item.title}
+        subtitle={item.subtitle}
+        image={item.image}
+        color={item.color}
+        onClick={() => openPreview(item.roleKey)}
+      />
+    ),
   }));
+
+  const activeCrumpleItem = CV_PAGES.find((p) => p.page === activeCrumplePage) || CV_PAGES[0];
 
   return (
     <section id="cv" ref={sectionRef} className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
@@ -174,49 +222,108 @@ export function CvFolderSection() {
       >
         {/* Top Controls Bar */}
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pb-5 dark:border-line/40">
-          <div className="flex items-center gap-2 text-xs font-semibold text-ink">
-            <span>{t("cv.badge")}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Mode Switch: Flap vs Book */}
+          <div className="flex items-center gap-2">
+            {/* View Switch: Folder vs Paper Crumple 3D */}
             <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
               <button
                 type="button"
-                onClick={() => setFolderMode("flap")}
-                className={`rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  folderMode === "flap"
+                onClick={() => setStageView("folder")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                  stageView === "folder"
                     ? "bg-brand text-white font-semibold shadow-xs"
                     : "hover:text-ink"
                 }`}
               >
-                {t("cv.modeFlap")}
+                <FolderClosed className="size-3" />
+                <span>Berkas Folder</span>
               </button>
               <button
                 type="button"
-                onClick={() => setFolderMode("book")}
-                className={`rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  folderMode === "book"
+                onClick={() => setStageView("crumple")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                  stageView === "crumple"
                     ? "bg-brand text-white font-semibold shadow-xs"
                     : "hover:text-ink"
                 }`}
               >
-                {t("cv.modeBook")}
+                <Sparkles className="size-3" />
+                <span>Kertas Remas 3D</span>
               </button>
             </div>
+          </div>
 
-            {/* Manual Toggle Open/Close Button */}
-            <button
-              type="button"
-              onClick={() => setIsFolderOpen((prev) => !prev)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                isFolderOpen
-                  ? "bg-brand/10 text-brand border border-brand/30"
-                  : "border border-line bg-white text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-              }`}
-            >
-              {isFolderOpen ? t("cv.closeFolder") : t("cv.openFolder")}
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {stageView === "folder" ? (
+              <>
+                {/* Mode Switch: Flap vs Book */}
+                <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
+                  <button
+                    type="button"
+                    onClick={() => setFolderMode("flap")}
+                    className={`rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                      folderMode === "flap"
+                        ? "bg-brand text-white font-semibold shadow-xs"
+                        : "hover:text-ink"
+                    }`}
+                  >
+                    {t("cv.modeFlap")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFolderMode("book")}
+                    className={`rounded-full px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                      folderMode === "book"
+                        ? "bg-brand text-white font-semibold shadow-xs"
+                        : "hover:text-ink"
+                    }`}
+                  >
+                    {t("cv.modeBook")}
+                  </button>
+                </div>
+
+                {/* Manual Toggle Open/Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsFolderOpen((prev) => !prev)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                    isFolderOpen
+                      ? "bg-brand/10 text-brand border border-brand/30"
+                      : "border border-line bg-white text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
+                  }`}
+                >
+                  {isFolderOpen ? t("cv.closeFolder") : t("cv.openFolder")}
+                </button>
+              </>
+            ) : (
+              /* Crumple View Controls */
+              <div className="flex items-center gap-1.5">
+                <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
+                  {CV_PAGES.map((p) => (
+                    <button
+                      key={p.page}
+                      type="button"
+                      onClick={() => setActiveCrumplePage(p.page)}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                        activeCrumplePage === p.page
+                          ? "bg-brand text-white shadow-2xs"
+                          : "hover:text-ink"
+                      }`}
+                    >
+                      Hal {p.page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCrumpleResetKey((k) => k + 1)}
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-body hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
+                  title="Ratakan Lembar Kertas"
+                >
+                  <RotateCcw className="size-3" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              </div>
+            )}
 
             {/* Direct Open Button */}
             <button
@@ -229,38 +336,100 @@ export function CvFolderSection() {
             </button>
           </div>
         </div>
-        {/* Center 3D Folder Container */}
-        <Parallax speed={-0.14}>
-          <div className="relative z-10 flex min-h-[340px] sm:min-h-[390px] items-center justify-center pt-8 pb-14">
-            <Folder
-              label="CV / Zekk"
-              color={isDark ? "#2563eb" : "#1b45c4"}
-              mode={folderMode}
-              variant="glass"
-              open={isFolderOpen}
-              onOpenChange={setIsFolderOpen}
-              size={isMobile ? 0.95 : 1.25}
-              items={folderItems}
-              paperColor="#ffffff"
-              tabPosition="right"
-              layout="spread"
-              openOn="click"
-              draggable={true}
-              zoomOnClick={true}
-              peek={true}
-              intro={false}
-              tilt={isMobile ? 0.35 : 0.6}
-              bounce={0.35}
-              speed={1.15}
-              frost={0.3}
-              theme={isDark ? "dark" : "light"}
-              onItemClick={(_item, index) => {
-                const key = roleKeys[index] ?? "all";
-                openPreview(key);
-              }}
-            />
+
+        {/* Center Stage: Folder View OR 3D Paper Crumple View */}
+        {stageView === "folder" ? (
+          <Parallax speed={-0.14}>
+            <div className="relative z-10 flex min-h-[360px] sm:min-h-[420px] items-center justify-center pt-8 pb-14">
+              <Folder
+                label="CV / Zekk"
+                color={isDark ? "#2563eb" : "#1b45c4"}
+                mode={folderMode}
+                variant="glass"
+                open={isFolderOpen}
+                onOpenChange={setIsFolderOpen}
+                size={isMobile ? 0.95 : 1.25}
+                items={folderItems}
+                paperColor="#ffffff"
+                tabPosition="right"
+                layout="spread"
+                openOn="click"
+                draggable={true}
+                zoomOnClick={true}
+                peek={true}
+                intro={false}
+                tilt={isMobile ? 0.35 : 0.6}
+                bounce={0.35}
+                speed={1.15}
+                frost={0.3}
+                theme={isDark ? "dark" : "light"}
+                onItemClick={(_item, index) => {
+                  const key = CV_PAGES[index]?.roleKey ?? "all";
+                  openPreview(key);
+                }}
+              />
+
+              {/* Floating Center Button: "Lihat CV" melayang di tengah stage */}
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => openPreview("all")}
+                  className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/50 bg-ink/90 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black hover:shadow-2xl active:scale-95 dark:border-white/20 dark:bg-white/95 dark:text-ink dark:hover:bg-white"
+                >
+                  <FileText className="size-4 text-sky-400 dark:text-brand transition-transform group-hover:scale-110" />
+                  <span>Lihat CV</span>
+                  <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </button>
+              </div>
+            </div>
+          </Parallax>
+        ) : (
+          /* Interactive 3D Paper Crumple Stage */
+          <div className="relative z-10 my-4 flex flex-col items-center justify-center">
+            <div className="mb-2 flex items-center gap-2 text-xs text-body">
+              <Sparkles className="size-3.5 text-brand" />
+              <span className="font-semibold text-ink">Simulasi Fisik Lembar CV 3D</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-500 text-[11px]">Tahan & geser mouse/jari untuk meremas kertas</span>
+            </div>
+
+            <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-slate-50/50 shadow-inner dark:border-line/40 dark:bg-[#0c0e17]/50">
+              <PaperCrumple
+                src={activeCrumpleItem.image}
+                alt={`Curriculum Vitae Zakaria Mujur P. - ${activeCrumpleItem.title}`}
+                width={320}
+                height={450}
+                sceneHeight={520}
+                releaseBehavior="restore"
+                crumpleAmount={0.85}
+                crumpleDuration={0.55}
+                releaseDuration={0.4}
+                foldCount={6}
+                foldSharpness={0.6}
+                wrinkleDepth={0.65}
+                creaseStrength={0.18}
+                paperColor="#f8fafc"
+                paperTexture={0.08}
+                draggable
+                returnToOrigin
+                resetKey={crumpleResetKey}
+              />
+
+              {/* Floating Center Button: "Lihat CV" melayang di tengah PaperCrumple stage */}
+              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
+                <button
+                  type="button"
+                  onClick={() => openPreview(activeCrumpleItem.roleKey)}
+                  className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/40 bg-ink/90 px-5 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black active:scale-95 dark:border-white/20 dark:bg-white/95 dark:text-ink dark:hover:bg-white"
+                >
+                  <FileText className="size-3.5 text-sky-400 dark:text-brand" />
+                  <span>Buka Halaman Lengkap</span>
+                  <ArrowUpRight className="size-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
-        </Parallax>
+        )}
 
         {/* Bottom Role Quick-Access Badges */}
         <ScrollReveal y={20} delay={0.1} className="relative z-10 mt-6 border-t border-line/70 pt-6 dark:border-line/40">
@@ -270,17 +439,17 @@ export function CvFolderSection() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {roleKeys.map((key) => {
-              const detail = ROLE_DETAILS[key];
-              const doc = cvDocs.find((d) => d.roleKey === key);
+            {CV_PAGES.map((item) => {
+              const detail = ROLE_DETAILS[item.roleKey];
+              const doc = cvDocs.find((d) => d.roleKey === item.roleKey);
               const title = doc?.title || detail.title;
-              const subtitle = doc?.subtitle || detail.subtitle;
+              const subtitle = item.subtitle;
               const color = doc?.color || detail.color;
               return (
                 <button
-                  key={key}
+                  key={item.page}
                   type="button"
-                  onClick={() => openPreview(key)}
+                  onClick={() => openPreview(item.roleKey)}
                   className="group flex flex-col rounded-2xl border border-line/80 bg-white p-4 text-left shadow-2xs transition-all duration-150 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/50 dark:bg-[#191e32]"
                 >
                   <div className="flex items-center justify-between">
@@ -288,10 +457,10 @@ export function CvFolderSection() {
                       className="flex size-7 items-center justify-center rounded-lg text-white font-black text-xs"
                       style={{ backgroundColor: color }}
                     >
-                      {title.charAt(0)}
+                      {item.page}
                     </div>
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 group-hover:text-brand transition-colors">
-                      <span>{t("cv.viewCv")}</span>
+                      <span>Hal {item.page}</span>
                       <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </span>
                   </div>

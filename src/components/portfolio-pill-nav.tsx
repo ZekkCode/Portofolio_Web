@@ -102,7 +102,7 @@ export function PortfolioPillNav() {
     { label: t("nav.stack"), href: "#stack" },
     { label: t("nav.projects"), href: "#proyek" },
     { label: t("nav.contact"), href: "#kontak" },
-    { label: t("nav.whatsapp"), href: profile.contact.whatsapp },
+    { label: t("nav.email", "Email"), href: `mailto:${profile.contact.email}` },
   ];
 
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {

@@ -118,21 +118,17 @@ function Hero() {
             {/* Action Buttons: Direct Contact & Verified Credentials */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <a
-                href={profile.contact.whatsapp}
-                target="_blank"
-                rel="noreferrer"
+                href={`mailto:${profile.contact.email}`}
                 className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition-all duration-150 hover:bg-brand-ink active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
-                <svg className="size-3.5 fill-current text-emerald-300" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.32a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24" />
-                </svg>
-                <span>WhatsApp</span>
+                <Mail className="size-4" />
+                <span>{t("hero.emailBtn", "Kirim Email")}</span>
               </a>
               <SmoothNavLink
                 href="#cv"
                 className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-surface active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928]"
               >
-                <span>{t("hero.cvBtn")}</span>
+                <span>{t("hero.cvBtn", "Folder Berkas Karir")}</span>
                 <ArrowRight className="size-3.5" />
               </SmoothNavLink>
             </div>

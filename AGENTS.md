@@ -108,6 +108,9 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
    - Tombol pintasan floating melayang di sudut kanan bawah (`ScrollToTop`) muncul otomatis saat scroll melewati 320px untuk memudahkan navigasi cepat kembali ke atas.
 11. **Dilarang Menampilkan Seksi Cara Kerja / Workflow**:
    - Repositori ini merupakan situs portofolio personal, bukan web agensi korporat. Dilarang keras memunculkan kembali seksi "Cara Kerja", "Workflow", "Process", atau alur kerja 4 langkah di halaman utama.
+12. **Standar CTA Hero**:
+   - Tombol aksi utama hero menggunakan email langsung (`mailto:zakariamujur6@gmail.com`) dengan ikon `<Mail />` (bukan WhatsApp).
+   - Tombol sekunder mengarah ke seksi CV dengan label "Folder Berkas Karir".
 
 
 <!-- BEGIN:nextjs-agent-rules -->

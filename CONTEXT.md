@@ -117,3 +117,5 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
    - Komponen `ScrollToTop` floating di sudut kanan bawah terhubung ke smooth scroll Lenis.
 7. **Bebas dari Seksi Cara Kerja**:
    - Situs portofolio personal tidak memuat seksi "Cara Kerja / Workflow". Semua konten fokus pada kredensial, keahlian, dan showcase karya nyata.
+8. **CTA Hero**:
+   - Tombol utama hero menggunakan email langsung (`mailto:zakariamujur6@gmail.com`) dan tombol sekunder mengarah ke "Folder Berkas Karir" (`#cv`).

@@ -235,9 +235,9 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
           title: item.title || fallback.title,
           subtitle: item.subtitle || fallback.subtitle,
           color: item.color || fallback.color,
-          pdfUrl: item.pdfUrl ?? "",
-          pageCount: typeof item.pageCount === "number" ? item.pageCount : fallback.pageCount,
-          pages: Array.isArray(item.pages) ? item.pages : [],
+          pdfUrl: (item.pdfUrl && item.pdfUrl.trim().length > 0) ? item.pdfUrl.trim() : fallback.pdfUrl,
+          pageCount: typeof item.pageCount === "number" && item.pageCount > 0 ? item.pageCount : fallback.pageCount,
+          pages: Array.isArray(item.pages) && item.pages.length > 0 ? item.pages : fallback.pages,
         } as CvDocConfig;
       })
     : defaultCvDocs;

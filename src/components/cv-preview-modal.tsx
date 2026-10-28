@@ -1,12 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, RotateCcw, FileText } from "lucide-react";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
 import PaperCrumple from "@/components/paper-crumple";
 
 export type RoleKey = "all" | "graphic" | "uiux" | "frontend" | "itsupport";
+
+export const ROLE_TO_PAGE_INDEX: Record<RoleKey, number> = {
+  all: 0,
+  graphic: 0,
+  uiux: 1,
+  frontend: 2,
+  itsupport: 3,
+};
+
+export const PAGE_INDEX_TO_ROLE: Record<number, Exclude<RoleKey, "all">> = {
+  0: "graphic",
+  1: "uiux",
+  2: "frontend",
+  3: "itsupport",
+};
 
 export interface RoleDetail {
   key: RoleKey;
@@ -129,35 +144,47 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const { cvDocs } = useSiteConfig();
   const [activeRole, setActiveRole] = useState<RoleKey>(initialRole);
   const [prevInitialRole, setPrevInitialRole] = useState<RoleKey>(initialRole);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(() => ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
   const [zoom, setZoom] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchDeltaX, setTouchDeltaX] = useState(0);
-  const [modalMode, setModalMode] = useState<"doc" | "crumple">("doc");
+  const [modalMode, setModalMode] = useState<"doc" | "crumple">("crumple");
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
 
   if (initialRole !== prevInitialRole) {
     setPrevInitialRole(initialRole);
     setActiveRole(initialRole);
-    setCurrentPage(0);
+    setCurrentPage(ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
+    setModalMode("crumple");
   }
 
-  // Handle active doc info
-  const effectiveKey: Exclude<RoleKey, "all"> = activeRole === "all" ? "frontend" : activeRole;
+  // Active role mapped from current page index
+  const pageRole = PAGE_INDEX_TO_ROLE[currentPage] || "frontend";
+  const effectiveKey: Exclude<RoleKey, "all"> = activeRole === "all" ? pageRole : activeRole;
   const currentDoc = cvDocs.find((d) => d.roleKey === effectiveKey);
   const currentDetail = ROLE_DETAILS[effectiveKey];
 
-  // Number of pages
-  const totalPages = currentDoc?.pages && currentDoc.pages.length > 0
-    ? currentDoc.pages.length
-    : (currentDoc?.pageCount || 2);
+  const totalPages = 4;
 
   const prevPage = () => {
-    setCurrentPage((p) => Math.max(0, p - 1));
+    setCurrentPage((p) => {
+      const next = Math.max(0, p - 1);
+      setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
+      return next;
+    });
   };
 
   const nextPage = () => {
-    setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
+    setCurrentPage((p) => {
+      const next = Math.min(totalPages - 1, p + 1);
+      setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
+      return next;
+    });
+  };
+
+  const goToPage = (pageIdx: number) => {
+    setCurrentPage(pageIdx);
+    setActiveRole(PAGE_INDEX_TO_ROLE[pageIdx] || "frontend");
   };
 
   // Keyboard navigation & Escape
@@ -306,6 +333,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
                 className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 title="Perkecil (-)"
+                aria-label="Perkecil tampilan dokumen"
               >
                 -
               </button>
@@ -315,37 +343,23 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                 onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
                 className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 title="Perbesar (+)"
+                aria-label="Perbesar tampilan dokumen"
               >
                 +
               </button>
             </div>
 
-            {/* Print / Download Button */}
-            {currentDoc?.pdfUrl ? (
-              <a
-                href={currentDoc.pdfUrl}
-                download
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              >
-                Unduh PDF
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="hidden rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-body transition hover:border-ink/40 hover:text-ink sm:inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
-                title="Cetak / PDF"
-              >
-                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="6 9 6 2 18 2 18 9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                Cetak / PDF
-              </button>
-            )}
+            {/* Download PDF ATS Button */}
+            <a
+              href={currentDoc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf"}
+              download="CV-ATS-ZakariaMP-2025.pdf"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <FileText className="size-3.5" />
+              <span>Unduh PDF ATS</span>
+            </a>
 
             {/* Close Button */}
             <button
@@ -362,27 +376,27 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           </div>
         </div>
 
-        {/* Role Filter Tabs */}
+        {/* Role & Page Filter Tabs */}
         <div className="flex overflow-x-auto border-b border-line bg-slate-50/70 px-4 py-2 sm:px-6 no-scrollbar gap-1.5 dark:border-line/40 dark:bg-[#141824]">
-          {(["all", "frontend", "uiux", "graphic", "itsupport"] as RoleKey[]).map((key) => {
-            const isAll = key === "all";
-            const roleDetail = !isAll ? ROLE_DETAILS[key] : null;
-            const doc = !isAll ? cvDocs.find((d) => d.roleKey === key) : null;
-            const title = isAll ? "Semua Berkas" : (doc?.title || roleDetail?.title || key);
-            const isSelected = activeRole === key;
-
+          {[
+            { key: "graphic" as RoleKey, page: 0, label: "Hal 1 • Profil & Grafis" },
+            { key: "uiux" as RoleKey, page: 1, label: "Hal 2 • UI/UX & Edu" },
+            { key: "frontend" as RoleKey, page: 2, label: "Hal 3 • Frontend Dev" },
+            { key: "itsupport" as RoleKey, page: 3, label: "Hal 4 • IT Support" },
+          ].map((tab) => {
+            const isSelected = currentPage === tab.page;
             return (
               <button
-                key={key}
+                key={tab.key}
                 type="button"
-                onClick={() => switchRole(key)}
+                onClick={() => goToPage(tab.page)}
                 className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                   isSelected
                     ? "bg-ink text-white shadow-sm dark:bg-white dark:text-ink"
                     : "border border-line bg-white/80 text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
                 }`}
               >
-                {title}
+                {tab.label}
               </button>
             );
           })}

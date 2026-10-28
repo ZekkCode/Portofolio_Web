@@ -51,6 +51,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const adminSecret = process.env.ADMIN_SECRET;
+  if (adminSecret) {
+    const authHeader = request.headers.get("authorization");
+    const secretHeader = request.headers.get("x-admin-secret");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : secretHeader;
+    if (token !== adminSecret) {
+      return NextResponse.json(
+        { success: false, error: "Akses ditolak: Secret admin tidak valid" },
+        { status: 401 }
+      );
+    }
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       {
@@ -63,8 +76,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as Partial<SiteConfig>;
-    const normalized = normalizeConfig(body);
+    const rawBody = await request.json();
+    if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+      return NextResponse.json(
+        { success: false, error: "Payload konfigurasi harus berupa objek JSON valid" },
+        { status: 400 }
+      );
+    }
+
+    const normalized = normalizeConfig(rawBody as Partial<SiteConfig>);
     const supabase = getSupabaseClient();
 
     if (!supabase) {

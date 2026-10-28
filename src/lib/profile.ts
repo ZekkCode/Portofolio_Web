@@ -191,9 +191,10 @@ export const profile = {
     whatsapp: "https://wa.me/62881081772005",
     socials: [
       { label: "GitHub", href: "https://github.com/ZekkCode" },
-      { label: "LinkedIn", href: "https://www.linkedin.com/in/zakariamp" },
       { label: "Instagram", href: "https://www.instagram.com/zekksparow" },
+      { label: "TikTok", href: "https://www.tiktok.com/@zekksparow" },
       { label: "Behance", href: "https://www.behance.net/zakariamp" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/zakariamp" },
       { label: "Trakteer", href: "https://trakteer.id/zakariamp" },
     ],
   },

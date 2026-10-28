@@ -110,7 +110,8 @@ Situs mengadopsi model **Hybrid Local-First with Cloud Persistence**:
    - Seluruh indikator navigasi dan link eksternal menggunakan SVG icon resmi dari `lucide-react` (`ArrowRight`, `ArrowUpRight`, `ChevronLeft`, `ChevronRight`).
 5. **Navbar Bottom Auto-Hide & Watermark Footer**:
    - `PortfolioPillNav` secara otomatis menghilang saat scroll mencapai area footer bawah.
-   - Footer menampilkan typographic signature "zakaria mp" menggunakan font pixel (`Pixelify_Sans`) dengan gradien memudar transparan ke bawah.
+   - Footer menampilkan kontak Gmail (`zakariamujur6@gmail.com`) dan kanal sosial media (GitHub, Instagram, TikTok, Behance).
+   - Watermark "zakaria mp" terletak di paling bawah footer menggunakan font pixel (`Pixelify_Sans`) dengan gradien warna biru memudar transparan ke bawah.
 6. **Navigasi Anchor Hash & Pintasan Scroll to Top**:
    - Setiap seksi memiliki anchor independen (`#about`, `#proyek`, `#faq`, `#services`, `#certificates`, dll.).
    - Komponen `ScrollToTop` floating di sudut kanan bawah terhubung ke smooth scroll Lenis.

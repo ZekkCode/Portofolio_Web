@@ -22,7 +22,7 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Mail } from "lucide-react";
 
 function Header() {
   const { t } = useTranslation();
@@ -490,40 +490,82 @@ function Contact() {
 function Footer() {
   const { views, isEngaged } = usePageViews();
 
+  const footerSocials = [
+    { label: "GitHub", href: "https://github.com/ZekkCode" },
+    { label: "Instagram", href: "https://www.instagram.com/zekksparow" },
+    { label: "TikTok", href: "https://www.tiktok.com/@zekksparow" },
+    { label: "Behance", href: "https://www.behance.net/zakariamp" },
+  ];
+
   return (
-    <footer className="relative border-t border-line overflow-hidden pt-12 pb-12 sm:pt-16 sm:pb-16 dark:border-line">
-      {/* Huge Pixelated Signature Watermark: zakaria mp */}
-      <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mb-6 sm:mb-10">
+    <footer className="relative border-t border-line overflow-hidden pt-12 pb-8 sm:pt-16 sm:pb-10 dark:border-line">
+      <div className="mx-auto max-w-5xl px-5">
+        {/* Footer Top Row: Brand Info + Contact via Gmail */}
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-display text-base font-bold text-ink">{profile.brand}</p>
+            <p className="text-xs text-body mt-0.5">
+              © {new Date().getFullYear()} {profile.name}. Mojokerto, Indonesia.
+            </p>
+          </div>
+
+          {/* Direct Gmail Contact */}
+          <div>
+            <a
+              href={`mailto:${profile.contact.email}`}
+              className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-4 py-2 text-xs font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-white hover:text-brand dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928] dark:hover:text-blue-400"
+            >
+              <Mail className="size-3.5 text-brand dark:text-blue-400" />
+              <span>{profile.contact.email}</span>
+              <ArrowUpRight className="size-3 text-muted" />
+            </a>
+          </div>
+        </div>
+
+        {/* Footer Middle Row: Socials & Live Verified Views */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line/60 pt-6 dark:border-line/40">
+          <ul className="flex flex-wrap items-center gap-2">
+            {footerSocials.map((s) => (
+              <li key={s.label}>
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-body shadow-2xs transition-all duration-150 hover:border-brand/40 hover:text-brand active:scale-[0.97] dark:border-line/60 dark:bg-[#111422] dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:text-blue-400"
+                >
+                  <span>{s.label}</span>
+                  <ArrowUpRight className="size-3 text-muted" />
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs backdrop-blur-xs transition-all duration-300 ${
+                isEngaged
+                  ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
+                  : "border-line bg-white/90 text-ink dark:border-line dark:bg-slate-900/90 dark:text-slate-200"
+              }`}
+              title="Kunjungan aktif terverifikasi"
+            >
+              <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
+              <span suppressHydrationWarning className="font-mono text-xs font-bold">
+                {views.toLocaleString("id-ID")}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Blue Pixelated Signature Watermark: zakaria mp (DIBAWAH FOOTER) */}
+      <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mt-10 sm:mt-14 -mb-4 sm:-mb-6">
         <p
           aria-hidden="true"
-          className="font-pixel text-[13vw] sm:text-[11vw] md:text-[10vw] lg:text-[112px] font-bold leading-none tracking-wider uppercase bg-gradient-to-b from-ink/45 via-ink/15 to-transparent dark:from-white/40 dark:via-white/10 dark:to-transparent bg-clip-text text-transparent"
+          className="font-pixel text-[13vw] sm:text-[11vw] md:text-[10vw] lg:text-[112px] font-bold leading-none tracking-wider uppercase bg-gradient-to-b from-blue-600 via-blue-500/40 to-transparent dark:from-blue-400 dark:via-blue-500/35 dark:to-transparent bg-clip-text text-transparent"
         >
           zakaria mp
         </p>
-      </div>
-
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 border-t border-line/60 pt-8 text-sm text-body sm:flex-row dark:border-line/40">
-        <div>
-          <p className="font-display text-base font-bold text-ink">{profile.brand}</p>
-          <p className="text-xs text-body mt-0.5">© {new Date().getFullYear()} {profile.name}. Mojokerto, Indonesia.</p>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-body">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs backdrop-blur-xs transition-all duration-300 ${
-              isEngaged
-                ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
-                : "border-line bg-white/90 text-ink dark:border-line dark:bg-slate-900/90 dark:text-slate-200"
-            }`}
-            title="Kunjungan aktif terverifikasi"
-          >
-            <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
-            <span suppressHydrationWarning className="font-mono text-xs font-bold">
-              {views.toLocaleString("id-ID")}
-            </span>
-          </span>
-          <span aria-hidden="true" className="text-line">•</span>
-          <span>Next.js 16 + Tailwind CSS</span>
-        </div>
       </div>
     </footer>
   );

@@ -90,8 +90,9 @@ Semua instruksi berikut adalah ketetapan permanen dari pemilik proyek (user) dan
    - Gunakan komponen ikon standar dari `lucide-react` (misal `<ArrowRight />`, `<ArrowUpRight />`, `<ChevronLeft />`, `<ChevronRight />`) dengan proporsi ukuran rapi (`size-3`, `size-3.5`).
 7. **Pill Navbar Hiding Behavior**:
    - Navbar floating (`PortfolioPillNav`) wajib menghilang otomatis saat scroll mencapai bagian paling bawah halaman (area footer) agar tidak menutupi informasi hak cipta dan metadata.
-8. **Tipografi Watermark Footer**:
-   - Teks watermark "zakaria mp" di bagian footer wajib menggunakan font pixel (`Pixelify_Sans` / `--font-pixel`) dengan efek gradien vertikal memudar transparan ke bawah (`bg-clip-text text-transparent bg-gradient-to-b`).
+8. **Tipografi Watermark Footer & Navigasi Kontak**:
+   - Teks watermark "zakaria mp" terletak di bagian paling bawah footer menggunakan font pixel (`Pixelify_Sans` / `--font-pixel`) dengan warna gradien biru memudar transparan ke bawah (`from-blue-600 via-blue-500/40 to-transparent`).
+   - Bagian footer menampilkan tautan kontak langsung Gmail (`zakariamujur6@gmail.com`) dan kanal sosial media aktif (GitHub, Instagram, TikTok, Behance) tanpa label framework yang tidak perlu.
 9. **Standar Anchor Hash Navigation**:
    - Setiap seksi wajib memiliki ID unik dan alias ramah URL agar dapat dituju secara langsung via hash (`#...`):
      - `#hero` / `#atas`

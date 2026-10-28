@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
-import { Parallax, ScrollReveal, ParallaxFloatingBadge, SmoothNavLink } from "@/components/parallax";
+import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
 import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
@@ -71,9 +71,7 @@ function Header() {
           <LanguageToggle />
           <ThemeToggle />
           <a
-            href={profile.contact.whatsapp}
-            target="_blank"
-            rel="noreferrer"
+            href={`mailto:${profile.contact.email}`}
             className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:inline-flex dark:bg-white dark:text-slate-900 shadow-2xs"
           >
             {t("nav.contactBtn")}
@@ -391,11 +389,6 @@ function Contact() {
               {/* KANAN: Panel Informasi Kontak */}
               <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-6">
                 <div className="space-y-4">
-                  <div className="inline-flex w-max items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-semibold text-brand dark:border-brand/30 dark:bg-brand/10 dark:text-blue-400">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
-                    <span>{t("contact.badge")}</span>
-                  </div>
-
                   <div>
                     <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
                       {t("contact.title")}

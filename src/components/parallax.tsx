@@ -222,29 +222,6 @@ export function ScrollScrub({
   );
 }
 
-interface ParallaxFloatingBadgeProps {
-  label: string;
-  speed?: number;
-  align?: "center" | "top";
-  className?: string;
-}
-
-export function ParallaxFloatingBadge({
-  label,
-  speed = -0.2,
-  align = "top",
-  className = "",
-}: ParallaxFloatingBadgeProps) {
-  return (
-    <Parallax speed={speed} align={align} className={`pointer-events-none select-none ${className}`}>
-      <span className="inline-flex items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-ink shadow-sm backdrop-blur-md dark:border-line/60 dark:bg-[#111422]/95">
-        <span className="size-1.5 rounded-full bg-brand animate-ping" aria-hidden="true" />
-        {label}
-      </span>
-    </Parallax>
-  );
-}
-
 export function useSmoothScrollTo() {
   const lenis = useLenis();
 

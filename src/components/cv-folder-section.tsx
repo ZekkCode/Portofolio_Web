@@ -355,7 +355,7 @@ export function CvFolderSection() {
             </div>
 
             {/* Page Switcher for the Crumple Tray */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
                 {CV_PAGES.map((p) => (
                   <button

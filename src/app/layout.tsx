@@ -27,8 +27,11 @@ const fontPixel = Pixelify_Sans({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#1b45c4",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1b45c4" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090e" },
+  ],
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,

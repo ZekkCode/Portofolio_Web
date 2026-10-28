@@ -202,7 +202,7 @@ export const profile = {
 
 export const navLinks = [
   { label: "Tentang", href: "#tentang" },
-  { label: "CV Role", href: "#cv" },
+  { label: "Berkas Karir", href: "#cv" },
   { label: "Stack", href: "#stack" },
   { label: "Proyek", href: "#proyek" },
   { label: "Kontak", href: "#kontak" },

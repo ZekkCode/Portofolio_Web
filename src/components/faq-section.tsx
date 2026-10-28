@@ -27,7 +27,9 @@ export function FaqSection() {
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6"
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-answer-${i}`}
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <span className="text-sm font-bold text-ink sm:text-base">
                     {t(`faq.q${i}`)}
@@ -37,6 +39,7 @@ export function FaqSection() {
                     viewBox="0 0 20 20"
                     fill="currentColor"
                     className={`size-5 shrink-0 text-muted transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
                   >
                     <path
                       fillRule="evenodd"
@@ -46,6 +49,9 @@ export function FaqSection() {
                   </svg>
                 </button>
                 <div
+                  id={`faq-answer-${i}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${i}`}
                   className={`grid transition-all duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                 >
                   <div className="overflow-hidden">

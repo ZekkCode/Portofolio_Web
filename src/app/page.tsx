@@ -9,6 +9,10 @@ import { Parallax, ScrollReveal, ParallaxFloatingBadge, SmoothNavLink } from "@/
 import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
+import { ServicesSection } from "@/components/services-section";
+import { CertificatesSection } from "@/components/certificates-section";
+import { WorkflowSection } from "@/components/workflow-section";
+import { FaqSection } from "@/components/faq-section";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
@@ -91,9 +95,17 @@ function Hero() {
         {/* Left Column: Editorial Information */}
         <div className="flex flex-col items-start gap-5 text-start">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs font-semibold text-body dark:border-line/60 dark:bg-[#111422]/80">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{t("hero.badge")}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{t("hero.available")}</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs font-medium text-body dark:border-line/60 dark:bg-[#111422]/80">
+                <svg className="size-3 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Mojokerto (GMT+7)</span>
+              </div>
             </div>
 
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.05]">
@@ -129,6 +141,24 @@ function Hero() {
                 <span>{t("hero.cvBtn")}</span>
                 <span aria-hidden="true">→</span>
               </SmoothNavLink>
+            </div>
+
+            {/* Organization Leadership Strip */}
+            <div className="pt-3 border-t border-line/60 dark:border-line/40">
+              <span className="block text-[11px] font-semibold text-muted uppercase tracking-wider">
+                {t("hero.orgTitle")}
+              </span>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {profile.experience.map((exp) => (
+                  <span
+                    key={exp.org}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/80 px-2.5 py-1 text-xs font-medium text-ink shadow-2xs dark:border-line/50 dark:bg-[#111422]/70"
+                  >
+                    <span className="size-1.5 rounded-full bg-brand" />
+                    <span>{exp.org}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           </Parallax>
         </div>
@@ -587,9 +617,13 @@ export default function Home() {
       <main>
         <Hero />
         <About />
+        <ServicesSection />
         <CvFolderSection />
         <Stack />
         <ProjectsSection />
+        <CertificatesSection />
+        <WorkflowSection />
+        <FaqSection />
         <Contact />
       </main>
       <Footer />

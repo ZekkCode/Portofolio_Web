@@ -487,10 +487,67 @@ function Footer() {
   const { views, isEngaged } = usePageViews();
 
   const footerSocials = [
-    { label: "GitHub", href: "https://github.com/ZekkCode" },
-    { label: "Instagram", href: "https://www.instagram.com/zekksparow" },
-    { label: "TikTok", href: "https://www.tiktok.com/@zekksparow" },
-    { label: "Behance", href: "https://www.behance.net/zakariamp" },
+    {
+      label: "GitHub",
+      href: "https://github.com/ZekkCode",
+      hoverClasses:
+        "hover:text-slate-900 hover:border-slate-800 hover:bg-slate-100 hover:shadow-md dark:hover:text-white dark:hover:border-slate-300 dark:hover:bg-slate-800/80",
+      icon: (
+        <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      label: "Instagram",
+      href: "https://www.instagram.com/zekksparow",
+      hoverClasses:
+        "hover:text-[#E4405F] hover:border-[#E4405F]/50 hover:bg-[#E4405F]/10 hover:shadow-[0_0_14px_rgba(228,64,95,0.25)] dark:hover:text-[#ff5c8a] dark:hover:border-[#ff5c8a]/50 dark:hover:bg-[#ff5c8a]/10",
+      icon: (
+        <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+          <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" strokeWidth="2.5" />
+        </svg>
+      ),
+    },
+    {
+      label: "TikTok",
+      href: "https://www.tiktok.com/@zekksparow",
+      hoverClasses:
+        "hover:text-[#00f2fe] hover:border-[#00f2fe]/50 hover:bg-[#00f2fe]/10 hover:shadow-[0_0_14px_rgba(0,242,254,0.25)] dark:hover:text-[#00f2fe] dark:hover:border-[#00f2fe]/50 dark:hover:bg-[#00f2fe]/10",
+      icon: (
+        <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.42a6.34 6.34 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.18 8.18 0 0 0 4.77 1.52V6.82a4.85 4.85 0 0 1-1-.13z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Behance",
+      href: "https://www.behance.net/zakariamp",
+      hoverClasses:
+        "hover:text-[#0057ff] hover:border-[#0057ff]/50 hover:bg-[#0057ff]/10 hover:shadow-[0_0_14px_rgba(0,87,255,0.25)] dark:hover:text-[#3b82f6] dark:hover:border-[#3b82f6]/50 dark:hover:bg-[#3b82f6]/10",
+      icon: (
+        <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 3-4.726 3-3.666 0-5.5-2.583-5.5-5.875 0-3.328 1.944-5.125 5.25-5.125 3.32 0 4.975 2.115 4.975 4.875 0 .422-.057.822-.125 1.125h-6.852c.071 1.579 1.094 2.658 2.457 2.658 1.157 0 1.916-.625 2.292-1.658h2.229zm-4.75-5.167c-1.125 0-1.875.75-2.083 1.833h4.167c-.042-1.042-.875-1.833-2.084-1.833zm-10.976-1.833h-4v-4h4c1.104 0 2 .896 2 2s-.896 2-2 2zm-4 2h4.5c1.381 0 2.5 1.119 2.5 2.5s-1.119 2.5-2.5 2.5h-4.5v-7zm0-6h-4v13h8.5c2.485 0 4.5-2.015 4.5-4.5 0-1.578-.814-2.969-2.05-3.774 1.246-.777 2.05-2.148 2.05-3.726 0-2.485-2.015-4.5-4.5-4.5h-4.5z" />
+        </svg>
+      ),
+    },
+    {
+      label: "LinkedIn",
+      href: "https://www.linkedin.com/in/zakariamp",
+      hoverClasses:
+        "hover:text-[#0A66C2] hover:border-[#0A66C2]/50 hover:bg-[#0A66C2]/10 hover:shadow-[0_0_14px_rgba(10,102,194,0.25)] dark:hover:text-[#0a66c2] dark:hover:border-[#0a66c2]/50 dark:hover:bg-[#0a66c2]/10",
+      icon: (
+        <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.2a1.66 1.66 0 0 0-1.66 1.66c0 .92.74 1.66 1.66 1.66.92 0 1.66-.74 1.66-1.66 0-.92-.74-1.66-1.66-1.66z" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -520,17 +577,20 @@ function Footer() {
 
         {/* Footer Middle Row: Socials & Live Verified Views */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line/60 pt-6 dark:border-line/40">
-          <ul className="flex flex-wrap items-center gap-2">
+          <ul className="flex items-center gap-2 sm:gap-2.5">
             {footerSocials.map((s) => (
               <li key={s.label}>
                 <a
                   href={s.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-body shadow-2xs transition-all duration-150 hover:border-brand/40 hover:text-brand active:scale-[0.97] dark:border-line/60 dark:bg-[#111422] dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:text-blue-400"
+                  aria-label={s.label}
+                  title={s.label}
+                  className={`group flex size-9 sm:size-10 items-center justify-center rounded-full border border-line bg-white text-body shadow-2xs backdrop-blur-xs transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 active:scale-95 dark:border-line/60 dark:bg-[#111422] dark:text-slate-400 ${s.hoverClasses}`}
                 >
-                  <span>{s.label}</span>
-                  <ArrowUpRight className="size-3 text-muted" />
+                  <span className="transition-transform duration-200 group-hover:scale-110">
+                    {s.icon}
+                  </span>
                 </a>
               </li>
             ))}

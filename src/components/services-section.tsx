@@ -43,8 +43,6 @@ export function ServicesSection() {
   const renderCard = (service: ServiceItem) => {
     const title = t(`services.${service.key}Title`);
     const desc = t(`services.${service.key}Desc`);
-    const itemsRaw = t(`services.${service.key}Items`);
-    const items = itemsRaw ? itemsRaw.split(",").map((item) => item.trim()) : [];
 
     return (
       <div
@@ -52,22 +50,17 @@ export function ServicesSection() {
         className="group relative flex flex-col justify-between rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
       >
         <div>
-          <div className="flex items-center justify-between border-b border-line/60 pb-3 dark:border-line/40">
-            <span className="font-mono text-xs font-bold text-brand dark:text-blue-400">
-              #{service.num}
-            </span>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400">
-              <svg
-                className="size-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.75}
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d={service.iconPath} />
-              </svg>
-            </div>
+          <div className="flex size-9 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400">
+            <svg
+              className="size-4.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.75}
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d={service.iconPath} />
+            </svg>
           </div>
 
           <h3 className="mt-4 font-display text-base font-bold text-ink group-hover:text-brand transition-colors">
@@ -76,17 +69,6 @@ export function ServicesSection() {
           <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body">
             {desc}
           </p>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-1.5 border-t border-line/50 pt-3.5 dark:border-line/30">
-          {items.map((item) => (
-            <span
-              key={item}
-              className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800/80 dark:text-slate-400"
-            >
-              {item}
-            </span>
-          ))}
         </div>
       </div>
     );

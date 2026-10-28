@@ -132,17 +132,7 @@ export const defaultProfileCard: ProfileCardConfig = {
   intro: true,
 };
 
-export const defaultProjects: Project[] = profile.projects.map((p, i) => ({
-  id: `profile-${i + 1}`,
-  title: p.title,
-  desc: p.desc,
-  tags: [...p.tags],
-  repo: p.repo,
-  role: p.role,
-  problem: p.problem,
-  highlight: p.highlight,
-  outcome: p.outcome,
-}));
+export const defaultProjects: Project[] = [];
 
 export const defaultCvDocs: CvDocConfig[] = [
   {
@@ -234,9 +224,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
           image: typeof item.image === "string" ? item.image : undefined,
           previewUrl: typeof item.previewUrl === "string" ? item.previewUrl : undefined,
         }))
-    : defaultProjects;
-
-  const resolvedProjects = projects.length > 0 ? projects : defaultProjects;
+    : [];
 
   const cvDocs = Array.isArray(raw.cvDocs) && raw.cvDocs.length > 0
     ? raw.cvDocs.map((item, index) => {
@@ -254,7 +242,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       })
     : defaultCvDocs;
 
-  return { headerLogoUrl, lanyard, profileCard, projects: resolvedProjects, cvDocs };
+  return { headerLogoUrl, lanyard, profileCard, projects, cvDocs };
 };
 
 let cloudSynced = false;
@@ -308,12 +296,9 @@ export const readConfig = (): SiteConfig => {
         const parsed = JSON.parse(raw);
         const normalized = normalizeConfig(parsed);
         const sanitizedProjects = normalized.projects.filter(
-          (project) => !project.id.startsWith("seed-")
+          (project) => !project.id.startsWith("seed-") && !project.id.startsWith("profile-")
         );
-        snapshot = {
-          ...normalized,
-          projects: sanitizedProjects.length > 0 ? sanitizedProjects : defaultProjects,
-        };
+        snapshot = { ...normalized, projects: sanitizedProjects };
       } else {
         snapshot = defaultSiteConfig;
       }

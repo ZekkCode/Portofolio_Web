@@ -17,3 +17,4 @@ export async function GET(request: Request) {
     authMethod: auth.authMethod,
   });
 }
+

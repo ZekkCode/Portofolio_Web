@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, RotateCcw, FileText } from "lucide-react";
-import { profile } from "@/lib/profile";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
 import { useSiteConfig } from "@/lib/site-store";
 import PaperCrumple from "@/components/paper-crumple";
 
@@ -49,7 +48,7 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-sky-700",
     bgLight: "bg-sky-500/10",
     borderColor: "border-sky-500/30",
-    desc: "Berpengalaman merancang identitas visual, branding brand/UMKM, materi publikasi sosial media, infografis, dan aset multimedia kreatif dengan prinsip estetika komunikasi visual.",
+    desc: "Berpengalaman merancang identitas visual, branding UMKM, materi publikasi sosial media, infografis, dan aset multimedia kreatif.",
     skills: ["Branding & Logo Design", "Digital Illustration", "Social Media Content", "Print & Poster Design", "Typography & Color Theory", "Video Editing Basics"],
     tools: ["Adobe Photoshop", "Adobe Illustrator", "Figma", "CorelDRAW", "CapCut", "Filmora"],
     responsibilities: [
@@ -72,7 +71,7 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-sky-600",
     bgLight: "bg-sky-500/10",
     borderColor: "border-sky-500/30",
-    desc: "Mendesain antarmuka produk digital (web & mobile) yang berpusat pada pengguna (user-centered design), mulai dari wireframing, perancangan design system, hingga interactive prototype yang mudah digunakan.",
+    desc: "Mendesain antarmuka produk digital (web & mobile) yang berpusat pada pengguna, mulai dari user journey, design system, hingga interactive prototype.",
     skills: ["User Journey & Flow", "Wireframing & Lo-Fi", "High-Fidelity Prototyping", "Design System & Tokens", "Usability Heuristics", "Responsive Layout"],
     tools: ["Figma", "Adobe XD", "FigJam", "Whimsical", "Component Libraries"],
     responsibilities: [
@@ -95,13 +94,13 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-brand",
     bgLight: "bg-brand/10",
     borderColor: "border-brand/30",
-    desc: "Mengembangkan aplikasi web modern yang cepat, interaktif, responsif, dan aksesibel. Menggabungkan Next.js App Router, React, Tailwind CSS, TypeScript, serta visual 3D WebGL / Three.js.",
+    desc: "Mengembangkan aplikasi web modern yang cepat, interaktif, responsif, dan aksesibel dengan Next.js App Router, React, TypeScript, dan Three.js.",
     skills: ["Next.js (App Router, Turbopack)", "React 19 & Hooks", "TypeScript Strict Mode", "Tailwind CSS v4", "Three.js & WebGL Shaders", "State Management & Sync"],
     tools: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Three.js", "VS Code", "GitHub"],
     responsibilities: [
       "Mengembangkan arsitektur frontend modular berbasis komponen dan clean code.",
       "Mengoptimalkan performa web (Core Web Vitals), aksesibilitas, dan SEO teknis.",
-      "Mengintegrasikan efek interaktif mutakhir (3D physics lanyard, canvas particle grid, card tilt).",
+      "Mengintegrasikan interaksi visual mutakhir (3D physics lanyard, paper crumple, fluid gestures).",
     ],
     keyProjects: [
       { name: "ZekkTech Portfolio 3D", desc: "Portofolio modern Next.js 16 + Tailwind v4 + Three.js Lanyard + React Bits Folder.", url: "https://github.com/ZekkCode" },
@@ -118,7 +117,7 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-amber-600",
     bgLight: "bg-amber-500/10",
     borderColor: "border-amber-500/30",
-    desc: "Mempunyai dasar kuat di bidang hardware, perakitan komputer (PC assembly), troubleshooting perangkat keras & lunak, instalasi dan administrasi sistem operasi Linux, serta otomasi bot.",
+    desc: "Memiliki keahlian di bidang perakitan hardware PC, instalasi dan administrasi sistem operasi Linux, troubleshooting jaringan, serta otomasi bot.",
     skills: ["Hardware Assembly & Rakit PC", "OS Maintenance (Linux & Windows)", "Network Basics (LAN, IP, DNS)", "Telegram Bot API Automation", "CLI Scripting & yt-dlp", "Troubleshooting Perangkat Lab"],
     tools: ["Ubuntu / Debian Linux", "Windows OS", "Python", "Bash", "yt-dlp", "Hardware Diagnostic Tools"],
     responsibilities: [
@@ -145,71 +144,106 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [activeRole, setActiveRole] = useState<RoleKey>(initialRole);
   const [prevInitialRole, setPrevInitialRole] = useState<RoleKey>(initialRole);
   const [currentPage, setCurrentPage] = useState(() => ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
-  const [zoom, setZoom] = useState(1);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchDeltaX, setTouchDeltaX] = useState(0);
-  const [modalMode, setModalMode] = useState<"doc" | "crumple">("doc");
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [viewport, setViewport] = useState({ w: 1200, h: 800 });
+  const [hasWebGL, setHasWebGL] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  // Deteksi ukuran viewport
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    const update = () => {
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
+  // Deteksi WebGL & preferensi reduced-motion
+  useEffect(() => {
+    try {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      if (!gl) setHasWebGL(false);
+    } catch {
+      setHasWebGL(false);
+    }
+
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setReducedMotion(media.matches);
+      const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
+    }
+  }, []);
+
+  // Simpan elemen yang membuka modal untuk pengembalian fokus keyboard
+  useEffect(() => {
+    if (isOpen) {
+      openerRef.current = (document.activeElement as HTMLElement) || null;
+    }
+  }, [isOpen]);
+
+  // Sinkronisasi saat initialRole berubah dari luar
   if (initialRole !== prevInitialRole) {
     setPrevInitialRole(initialRole);
     setActiveRole(initialRole);
     setCurrentPage(ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
-    setModalMode("doc");
   }
 
-  // Active role mapped from current page index
+  const handleClose = useCallback(() => {
+    onClose();
+    if (openerRef.current) {
+      setTimeout(() => openerRef.current?.focus(), 50);
+    }
+  }, [onClose]);
+
+  // Resolusi data halaman dan dokumen aktif
   const pageRole = PAGE_INDEX_TO_ROLE[currentPage] || "frontend";
   const effectiveKey: Exclude<RoleKey, "all"> = activeRole === "all" ? pageRole : activeRole;
   const currentDoc = cvDocs.find((d) => d.roleKey === effectiveKey);
   const currentDetail = ROLE_DETAILS[effectiveKey];
 
-  const pagesList = currentDoc?.pages && currentDoc.pages.length > 0
-    ? currentDoc.pages
-    : ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
+  const pagesList =
+    currentDoc?.pages && currentDoc.pages.length > 0
+      ? currentDoc.pages
+      : ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
 
   const totalPages = pagesList.length;
-  const paperWidth = isMobile ? 300 : 420;
-  const paperHeight = isMobile ? 424 : 594;
-  const sceneHeight = isMobile ? 520 : 660;
 
-  const prevPage = () => {
+  const prevPage = useCallback(() => {
     setCurrentPage((p) => {
       const next = Math.max(0, p - 1);
       setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
       return next;
     });
-  };
+  }, []);
 
-  const nextPage = () => {
+  const nextPage = useCallback(() => {
     setCurrentPage((p) => {
       const next = Math.min(totalPages - 1, p + 1);
       setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
       return next;
     });
-  };
-
-  const goToPage = (pageIdx: number) => {
-    setCurrentPage(pageIdx);
-    setActiveRole(PAGE_INDEX_TO_ROLE[pageIdx] || "frontend");
-  };
+  }, [totalPages]);
 
   // Keyboard navigation & Escape
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowLeft") setCurrentPage((p) => Math.max(0, p - 1));
-      else if (e.key === "ArrowRight") setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      } else if (e.key === "ArrowLeft") {
+        prevPage();
+      } else if (e.key === "ArrowRight") {
+        nextPage();
+      }
     };
 
     const originalOverflow = document.body.style.overflow;
@@ -220,377 +254,175 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose, totalPages]);
-
-  // Reset page when role changes
-  const switchRole = (role: RoleKey) => {
-    setActiveRole(role);
-    setCurrentPage(0);
-  };
-
-  // Touch Swipe Handlers for mobile & trackpad
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.targetTouches[0].clientX);
-    setTouchDeltaX(0);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    setTouchDeltaX(e.targetTouches[0].clientX - touchStartX);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchDeltaX < -45) {
-      nextPage();
-    } else if (touchDeltaX > 45) {
-      prevPage();
-    }
-    setTouchStartX(null);
-    setTouchDeltaX(0);
-  };
+  }, [isOpen, handleClose, prevPage, nextPage]);
 
   if (!isOpen) return null;
+
+  // Ukuran kertas responsif sesuai viewport (rasio A4 = 1 : 1.414)
+  const isMobile = viewport.w < 640;
+  const maxW = isMobile ? Math.min(viewport.w - 32, 330) : 400;
+  const maxH = isMobile ? Math.min(viewport.h - 160, 480) : Math.min(viewport.h - 140, 580);
+  const paperWidth = Math.round(Math.min(maxW, maxH / 1.414));
+  const paperHeight = Math.round(paperWidth * 1.414);
+  const sceneHeight = paperHeight + (isMobile ? 32 : 56);
+
+  // URL PDF yang tersimpan di admin/backend atau Cloudflare R2
+  const storedPdfUrl = currentDoc?.pdfUrl?.trim() || "";
+  const isDirectHttpR2 =
+    /^https?:\/\//i.test(storedPdfUrl) &&
+    !storedPdfUrl.includes(".r2.cloudflarestorage.com");
+
+  // Jika URL berupa domain R2 publik langsung, gunakan langsung; jika private/relatif, rute via /api/cv-pdf untuk signed URL aman
+  const pdfHref = isDirectHttpR2
+    ? storedPdfUrl
+    : `/api/cv-pdf?role=${effectiveKey}`;
+
+  const currentTitle = currentDoc?.title || currentDetail.title;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="cv-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6"
+      aria-label="Tampilan Lembar CV Interaktif"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
     >
-      {/* Backdrop */}
+      {/* Backdrop transparan lembut: meredupkan latar belakang tanpa kotak kartu */}
       <div
-        onClick={onClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+        onClick={handleClose}
+        className="absolute inset-0 bg-black/65 backdrop-blur-sm transition-opacity duration-300"
         aria-hidden="true"
       />
 
-      {/* Modal Dialog Shell */}
-      <div className="relative flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl dark:border-line/60 dark:bg-[#0c0e17]">
-        {/* Top Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-white/95 px-4 py-3 backdrop-blur-md sm:px-6 dark:border-line/40 dark:bg-[#0c0e17]/95">
-          <div className="flex items-center gap-3">
-            <div
-              className="h-8 w-1 rounded-full"
-              style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
-              aria-hidden="true"
+      {/* Kontrol Atas Melayang (Transparan, Menghilang Saat Drag) */}
+      <div
+        className={`fixed top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-30 flex items-center justify-between pointer-events-none transition-opacity duration-200 ${
+          isDragging ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        {/* Indikator Halaman & Spesialisasi Ringkas */}
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md text-white text-xs font-semibold select-none">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
+          />
+          <span>
+            Hal {currentPage + 1}/{totalPages} • {currentTitle}
+          </span>
+        </div>
+
+        {/* Aksi Cepat: Ratakan & Tutup */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCrumpleResetKey((k) => k + 1)}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md shadow-md transition hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            title="Ratakan Lembar Kertas"
+          >
+            <RotateCcw className="size-3.5" />
+            <span className="hidden sm:inline">Ratakan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex min-h-[40px] min-w-[40px] size-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-md shadow-md transition hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="Tutup pratinjau CV"
+          >
+            <X className="size-4.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Area Tengah: Lembar Kertas Asli Mengambang Bebas (Tanpa Container Box / Border) */}
+      <div className="relative z-10 flex items-center justify-center w-full max-w-full select-none">
+        {hasWebGL && !reducedMotion ? (
+          <PaperCrumple
+            src={pagesList[currentPage]}
+            alt={`Curriculum Vitae Zakaria Mujur P. Halaman ${currentPage + 1}`}
+            width={paperWidth}
+            height={paperHeight}
+            sceneHeight={sceneHeight}
+            releaseBehavior="restore"
+            crumpleAmount={0.85}
+            crumpleDuration={0.55}
+            releaseDuration={0.4}
+            foldCount={6}
+            foldSharpness={0.6}
+            wrinkleDepth={0.65}
+            creaseStrength={0.18}
+            paperColor="#ffffff"
+            paperTexture={0.06}
+            shadow={true}
+            shadowOpacity={0.12}
+            draggable={true}
+            returnToOrigin={true}
+            resetKey={crumpleResetKey}
+            onStateChange={(state) => {
+              setIsDragging(state === "holding");
+            }}
+          />
+        ) : (
+          /* Fallback Statis saat WebGL tidak tersedia atau pengguna memilih Reduced Motion */
+          <div className="relative flex items-center justify-center p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pagesList[currentPage]}
+              alt={`Curriculum Vitae Halaman ${currentPage + 1}`}
+              style={{ width: paperWidth, height: paperHeight }}
+              className="rounded-lg shadow-2xl object-contain bg-white pointer-events-none"
             />
-            <div>
-              <p className="text-[10px] font-bold tracking-[0.12em] text-body uppercase">
-                Berkas Karir ATS
-              </p>
-              <h2 id="cv-modal-title" className="text-sm font-bold text-ink sm:text-base">
-                {profile.name} — <span style={{ color: currentDoc?.color || currentDetail.color }}>{currentDoc?.title || currentDetail.title}</span>
-              </h2>
-            </div>
-          </div>
-
-          {/* Navigation Controls: Slide pages, Zoom, Print/Download, Close */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* View Mode Toggle: Dokumen vs Kertas Remas 3D */}
-            <div className="flex rounded-full border border-line bg-slate-100/90 p-0.5 text-xs dark:border-line/50 dark:bg-slate-900/90">
-              <button
-                type="button"
-                onClick={() => setModalMode("doc")}
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                  modalMode === "doc"
-                    ? "bg-white text-ink shadow-2xs dark:bg-[#191e32] dark:text-white"
-                    : "text-body hover:text-ink"
-                }`}
-              >
-                Dokumen
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalMode("crumple")}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                  modalMode === "crumple"
-                    ? "bg-white text-ink shadow-2xs dark:bg-[#191e32] dark:text-white"
-                    : "text-body hover:text-ink"
-                }`}
-              >
-                <Sparkles className="size-3 text-brand" />
-                <span>Remas 3D</span>
-              </button>
-            </div>
-
-            {/* Page Slider Controls (Active when multi-page) */}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1 rounded-full border border-line bg-slate-100/90 px-2 py-1 text-xs dark:border-line/50 dark:bg-slate-900/90">
-                <button
-                  type="button"
-                  onClick={prevPage}
-                  disabled={currentPage === 0}
-                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  title="Halaman Sebelumnya"
-                >
-                  <ChevronLeft className="size-3.5" />
-                </button>
-                <span className="font-mono text-[11px] font-semibold text-ink px-1.5">
-                  {currentPage + 1} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={nextPage}
-                  disabled={currentPage >= totalPages - 1}
-                  className="rounded-full p-1 text-body transition hover:bg-white hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  title="Halaman Berikutnya"
-                >
-                  <ChevronRight className="size-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Zoom Controls */}
-            <div className="hidden sm:flex items-center gap-1 rounded-full border border-line bg-white px-2 py-1 text-xs dark:border-line/50 dark:bg-slate-900">
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
-                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                title="Perkecil (-)"
-                aria-label="Perkecil tampilan dokumen"
-              >
-                -
-              </button>
-              <span className="font-mono text-[10px] text-body">{Math.round(zoom * 100)}%</span>
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
-                className="rounded px-1.5 py-0.5 text-body hover:text-ink font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                title="Perbesar (+)"
-                aria-label="Perbesar tampilan dokumen"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Download PDF ATS Button */}
-            <a
-              href={currentDoc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf"}
-              download="CV-ATS-ZakariaMP-2025.pdf"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <FileText className="size-3.5" />
-              <span>Unduh PDF ATS</span>
-            </a>
-
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex min-h-[44px] min-w-[44px] size-11 sm:size-10 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
-              aria-label="Tutup modal"
-            >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Role & Page Filter Tabs */}
-        <div className="flex overflow-x-auto border-b border-line bg-slate-50/70 px-4 py-2 sm:px-6 no-scrollbar gap-1.5 dark:border-line/40 dark:bg-[#141824]">
-          {[
-            { key: "graphic" as RoleKey, page: 0, label: "Hal 1 • Profil & Grafis" },
-            { key: "uiux" as RoleKey, page: 1, label: "Hal 2 • UI/UX & Edu" },
-            { key: "frontend" as RoleKey, page: 2, label: "Hal 3 • Frontend Dev" },
-            { key: "itsupport" as RoleKey, page: 3, label: "Hal 4 • IT Support" },
-          ].map((tab) => {
-            const isSelected = currentPage === tab.page;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => goToPage(tab.page)}
-                className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-                  isSelected
-                    ? "bg-ink text-white shadow-sm dark:bg-white dark:text-ink"
-                    : "border border-line bg-white/80 text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Center Stage: Document Slider Area */}
-        <div
-          className="relative flex-1 overflow-auto bg-slate-100/90 p-4 sm:p-6 lg:p-8 dark:bg-[#07080d]"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Floating Slider Chevron Arrows (Desktop / Tablet) */}
-          {totalPages > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prevPage}
-                disabled={currentPage === 0}
-                className="absolute left-3 top-1/2 z-20 -translate-y-1/2 hidden md:flex size-10 items-center justify-center rounded-full border border-line bg-white/95 text-ink shadow-lg transition hover:scale-105 active:scale-95 disabled:opacity-0 disabled:pointer-events-none dark:border-line/50 dark:bg-[#191e32]"
-                aria-label="Halaman sebelumnya"
-              >
-                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={nextPage}
-                disabled={currentPage >= totalPages - 1}
-                className="absolute right-3 top-1/2 z-20 -translate-y-1/2 hidden md:flex size-10 items-center justify-center rounded-full border border-line bg-white/95 text-ink shadow-lg transition hover:scale-105 active:scale-95 disabled:opacity-0 disabled:pointer-events-none dark:border-line/50 dark:bg-[#191e32]"
-                aria-label="Halaman berikutnya"
-              >
-                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </>
-          )}
-
-          {/* 3D Paper Crumple Physics Stage (Spacious, No Constraining Div) */}
-          {modalMode === "crumple" ? (
-            <div className="mx-auto flex h-full w-full flex-col items-center justify-center py-2">
-              <div className="mb-2 flex items-center justify-between w-full max-w-lg px-3 text-xs text-body">
-                <div className="flex items-center gap-1.5 font-semibold text-ink">
-                  <Sparkles className="size-3.5 text-brand" />
-                  <span>Simulasi Fisik 3D • Halaman {currentPage + 1}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline text-[11px] text-muted">Tahan & geser untuk meremas</span>
-                  <button
-                    type="button"
-                    onClick={() => setCrumpleResetKey((k) => k + 1)}
-                    className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] font-semibold text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-                    title="Ratakan Lembar Kertas"
-                  >
-                    <RotateCcw className="size-3" />
-                    <span>Ratakan</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Seamless Full-Bleed 3D Paper Stage */}
-              <div className="relative flex items-center justify-center w-full select-none">
-                <PaperCrumple
-                  src={pagesList[currentPage]}
-                  alt={`Curriculum Vitae Halaman ${currentPage + 1}`}
-                  width={paperWidth}
-                  height={paperHeight}
-                  sceneHeight={sceneHeight}
-                  releaseBehavior="restore"
-                  crumpleAmount={0.85}
-                  crumpleDuration={0.55}
-                  releaseDuration={0.4}
-                  foldCount={6}
-                  foldSharpness={0.6}
-                  wrinkleDepth={0.65}
-                  creaseStrength={0.18}
-                  paperColor="#f8fafc"
-                  paperTexture={0.08}
-                  draggable
-                  returnToOrigin
-                  resetKey={crumpleResetKey}
-                />
-              </div>
-
-              <p className="mt-2 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Pencet untuk melihat bersih • Tahan & geser kursor / sentuhan untuk meremas kertas
-              </p>
-            </div>
-          ) : currentDoc?.pdfUrl && !currentDoc.pages?.length ? (
-            <div className="mx-auto flex h-full max-w-4xl flex-col items-center justify-center">
-              <iframe
-                src={currentDoc.pdfUrl}
-                className="h-full min-h-[580px] w-full rounded-2xl border border-line bg-white shadow-xl"
-                title={currentDoc.title}
-              />
-            </div>
-          ) : (
-            /* Multi-Page Slide Track ("bisa digeser kalau halaman lebih dari satu") */
-            <div className="mx-auto flex justify-center">
-              <div
-                className="relative w-full max-w-3xl transition-transform duration-300 ease-out"
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: "top center",
-                }}
-              >
-                {/* Pages Horizontal Slider */}
-                <div className="overflow-hidden">
-                  <div
-                    className="flex transition-transform duration-300 ease-out"
-                    style={{
-                      transform: `translateX(-${currentPage * 100}%)`,
-                    }}
-                  >
-                    {pagesList.map((pageImg, idx) => (
-                      <div key={idx} className="w-full shrink-0 flex justify-center p-2">
-                        <div className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-2xl">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={pageImg}
-                            alt={`Halaman ${idx + 1}`}
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Pagination & Navigation Strip */}
-        {totalPages > 1 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line/80 bg-white/95 px-4 py-2.5 sm:px-6 dark:border-line/40 dark:bg-[#0c0e17]/95">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-body">Geser layar atau gunakan tombol:</span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setCurrentPage(idx)}
-                    className={`h-2 rounded-full transition-all ${
-                      currentPage === idx
-                        ? "w-6 bg-brand"
-                        : "w-2 bg-slate-300 hover:bg-slate-400 dark:bg-slate-700"
-                    }`}
-                    title={`Ke Halaman ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={prevPage}
-                disabled={currentPage === 0}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
-              >
-                <ChevronLeft className="size-3.5" />
-                <span>Sebelumnya</span>
-              </button>
-              <button
-                type="button"
-                onClick={nextPage}
-                disabled={currentPage >= totalPages - 1}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink disabled:opacity-30 dark:border-line/40 dark:bg-slate-900"
-              >
-                <span>Selanjutnya</span>
-                <ChevronRight className="size-3.5" />
-              </button>
-            </div>
           </div>
         )}
+      </div>
+
+      {/* Kontrol Bawah Melayang: Navigasi Halaman Ringkas & Tombol "Buka PDF" */}
+      <div
+        className={`fixed bottom-5 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 z-30 pointer-events-none flex flex-wrap items-center justify-between gap-3 max-w-2xl mx-auto transition-opacity duration-200 ${
+          isDragging ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        {/* Navigasi Halaman Ringkas (Hanya Muncul Jika Lebih dari 1 Halaman) */}
+        {totalPages > 1 ? (
+          <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 py-1.5 backdrop-blur-md shadow-lg text-white select-none">
+            <button
+              type="button"
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              className="flex min-h-[36px] min-w-[36px] size-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              aria-label="Halaman sebelumnya"
+              title="Halaman Sebelumnya"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="font-mono text-xs font-bold px-2 tracking-wider">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={nextPage}
+              disabled={currentPage >= totalPages - 1}
+              className="flex min-h-[36px] min-w-[36px] size-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              aria-label="Halaman berikutnya"
+              title="Halaman Berikutnya"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <div />
+        )}
+
+        {/* Tombol Mengambang "Buka PDF" — Tautan Asli ke R2 / Dokumen Cloud */}
+        <a
+          href={pdfHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xl shadow-brand/35 backdrop-blur-sm transition-all duration-150 hover:bg-brand-ink hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <FileText className="size-4" />
+          <span>Buka PDF</span>
+          <ArrowUpRight className="size-3.5 text-white/80" />
+        </a>
       </div>
     </div>
   );

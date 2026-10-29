@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export interface R2Config {
   accountId: string;
@@ -60,6 +61,72 @@ export function getR2Client(): S3Client {
   });
 
   return s3ClientInstance;
+}
+
+export function extractR2Key(keyOrUrl: string, bucketName?: string): string {
+  if (!keyOrUrl) return "";
+  let path = keyOrUrl.trim();
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const u = new URL(path);
+      path = u.pathname;
+    } catch {
+      // fallback
+    }
+  }
+  path = path.replace(/^\/+/, "");
+  if (bucketName && path.startsWith(`${bucketName}/`)) {
+    path = path.slice(bucketName.length + 1);
+  }
+  return path;
+}
+
+export async function createPresignedCvUrl(
+  keyOrUrl: string,
+  filename = "CV-ATS-ZakariaMP-2025.pdf",
+  expiresIn = 3600
+): Promise<string | null> {
+  const config = getR2Config();
+  if (!config) return null;
+
+  const key = extractR2Key(keyOrUrl, config.bucketName);
+  if (!key) return null;
+
+  const client = getR2Client();
+  const command = new GetObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+    ResponseContentType: "application/pdf",
+    ResponseContentDisposition: `inline; filename="${filename}"`,
+  });
+
+  return getSignedUrl(client, command, { expiresIn });
+}
+
+export async function getR2Object(keyOrUrl: string): Promise<{
+  body: Uint8Array;
+  contentType: string;
+} | null> {
+  const config = getR2Config();
+  if (!config) return null;
+
+  const key = extractR2Key(keyOrUrl, config.bucketName);
+  if (!key) return null;
+
+  const client = getR2Client();
+  const res = await client.send(
+    new GetObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+    })
+  );
+
+  if (!res.Body) return null;
+  const bytes = await res.Body.transformToByteArray();
+  return {
+    body: bytes,
+    contentType: res.ContentType || "application/pdf",
+  };
 }
 
 export async function uploadFileToR2({

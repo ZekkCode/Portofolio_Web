@@ -238,3 +238,4 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     cvDocs: normalizedCvDocs,
   };
 };
+

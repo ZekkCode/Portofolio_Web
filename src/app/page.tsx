@@ -366,12 +366,12 @@ function Contact() {
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
           <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
             {/* KIRI: Hologram Profile Card */}
-            <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-6 sm:p-8">
+            <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-8">
               <ProfileCardStage />
             </div>
 
             {/* KANAN: Panel Informasi Kontak (Stabil, Mudah Diklik) */}
-            <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-6">
+            <div className="relative flex flex-col justify-between p-4 sm:p-8 lg:p-10 space-y-6">
                 <div className="space-y-4">
                   <div>
                     <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">

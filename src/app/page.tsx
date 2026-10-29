@@ -118,7 +118,7 @@ function Hero() {
                 href="#cv"
                 className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
               >
-                <span>{t("hero.cvBtn", "Folder Berkas Karir")}</span>
+                <span>{t("hero.cvBtn", "Berkas Karier")}</span>
                 <ArrowRight className="size-3.5" />
               </SmoothNavLink>
             </div>
@@ -222,28 +222,20 @@ function Stack() {
 
   const disciplines = [
     {
-      category: t("stack.uiuxTitle"),
-      desc: t("stack.uiuxDesc"),
+      category: t("stack.uiuxTitle", "UI/UX & Desain Produk"),
       tools: ["Figma", "Adobe XD"],
-      skills: ["Design System", "User Flows", "Interactive Prototype", "Autolayout"],
     },
     {
-      category: t("stack.frontendTitle"),
-      desc: t("stack.frontendDesc"),
+      category: t("stack.frontendTitle", "Frontend Web Development"),
       tools: ["Next.js", "React", "TypeScript", "TailwindCSS"],
-      skills: ["App Router", "State Synchronization", "Fluid Styling", "GSAP & Lenis"],
     },
     {
-      category: t("stack.visualTitle"),
-      desc: t("stack.visualDesc"),
+      category: t("stack.visualTitle", "Desain Grafis & Multimedia"),
       tools: ["Illustrator", "Photoshop", "CapCut", "Filmora"],
-      skills: ["Three.js WebGL", "Vector Branding", "Raster Assets", "Motion Teaser"],
     },
     {
-      category: t("stack.systemsTitle"),
-      desc: t("stack.systemsDesc"),
+      category: t("stack.systemsTitle", "Sistem IT & Database"),
       tools: ["MySQL", "GitHub"],
-      skills: ["Git Versioning", "Relational Schema", "Python Scripts", "IT Support"],
     },
   ];
 
@@ -268,11 +260,8 @@ function Stack() {
               <h3 className="font-display text-base font-bold text-ink">
                 {item.category}
               </h3>
-              <p className="mt-1 text-xs text-body leading-relaxed">
-                {item.desc}
-              </p>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3.5 flex flex-wrap gap-2">
                 {item.tools.map((toolName) => {
                   const tool = profile.stack.find((s) => s.name === toolName);
                   if (!tool) return null;
@@ -312,11 +301,8 @@ function Stack() {
               <h3 className="font-display text-base font-bold text-ink">
                 {item.category}
               </h3>
-              <p className="mt-1 text-xs text-body leading-relaxed">
-                {item.desc}
-              </p>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3.5 flex flex-wrap gap-2">
                 {item.tools.map((toolName) => {
                   const tool = profile.stack.find((s) => s.name === toolName);
                   if (!tool) return null;
@@ -427,7 +413,7 @@ function Contact() {
                       className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
                     >
                       <FileText className="size-3.5 text-brand dark:text-blue-400" />
-                      <span>{t("hero.cvBtn", "Folder Berkas Karir")}</span>
+                      <span>{t("hero.cvBtn", "Berkas Karier")}</span>
                       <ArrowRight className="size-3.5" />
                     </SmoothNavLink>
                   </div>
@@ -619,22 +605,22 @@ export default function Home() {
         <ShapeGrid
           shape="square"
           direction="diagonal"
-          lineColor={isDark ? "#202638" : "#dcdce8"}
-          hoverColor={isDark ? "#3b82f6" : "#1b45c4"}
+          lineColor={isDark ? "#171c2a" : "#e6e7f2"}
+          hoverColor={isDark ? "#2563eb" : "#1b45c4"}
           hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
-          fillOpacity={isDark ? 0.22 : 0.14}
-          cellSize={40}
-          speed={0.25}
+          fillOpacity={isDark ? 0.12 : 0.08}
+          cellSize={44}
+          speed={0.2}
           lineWidth={1}
           radius={2.0}
-          trail={0.7}
-          glow={isDark ? 0.35 : 0.22}
+          trail={0.6}
+          glow={isDark ? 0.16 : 0.10}
           fade={1}
           clickCascade
           intro
         />
-        {/* Lapisan peredam gradien ambient */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(238,242,255,0.18),rgba(255,255,255,0.4)_70%)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-15%,rgba(30,41,59,0.18),rgba(8,9,14,0.55)_70%)] pointer-events-none" />
+        {/* Lapisan peredam ambient untuk kenyamanan membaca teks */}
+        <div className="absolute inset-0 bg-white/70 dark:bg-[#08090e]/75 pointer-events-none transition-colors duration-300" />
       </div>
       <Header />
       <PortfolioPillNav />

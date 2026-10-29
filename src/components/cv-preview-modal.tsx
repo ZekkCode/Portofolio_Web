@@ -98,9 +98,9 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     skills: ["Next.js (App Router, Turbopack)", "React 19 & Hooks", "TypeScript Strict Mode", "Tailwind CSS v4", "Three.js & WebGL Shaders", "State Management & Sync"],
     tools: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Three.js", "VS Code", "GitHub"],
     responsibilities: [
-      "Mengembangkan arsitektur frontend modular berbasis komponen dan clean code.",
-      "Mengoptimalkan performa web (Core Web Vitals), aksesibilitas, dan SEO teknis.",
-      "Mengintegrasikan interaksi visual mutakhir (3D physics lanyard, paper crumple, fluid gestures).",
+      "Mengembangkan antarmuka web modular berbasis komponen yang mudah dirawat.",
+      "Mengoptimalkan aksesibilitas, responsivitas tampilan, dan efisiensi aset web.",
+      "Mengintegrasikan interaksi visual interaktif menggunakan Next.js dan Three.js.",
     ],
     keyProjects: [
       { name: "ZekkTech Portfolio 3D", desc: "Portofolio modern Next.js 16 + Tailwind v4 + Three.js Lanyard + React Bits Folder.", url: "https://github.com/ZekkCode" },

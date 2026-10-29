@@ -62,14 +62,14 @@ export default function AdminLoginPage() {
             </div>
             <div>
               <h1 className="font-display text-lg font-bold text-ink">
-                Autentikasi Administrator
+                Masuk Admin
               </h1>
-              <p className="text-xs text-body">ZekkTech Portfolio Management</p>
+              <p className="text-xs text-body">Panel Pengelolaan Portofolio</p>
             </div>
           </div>
 
           <p className="mt-4 text-xs leading-relaxed text-body border-t border-line/60 pt-4 dark:border-line/40">
-            Akses terbatas hanya untuk pemilik portofolio. Seluruh sesi, hak tulis, dan mutasi data diverifikasi langsung oleh server.
+            Akses khusus pemilik portofolio untuk mengelola konten dan dokumen.
           </p>
 
           {error && (
@@ -126,18 +126,12 @@ export default function AdminLoginPage() {
                 </>
               ) : (
                 <>
-                  <span>Masuk ke Panel Admin</span>
+                  <span>Masuk Admin</span>
                   <ArrowRight className="size-3.5" />
                 </>
               )}
             </button>
           </form>
-
-          <div className="mt-6 border-t border-line/60 pt-4 text-center dark:border-line/40">
-            <p className="text-[11px] text-muted">
-              Perlindungan sesi HTTPS + HTTP-Only Cookie + CSRF Guard
-            </p>
-          </div>
         </div>
       </div>
     </div>

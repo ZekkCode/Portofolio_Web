@@ -14,9 +14,9 @@ export const profile = {
     "Berangkat dari latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang rapi, responsif, dan mudah digunakan untuk organisasi kampus dan klien freelance.",
   ],
   stats: [
-    { value: "7", label: "Proyek selesai" },
+    { value: "7", label: "Proyek Selesai" },
     { value: "29", label: "Sertifikat" },
-    { value: "6+", label: "Tahun freelance" },
+    { value: "6+", label: "Tahun Pengalaman" },
     { value: "3", label: "Organisasi" },
   ],
   stack: [
@@ -75,7 +75,7 @@ export const profile = {
       role: "IR & Algorithm Engineer",
       problem: "Mengekstrak dan merangking artikel teks dari korpus mentah tanpa modul mesin pencari pihak ketiga.",
       highlight: "Pipeline mandiri: Text Preprocessing (Tokenizing, Stopwords, Stemming), matriks bobot TF-IDF, dan perankingan Cosine Similarity.",
-      outcome: "Mesin pencari teks berkecepatan sub-detik dengan tingkat akurasi kesamaan dokumen yang teruji.",
+      outcome: "Mesin pencari teks bahasa Indonesia yang menghasilkan perankingan dokumen relevan berdasarkan skor bobot kata.",
     },
     {
       title: "ZEDD",
@@ -203,7 +203,7 @@ export const profile = {
 
 export const navLinks = [
   { label: "Tentang", href: "#tentang" },
-  { label: "Berkas Karir", href: "#cv" },
+  { label: "Berkas Karier", href: "#cv" },
   { label: "Stack", href: "#stack" },
   { label: "Proyek", href: "#proyek" },
   { label: "Kontak", href: "#kontak" },

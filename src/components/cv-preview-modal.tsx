@@ -286,7 +286,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       role="dialog"
       aria-modal="true"
       aria-label="Tampilan Lembar CV Interaktif"
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden"
     >
       {/* Backdrop transparan lembut: meredupkan latar belakang tanpa kotak kartu */}
       <div

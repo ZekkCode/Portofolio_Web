@@ -90,7 +90,7 @@ function Hero() {
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
         {/* Left Column: Editorial Information - Stable, readable layout without parallax displacement */}
-        <div className="flex flex-col items-start gap-5 text-start">
+        <div className="relative z-10 flex flex-col items-start gap-5 text-start">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5">
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.05]">
               Zakaria Mujur Prasetyo
@@ -125,11 +125,11 @@ function Hero() {
           </div>
         </div>
 
-        {/* Right Column: Disciplined 3D Card Presentation Frame with Living Parallax */}
+        {/* Right Column: Interactive 3D Lanyard ID Card */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full">
-          <Parallax speed={0.14} align="top" className="w-full max-w-[320px]">
-            <ProfileCardStage />
-          </Parallax>
+          <div className="relative w-full max-w-[340px] sm:max-w-[400px] h-[440px] sm:h-[480px] lg:h-[520px]">
+            <LanyardStage className="h-full w-full" />
+          </div>
         </div>
       </div>
     </section>
@@ -379,11 +379,9 @@ function Contact() {
       <ScrollReveal y={24} className="w-full">
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
           <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
-            {/* KIRI: Lanyard 3D Stage dengan parallax fisik halus */}
-            <div className="relative flex flex-col justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-6">
-              <Parallax speed={0.08} className="relative my-auto flex items-center justify-center py-2 sm:py-4">
-                <LanyardStage className="h-[340px] sm:h-[440px] lg:h-[480px]" />
-              </Parallax>
+            {/* KIRI: Hologram Profile Card */}
+            <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-6 sm:p-8">
+              <ProfileCardStage />
             </div>
 
             {/* KANAN: Panel Informasi Kontak (Stabil, Mudah Diklik) */}

@@ -42,10 +42,6 @@ export const metadata: Metadata = {
   metadataBase: new URL(profile.site),
   alternates: {
     canonical: "/",
-    languages: {
-      "id-ID": "/",
-      "en-US": "/",
-    },
   },
   title: {
     default: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
@@ -177,7 +173,7 @@ const jsonLd = {
       description: profile.bio[0],
       gender: "Male",
       email: profile.contact.email,
-      telephone: profile.contact.whatsapp,
+      telephone: profile.contact.phone,
       knowsLanguage: ["id", "en"],
       address: {
         "@type": "PostalAddress",
@@ -185,9 +181,10 @@ const jsonLd = {
         addressRegion: "Jawa Timur",
         addressCountry: "ID",
       },
-      alumnusOf: {
+      affiliation: {
         "@type": "CollegeOrUniversity",
         name: "Universitas Trunojoyo Madura",
+        description: "Mahasiswa Aktif Teknik Informatika (2024)",
       },
       knowsAbout: [
         "UI/UX Design",

@@ -7,11 +7,11 @@ export const profile = {
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",
   tagline: "Mahasiswa Teknik Informatika",
   location: "Mojokerto, Jawa Timur",
-  site: "https://zekktech.biz.id",
+  site: process.env.NEXT_PUBLIC_SITE_URL || "https://zakariamp.vercel.app",
   since: "2020",
   bio: [
-    "Mahasiswa Teknik Informatika angkatan 2024 yang mendalami rekayasa frontend dan perancangan antarmuka sejak 2020. Menekuni perpaduan logika pemrograman modern dengan estetika desain sistem yang terstruktur.",
-    "Berakar dari latar belakang multimedia, grafis, dan arsitektur perangkat keras. Aktif membantu pelajar, UMKM, dan komunitas dalam merancang desain UI/UX teruji, membangun web responsif, serta identitas visual digital.",
+    "Mahasiswa Teknik Informatika Universitas Trunojoyo Madura (angkatan 2024) yang mendalami UI/UX design dan rekayasa frontend web sejak 2020. Terbiasa merancang design system di Figma dan mengimplementasikannya ke Next.js serta TypeScript.",
+    "Berangkat dari latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang rapi, responsif, dan mudah digunakan untuk organisasi kampus dan klien freelance.",
   ],
   stats: [
     { value: "7", label: "Proyek selesai" },
@@ -188,6 +188,7 @@ export const profile = {
   ],
   contact: {
     email: "zakariamujur6@gmail.com",
+    phone: "+62881081772005",
     whatsapp: "https://wa.me/62881081772005",
     socials: [
       { label: "GitHub", href: "https://github.com/ZekkCode" },

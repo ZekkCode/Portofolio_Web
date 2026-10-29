@@ -380,7 +380,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <button
               type="button"
               onClick={onClose}
-              className="flex size-8 sm:size-9 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
+              className="flex min-h-[44px] min-w-[44px] size-11 sm:size-10 items-center justify-center rounded-full border border-line bg-white text-body transition hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-900"
               aria-label="Tutup modal"
             >
               <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -57,11 +57,7 @@ function Header() {
                 ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
                 : "border-line bg-surface/90 text-body dark:border-line/60 dark:bg-slate-900/80"
             }`}
-            title={
-              isEngaged
-                ? "Kunjungan aktif terverifikasi (Engaged View)"
-                : "Validasi kunjungan aktif (15–30 dtk)"
-            }
+            title="Total tayangan halaman (Page Views)"
           >
             <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
             <span suppressHydrationWarning className="font-mono text-[11px] font-bold">
@@ -72,7 +68,7 @@ function Header() {
           <ThemeToggle />
           <a
             href={`mailto:${profile.contact.email}`}
-            className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:inline-flex dark:bg-white dark:text-slate-900 shadow-2xs"
+            className="hidden min-h-[44px] items-center rounded-full bg-ink px-5 py-2 text-xs font-semibold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:inline-flex dark:bg-white dark:text-slate-900 shadow-2xs"
           >
             {t("nav.contactBtn")}
           </a>

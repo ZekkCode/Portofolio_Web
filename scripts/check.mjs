@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import crypto from "node:crypto";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -121,6 +122,29 @@ try {
   await new Promise((resolve) => ws.addEventListener("open", resolve));
   await send("Page.enable");
   await send("Runtime.enable");
+  await send("Network.enable");
+
+  // Injeksi session cookie admin agar pengujian admin terverifikasi secara aman
+  const secret = process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key =
+    secret && secret.length >= 16
+      ? secret
+      : crypto.createHash("sha256").update("zekktech-admin-default-signing-key-salt").digest("hex");
+  const payload = {
+    email: process.env.ADMIN_EMAIL || "zakariamujur6@gmail.com",
+    role: "admin",
+    exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
+  };
+  const sessionData = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sessionSig = crypto.createHmac("sha256", key).update(sessionData).digest("base64url");
+  const sessionToken = `${sessionData}.${sessionSig}`;
+
+  await send("Network.setCookie", {
+    name: "zekk_admin_session",
+    value: sessionToken,
+    url: base,
+  });
+
   console.log("Navigating to /");
 
   await goto("/", 3000);

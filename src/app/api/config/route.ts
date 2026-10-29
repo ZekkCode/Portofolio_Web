@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
-import { normalizeConfig, type SiteConfig } from "@/lib/site-store";
+import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
+import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
+import { validateSiteConfigPayload } from "@/lib/config-validator";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -34,14 +36,17 @@ export async function GET() {
       return NextResponse.json({
         configured: true,
         config: null,
-        message: "Belum ada konfigurasi di Supabase",
+        message: "Belum ada konfigurasi tersimpan di cloud",
       });
     }
+
+    // Sanitasi data publik sebelum dikirim ke client
+    const normalized = normalizeConfig(data.config as Partial<SiteConfig>);
 
     return NextResponse.json({
       configured: true,
       provider: "supabase",
-      config: normalizeConfig(data.config),
+      config: normalized,
       updatedAt: data.updated_at,
     });
   } catch (error) {
@@ -51,39 +56,63 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const adminSecret = process.env.ADMIN_SECRET;
-  if (adminSecret) {
-    const authHeader = request.headers.get("authorization");
-    const secretHeader = request.headers.get("x-admin-secret");
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : secretHeader;
-    if (token !== adminSecret) {
-      return NextResponse.json(
-        { success: false, error: "Akses ditolak: Secret admin tidak valid" },
-        { status: 401 }
-      );
-    }
+  // 1. Validasi CSRF / Origin
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: "Permintaan lintas domain (Cross-Origin) ditolak" },
+      { status: 403 }
+    );
   }
 
+  // 2. Wajib Autentikasi Admin Server-Side
+  const auth = await verifyAdminRequest(request);
+  if (!auth.isAuthenticated) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Akses ditolak: Operasi penyimpanan hanya diizinkan untuk administrator terotentikasi.",
+      },
+      { status: 401 }
+    );
+  }
+
+  // 3. Validasi Payload Schema & Sanitasi
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Format request bukan JSON valid" },
+      { status: 400 }
+    );
+  }
+
+  const validation = validateSiteConfigPayload(rawBody);
+  if (!validation.isValid) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Payload tidak valid",
+        details: validation.errors,
+      },
+      { status: 400 }
+    );
+  }
+
+  // 4. Kredensial cloud yang belum ada harus menolak operasi tulis server
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       {
         success: false,
         configured: false,
-        message: "Supabase belum dikonfigurasi di environment variables",
+        message:
+          "Supabase Cloud belum dikonfigurasi di server environment. Perubahan hanya tersimpan di draft lokal perangkat Anda dan belum terpublikasi ke server.",
       },
       { status: 200 }
     );
   }
 
   try {
-    const rawBody = await request.json();
-    if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
-      return NextResponse.json(
-        { success: false, error: "Payload konfigurasi harus berupa objek JSON valid" },
-        { status: 400 }
-      );
-    }
-
     const normalized = normalizeConfig(rawBody as Partial<SiteConfig>);
     const supabase = getSupabaseClient();
 
@@ -105,18 +134,19 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: `Database Supabase menolak operasi: ${error.message}` },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      provider: "supabase",
-      message: "Konfigurasi berhasil disimpan ke Supabase Cloud Database",
+      message: "Konfigurasi berhasil disimpan dan dipublikasikan ke Supabase Cloud",
+      updatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Gagal menyimpan ke Supabase";
+    const message =
+      error instanceof Error ? error.message : "Terjadi kesalahan server saat menyimpan konfigurasi";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

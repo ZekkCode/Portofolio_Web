@@ -15,7 +15,7 @@ export const translations = {
     hero: {
       badge: "Mojokerto, Indonesia · Terbuka untuk Kolaborasi",
       roles: "UI/UX Designer & Frontend Developer",
-      desc: "Mahasiswa Teknik Informatika asal Mojokerto. Mengembangkan antarmuka web performa tinggi dengan Next.js & TypeScript, merancang desain sistem di Figma, dan mengeksplorasi interaksi 3D fisik.",
+      desc: "Mahasiswa Teknik Informatika asal Mojokerto. Merancang antarmuka terstruktur di Figma, membangun aplikasi web responsif dengan Next.js & TypeScript, serta mengeksplorasi interaksi 3D fisik.",
       cvBtn: "Folder Berkas Karir",
       emailBtn: "Kirim Email",
       projectsBtn: "Lihat Proyek",
@@ -130,8 +130,8 @@ export const translations = {
       solution: "Solusi:",
       outcome: "Hasil:",
       focus: "Fokus:",
-      emptyTitle: "Belum Ada Proyek yang Ditampilkan",
-      emptyDesc: "Database belum memuat data proyek aktif. Proyek yang disimpan melalui panel admin akan langsung tersinkronisasi di sini.",
+      emptyTitle: "Koleksi Proyek Segera Hadir",
+      emptyDesc: "Dokumentasi dan studi kasus proyek sedang dalam tahap kurasi dan pembaruan berkala. Kunjungi repositori GitHub untuk melihat kode sumber langsung.",
       adminBtn: "Kelola di Panel Admin",
     },
     repoModal: {
@@ -292,8 +292,8 @@ export const translations = {
       solution: "Solution:",
       outcome: "Outcome:",
       focus: "Focus:",
-      emptyTitle: "No Projects Published Yet",
-      emptyDesc: "No active projects found in the database. Projects saved via the admin panel will automatically appear here.",
+      emptyTitle: "Project Showcase Coming Soon",
+      emptyDesc: "Case studies and project documentations are currently being curated. Visit the GitHub repository to explore direct source code.",
       adminBtn: "Manage in Admin Panel",
     },
     repoModal: {

@@ -15,7 +15,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     formats: ["image/avif", "image/webp"],
@@ -45,4 +45,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

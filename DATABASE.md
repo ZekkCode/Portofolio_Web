@@ -47,10 +47,12 @@ CREATE TABLE IF NOT EXISTS public.site_config (
 ALTER TABLE public.site_config ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read site_config"
-  ON public.site_config FOR SELECT USING (true);
+  ON public.site_config FOR SELECT TO anon, authenticated USING (true);
 
-CREATE POLICY "Allow upsert site_config"
-  ON public.site_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admin write site_config"
+  ON public.site_config FOR ALL TO authenticated
+  USING (coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') = 'admin' OR (auth.jwt() ->> 'email') = 'zakariamujur6@gmail.com')
+  WITH CHECK (coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') = 'admin' OR (auth.jwt() ->> 'email') = 'zakariamujur6@gmail.com');
 ```
 
 #### B. Tabel `page_views` (Penghitung Kunjungan Persisten)
@@ -66,10 +68,9 @@ CREATE TABLE IF NOT EXISTS public.page_views (
 ALTER TABLE public.page_views ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read page_views"
-  ON public.page_views FOR SELECT USING (true);
+  ON public.page_views FOR SELECT TO anon, authenticated USING (true);
 
-CREATE POLICY "Allow update page_views"
-  ON public.page_views FOR ALL USING (true) WITH CHECK (true);
+-- Pembaruan hanya dilakukan lewat RPC increment_page_view() atau service_role server-side
 ```
 
 #### C. Tabel `project_views` (Engaged Valid Views & Deduplikasi 24 Jam)

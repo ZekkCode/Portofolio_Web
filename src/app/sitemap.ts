@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 import { profile } from "@/lib/profile";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  // Tanggal pembaruan rilis portofolio aktual
+  const lastModified = new Date("2026-10-29T00:00:00.000Z");
 
   return [
     {
@@ -10,12 +11,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "weekly",
       priority: 1.0,
-      alternates: {
-        languages: {
-          "id-ID": `${profile.site}/`,
-          "en-US": `${profile.site}/`,
-        },
-      },
     },
   ];
 }

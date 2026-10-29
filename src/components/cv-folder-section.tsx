@@ -153,7 +153,7 @@ export function CvFolderSection() {
           layout="spread"
           openOn="click"
           draggable={true}
-          zoomOnClick={true}
+          zoomOnClick={false}
           peek={true}
           intro={false}
           tilt={isMobile ? 0.35 : 0.6}

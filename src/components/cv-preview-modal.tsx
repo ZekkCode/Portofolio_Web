@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
+import { useLenis } from "lenis/react";
 import { useSiteConfig } from "@/lib/site-store";
 import PaperCrumple from "@/components/paper-crumple";
 
@@ -141,8 +142,10 @@ interface CvPreviewModalProps {
 
 export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPreviewModalProps) {
   const { cvDocs } = useSiteConfig();
+  const lenis = useLenis();
   const [activeRole, setActiveRole] = useState<RoleKey>(initialRole);
   const [prevInitialRole, setPrevInitialRole] = useState<RoleKey>(initialRole);
+  const [prevIsOpen, setPrevIsOpen] = useState<boolean>(isOpen);
   const [currentPage, setCurrentPage] = useState(() => ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -162,6 +165,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   });
 
   const openerRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Deteksi ukuran viewport
   useEffect(() => {
@@ -187,14 +192,27 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   useEffect(() => {
     if (isOpen) {
       openerRef.current = (document.activeElement as HTMLElement) || null;
+      setTimeout(() => closeButtonRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
-  // Sinkronisasi saat initialRole berubah dari luar
-  if (initialRole !== prevInitialRole) {
+  // Sinkronisasi Lenis: Hentikan momentum scroll background saat modal aktif
+  useEffect(() => {
+    if (!isOpen) return;
+    lenis?.stop();
+    return () => {
+      lenis?.start();
+    };
+  }, [isOpen, lenis]);
+
+  // Sinkronisasi saat modal dibuka atau initialRole berubah dari luar (pola resmi React render-time adjustment)
+  if (isOpen && (!prevIsOpen || initialRole !== prevInitialRole)) {
+    setPrevIsOpen(isOpen);
     setPrevInitialRole(initialRole);
     setActiveRole(initialRole);
     setCurrentPage(ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
+  } else if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(false);
   }
 
   const handleClose = useCallback(() => {
@@ -233,7 +251,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     });
   }, [totalPages]);
 
-  // Keyboard navigation & Escape
+  // Keyboard navigation, Escape & Focus Trap
   useEffect(() => {
     if (!isOpen) return;
 
@@ -245,6 +263,31 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
         prevPage();
       } else if (e.key === "ArrowRight") {
         nextPage();
+      } else if (e.key === "Tab") {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+
+        const focusables = Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href]:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || !dialog.contains(document.activeElement)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last || !dialog.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
 
@@ -283,6 +326,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Tampilan Lembar CV Interaktif"
@@ -301,14 +345,14 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           isDragging ? "opacity-0" : "opacity-100"
         }`}
       >
-        {/* Indikator Halaman & Spesialisasi Ringkas */}
+        {/* Indikator Spesialisasi & Judul Dokumen Ringkas */}
         <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md text-white text-xs font-semibold select-none">
           <span
-            className="size-2 rounded-full"
+            className="size-2 rounded-full shrink-0"
             style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
           />
-          <span>
-            Hal {currentPage + 1}/{totalPages} • {currentTitle}
+          <span className="truncate max-w-[220px] sm:max-w-none">
+            {currentTitle}
           </span>
         </div>
 
@@ -325,6 +369,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           </button>
 
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={handleClose}
             className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
@@ -397,7 +442,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
               <ChevronLeft className="size-4" />
             </button>
             <span className="font-mono text-xs font-bold px-2 tracking-wider">
-              {currentPage + 1} / {totalPages}
+              Hal {currentPage + 1} dari {totalPages}
             </span>
             <button
               type="button"

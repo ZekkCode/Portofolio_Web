@@ -44,6 +44,28 @@ async function getStoredCvDoc(roleKey?: string | null): Promise<CvDocConfig | un
   return cvDocs[0];
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Range, Authorization",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Content-Disposition",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+}
+
+export async function HEAD(request: NextRequest) {
+  const getRes = await GET(request);
+  return new NextResponse(null, {
+    status: getRes.status,
+    headers: getRes.headers,
+  });
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const role = searchParams.get("role");
@@ -70,7 +92,7 @@ export async function GET(request: NextRequest) {
 
       if (signedUrl) {
         if (wantsJson) {
-          return NextResponse.json({ url: signedUrl });
+          return NextResponse.json({ url: signedUrl }, { headers: CORS_HEADERS });
         }
         return NextResponse.redirect(signedUrl, 302);
       }
@@ -82,7 +104,7 @@ export async function GET(request: NextRequest) {
   // 2. Jika targetUrl adalah URL eksternal absolut
   if (/^https?:\/\//i.test(targetUrl)) {
     if (wantsJson) {
-      return NextResponse.json({ url: targetUrl });
+      return NextResponse.json({ url: targetUrl }, { headers: CORS_HEADERS });
     }
     return NextResponse.redirect(targetUrl, 302);
   }
@@ -94,12 +116,13 @@ export async function GET(request: NextRequest) {
     const fileBuffer = await readFile(filePath);
 
     if (wantsJson) {
-      return NextResponse.json({ url: `/${cleanPath}` });
+      return NextResponse.json({ url: `/${cleanPath}` }, { headers: CORS_HEADERS });
     }
 
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": "application/pdf",
         "Content-Disposition": 'inline; filename="CV-ATS-ZakariaMP-2025.pdf"',
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
@@ -109,7 +132,7 @@ export async function GET(request: NextRequest) {
     console.error("[api/cv-pdf] Berkas lokal tidak ditemukan:", err);
     return NextResponse.json(
       { error: "Berkas PDF CV tidak ditemukan." },
-      { status: 404 }
+      { status: 404, headers: CORS_HEADERS }
     );
   }
 }

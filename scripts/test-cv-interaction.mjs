@@ -115,10 +115,10 @@ try {
   await send("Page.navigate", { url: `${base}/` });
   await sleep(3500);
 
-  // Click "Buka Berkas CV Lengkap"
+  // Click "Buka Berkas Karier"
   console.log("3. Opening CV preview from folder stage...");
   const opened = await evaluate(`(() => {
-    const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Buka Berkas CV Lengkap'));
+    const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Buka Berkas Karier') || b.textContent.includes('Buka Berkas CV Lengkap'));
     if (!btn) return false;
     btn.click();
     return true;
@@ -177,7 +177,7 @@ try {
     const dialog = document.querySelector('[role="dialog"]');
     return dialog ? dialog.innerText : "";
   })()`);
-  assert.ok(pageIndicator.includes("2/4") || pageIndicator.includes("2 / 4"), "Pergantian halaman gagal");
+  assert.ok(pageIndicator.includes("2/4") || pageIndicator.includes("2 / 4") || pageIndicator.includes("2 dari 4"), "Pergantian halaman gagal");
   console.log("ok  Navigasi halaman: berhasil beralih ke Hal 2 / 4");
 
   // 5. Test interaction: press and hold on paper

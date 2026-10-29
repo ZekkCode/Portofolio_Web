@@ -49,7 +49,7 @@ export function ServicesSection() {
         key={service.key}
         className="group relative flex h-full flex-col justify-between rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
       >
-        <div>
+        <div className="flex h-full flex-col">
           {/* Header: Icon di Kiri, Teks Judul Layanan di Sebelah Kanan Icon */}
           <div className="flex items-center gap-3.5">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400">
@@ -70,7 +70,7 @@ export function ServicesSection() {
             </h3>
           </div>
 
-          <p className="mt-3.5 text-xs sm:text-sm leading-relaxed text-body">
+          <p className="mt-3.5 flex-1 text-xs sm:text-sm leading-relaxed text-body">
             {desc}
           </p>
         </div>
@@ -87,7 +87,7 @@ export function ServicesSection() {
 
       {/* Grid Banner Layanan: Sejajar, Rapi, Simetris 2x2 Tanpa Disparitas Parallax */}
       <ScrollReveal y={20}>
-        <div className="grid gap-4 sm:grid-cols-2 items-stretch">
+        <div className="grid gap-4 sm:grid-cols-2 auto-rows-fr items-stretch">
           {services.map(renderCard)}
         </div>
       </ScrollReveal>

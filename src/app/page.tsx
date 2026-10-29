@@ -11,6 +11,7 @@ import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
 import { ServicesSection } from "@/components/services-section";
 import { CertificatesSection } from "@/components/certificates-section";
+import { ExperienceTimeline } from "@/components/experience-timeline";
 import { FaqSection } from "@/components/faq-section";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
@@ -22,11 +23,11 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
-import { ArrowRight, ArrowUpRight, FileText, Mail } from "lucide-react";
+import { ArrowRight, FileText, Mail } from "lucide-react";
 
 function Header() {
   const { t } = useTranslation();
-  const { views, isEngaged } = usePageViews();
+  const { views, isEngaged, isVerified } = usePageViews();
   const { headerLogoUrl } = useSiteConfig();
 
   return (
@@ -51,19 +52,21 @@ function Header() {
         </SmoothNavLink>
 
         <div className="flex items-center gap-2 sm:gap-2.5 pe-14 md:pe-0">
-          <span
-            className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md transition-all duration-300 ${
-              isEngaged
-                ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
-                : "border-line bg-surface/90 text-body dark:border-line/60 dark:bg-slate-900/80"
-            }`}
-            title="Total tayangan halaman (Page Views)"
-          >
-            <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
-            <span suppressHydrationWarning className="font-mono text-[11px] font-bold">
-              {views.toLocaleString("id-ID")}
+          {isVerified && (
+            <span
+              className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md transition-all duration-300 ${
+                isEngaged
+                  ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
+                  : "border-line bg-surface/90 text-body dark:border-line/60 dark:bg-slate-900/80"
+              }`}
+              title="Total tayangan halaman (Page Views)"
+            >
+              <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
+              <span suppressHydrationWarning className="font-mono text-[11px] font-bold">
+                {views.toLocaleString("id-ID")}
+              </span>
             </span>
-          </span>
+          )}
           <LanguageToggle />
           <ThemeToggle />
           <a
@@ -190,26 +193,9 @@ function About() {
           <h3 className="mb-4 text-sm font-bold text-brand dark:text-blue-400">
             {t("about.expTitle")}
           </h3>
-          <Parallax speed={0.14} className="lg:pt-2">
-            <ol className="space-y-6 border-s border-line/70 ps-5 dark:border-line/40">
-              {profile.experience.map((item) => (
-                <li key={item.org} className="relative group">
-                  <span
-                    className="absolute top-1.5 -start-[26px] size-2.5 rounded-full border-2 border-white bg-brand shadow-xs transition-transform group-hover:scale-125 dark:border-slate-900"
-                    aria-hidden="true"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted">
-                      {item.period} · {item.place}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm font-bold text-ink">{item.role}</p>
-                  <p className="text-xs font-semibold text-brand dark:text-blue-400">{item.org}</p>
-                  <p className="mt-1 text-xs sm:text-sm leading-relaxed text-body">{item.desc}</p>
-                </li>
-              ))}
-            </ol>
-          </Parallax>
+          <ScrollReveal y={16}>
+            <ExperienceTimeline />
+          </ScrollReveal>
         </div>
       </div>
     </section>
@@ -457,7 +443,7 @@ function Contact() {
 }
 
 function Footer() {
-  const { views, isEngaged } = usePageViews();
+  const { views, isEngaged, isVerified } = usePageViews();
 
   const footerSocials = [
     {
@@ -516,7 +502,6 @@ function Footer() {
   return (
     <footer className="relative border-t border-line overflow-hidden pt-12 pb-8 sm:pt-16 sm:pb-10 dark:border-line">
       <div className="mx-auto max-w-5xl px-5">
-        {/* Footer Top Row: Brand Info + Contact via Gmail */}
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-display text-base font-bold text-ink">{profile.brand}</p>
@@ -525,54 +510,42 @@ function Footer() {
             </p>
           </div>
 
-          {/* Direct Gmail Contact */}
-          <div>
-            <a
-              href={`mailto:${profile.contact.email}`}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line/80 bg-transparent px-4 py-2 text-xs sm:text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
-            >
-              <Mail className="size-3.5 text-brand dark:text-blue-400" />
-              <span>{profile.contact.email}</span>
-              <ArrowUpRight className="size-3 text-muted" />
-            </a>
-          </div>
-        </div>
+          {/* Socials: Clean icons with 44px hit target and no permanent circle borders */}
+          <div className="flex items-center gap-4">
+            <ul className="flex items-center gap-1 sm:gap-1.5">
+              {footerSocials.map((s) => (
+                <li key={s.label}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={s.label}
+                    title={s.label}
+                    className="group flex size-11 items-center justify-center rounded-xl text-body transition-colors duration-150 hover:text-brand hover:bg-brand/5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-blue-400 dark:hover:bg-brand/10"
+                  >
+                    <span className="transition-transform duration-150 group-hover:scale-110 motion-reduce:transform-none">
+                      {s.icon}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
 
-        {/* Footer Middle Row: Socials & Live Verified Views */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line/60 pt-6 dark:border-line/40">
-          <ul className="flex items-center gap-2 sm:gap-2.5">
-            {footerSocials.map((s) => (
-              <li key={s.label}>
-                <a
-                  href={s.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={s.label}
-                  title={s.label}
-                  className="group flex size-11 items-center justify-center rounded-xl text-body transition-colors duration-150 hover:text-brand hover:bg-brand/5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-blue-400 dark:hover:bg-brand/10"
-                >
-                  <span className="transition-transform duration-150 group-hover:scale-110 motion-reduce:transform-none">
-                    {s.icon}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs backdrop-blur-xs transition-all duration-300 ${
-                isEngaged
-                  ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
-                  : "border-line bg-white/90 text-ink dark:border-line dark:bg-slate-900/90 dark:text-slate-200"
-              }`}
-              title="Kunjungan aktif terverifikasi"
-            >
-              <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
-              <span suppressHydrationWarning className="font-mono text-xs font-bold">
-                {views.toLocaleString("id-ID")}
+            {isVerified && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold shadow-2xs backdrop-blur-xs transition-all duration-300 ${
+                  isEngaged
+                    ? "border-brand/40 bg-brand/5 text-ink dark:border-blue-500/40 dark:bg-blue-950/30 dark:text-blue-200"
+                    : "border-line bg-white/90 text-ink dark:border-line dark:bg-slate-900/90 dark:text-slate-200"
+                }`}
+                title="Kunjungan aktif terverifikasi"
+              >
+                <AnimatedEye isEngaged={isEngaged} className="size-3.5" />
+                <span suppressHydrationWarning className="font-mono text-xs font-bold">
+                  {views.toLocaleString("id-ID")}
+                </span>
               </span>
-            </span>
+            )}
           </div>
         </div>
       </div>

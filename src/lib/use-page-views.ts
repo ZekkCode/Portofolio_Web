@@ -9,6 +9,7 @@ const ENGAGED_VIEW_DELAY_MS = 20000; // 20 detik waktu tunggu keterlibatan aktif
 
 let currentViews: number = DEFAULT_VIEWS;
 let isGloballyEngaged: boolean = false;
+let isGloballyVerified: boolean = false;
 
 const subscribers = new Set<() => void>();
 
@@ -31,14 +32,23 @@ function getServerSnapshot(): number {
   return DEFAULT_VIEWS;
 }
 
+function getVerifiedSnapshot(): boolean {
+  return isGloballyVerified;
+}
+
+function getServerVerifiedSnapshot(): boolean {
+  return false;
+}
+
 // 1. Ambil jumlah view terkini secara instan (GET tanpa inkremen)
 async function fetchCurrentViews(): Promise<number> {
   try {
     const res = await fetch("/api/views", { method: "GET" });
     if (res.ok) {
-      const data = (await res.json()) as { views?: number };
+      const data = (await res.json()) as { views?: number; isVerified?: boolean };
       if (typeof data.views === "number") {
         currentViews = data.views;
+        isGloballyVerified = Boolean(data.isVerified);
         try {
           window.localStorage.setItem(VIEWS_CACHE_KEY, String(data.views));
         } catch {
@@ -77,9 +87,10 @@ async function recordEngagedView(projectId = "portfolio"): Promise<void> {
     });
 
     if (res.ok) {
-      const data = (await res.json()) as { views?: number; recorded?: boolean };
+      const data = (await res.json()) as { views?: number; recorded?: boolean; isVerified?: boolean };
       if (typeof data.views === "number") {
         currentViews = data.views;
+        isGloballyVerified = Boolean(data.isVerified);
         try {
           window.localStorage.setItem(VIEWS_CACHE_KEY, String(data.views));
           window.sessionStorage.setItem(SESSION_RECORDED_KEY, "1");
@@ -97,6 +108,7 @@ async function recordEngagedView(projectId = "portfolio"): Promise<void> {
 
 export function usePageViews() {
   const views = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isVerified = useSyncExternalStore(subscribe, getVerifiedSnapshot, getServerVerifiedSnapshot);
   const [loading, setLoading] = useState(true);
   const [engaged, setEngaged] = useState(isGloballyEngaged);
 
@@ -180,5 +192,5 @@ export function usePageViews() {
     };
   }, []);
 
-  return { views, loading, isEngaged: engaged };
+  return { views, loading, isEngaged: engaged, isVerified };
 }

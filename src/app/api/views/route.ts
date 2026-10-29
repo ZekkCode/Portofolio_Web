@@ -11,8 +11,11 @@ interface ViewsData {
 }
 
 const DATA_FILE = join(process.cwd(), ".views.json");
-const INITIAL_SEED = 1420; // Nilai dasar tampilan portofolio
+const INITIAL_SEED = 1420; // Nilai dasar seed tidak terverifikasi
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+// Counter dianggap terverifikasi hanya jika dikonfigurasi melalui sumber analitik otentik
+const isVerifiedSource = Boolean(process.env.VERIFIED_PAGE_VIEWS === "true");
 
 let cachedCount: number | null = null;
 const memoryVisits = new Map<string, number>();
@@ -32,7 +35,7 @@ function extractClientInfo(request: Request): { ip: string; userAgent: string; h
   return { ip, userAgent, hash };
 }
 
-async function getStoredViews(): Promise<number> {
+async function getStoredViews(): Promise<{ count: number; isVerified: boolean }> {
   if (isSupabaseConfigured()) {
     try {
       const supabase = getSupabaseClient();
@@ -45,7 +48,7 @@ async function getStoredViews(): Promise<number> {
 
         if (!error && data && typeof data.count === "number") {
           cachedCount = Number(data.count);
-          return cachedCount;
+          return { count: cachedCount, isVerified: isVerifiedSource };
         }
 
         if (!error && !data) {
@@ -55,7 +58,7 @@ async function getStoredViews(): Promise<number> {
             updated_at: new Date().toISOString(),
           });
           cachedCount = INITIAL_SEED;
-          return INITIAL_SEED;
+          return { count: INITIAL_SEED, isVerified: isVerifiedSource };
         }
       }
     } catch {
@@ -63,21 +66,21 @@ async function getStoredViews(): Promise<number> {
     }
   }
 
-  if (cachedCount !== null) return cachedCount;
+  if (cachedCount !== null) return { count: cachedCount, isVerified: false };
 
   try {
     if (existsSync(DATA_FILE)) {
       const raw = readFileSync(DATA_FILE, "utf-8");
       const parsed = JSON.parse(raw) as Partial<ViewsData>;
       cachedCount = typeof parsed.count === "number" ? parsed.count : INITIAL_SEED;
-      return cachedCount;
+      return { count: cachedCount, isVerified: false };
     }
   } catch {
     // fallback
   }
 
   cachedCount = INITIAL_SEED;
-  return cachedCount;
+  return { count: cachedCount, isVerified: false };
 }
 
 async function saveViews(count: number, newVisitKey?: string, timestamp?: number) {
@@ -136,9 +139,9 @@ async function saveViews(count: number, newVisitKey?: string, timestamp?: number
 }
 
 export async function GET() {
-  const count = await getStoredViews();
+  const { count, isVerified } = await getStoredViews();
   return NextResponse.json(
-    { views: count },
+    { views: count, isVerified },
     {
       headers: {
         "Cache-Control": "public, s-maxage=10, stale-while-revalidate=59",
@@ -161,7 +164,8 @@ export async function POST(request: Request) {
   const { hash: visitorHash } = extractClientInfo(request);
   const now = Date.now();
   const visitKey = `${projectId}:${visitorHash}`;
-  let count = await getStoredViews();
+  const stored = await getStoredViews();
+  let count = stored.count;
 
   // 1. Cek di Supabase jika terhubung
   if (isSupabaseConfigured()) {
@@ -181,7 +185,7 @@ export async function POST(request: Request) {
         if (!error && existing) {
           // Pengunjung yang sama dalam 24 jam terakhir -> Abaikan (tidak menambah count)
           return NextResponse.json(
-            { views: count, recorded: false, reason: "cooldown_24h" },
+            { views: count, recorded: false, reason: "cooldown_24h", isVerified: isVerifiedSource },
             { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
           );
         }
@@ -197,7 +201,7 @@ export async function POST(request: Request) {
         await saveViews(count, visitKey, now);
 
         return NextResponse.json(
-          { views: count, recorded: true },
+          { views: count, recorded: true, isVerified: isVerifiedSource },
           { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
         );
       }
@@ -210,9 +214,9 @@ export async function POST(request: Request) {
   let lastVisit = memoryVisits.get(visitKey);
   if (!lastVisit && existsSync(DATA_FILE)) {
     try {
-      const stored = JSON.parse(readFileSync(DATA_FILE, "utf-8")) as ViewsData;
-      if (stored.history && stored.history[visitKey]) {
-        lastVisit = stored.history[visitKey];
+      const storedData = JSON.parse(readFileSync(DATA_FILE, "utf-8")) as ViewsData;
+      if (storedData.history && storedData.history[visitKey]) {
+        lastVisit = storedData.history[visitKey];
         memoryVisits.set(visitKey, lastVisit);
       }
     } catch {
@@ -222,7 +226,7 @@ export async function POST(request: Request) {
 
   if (lastVisit && now - lastVisit < TWENTY_FOUR_HOURS_MS) {
     return NextResponse.json(
-      { views: count, recorded: false, reason: "cooldown_24h" },
+      { views: count, recorded: false, reason: "cooldown_24h", isVerified: false },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   }
@@ -242,7 +246,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { views: count, recorded: true },
+    { views: count, recorded: true, isVerified: false },
     {
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
 import { useLenis } from "lenis/react";
 import { useSiteConfig } from "@/lib/site-store";
@@ -164,6 +165,12 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   });
 
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
   const openerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -301,7 +308,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     };
   }, [isOpen, handleClose, prevPage, nextPage]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   // Ukuran kertas responsif sesuai viewport (rasio A4 = 1 : 1.414)
   const isMobile = viewport.w < 640;
@@ -309,7 +316,6 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const maxH = isMobile ? Math.min(viewport.h - 160, 480) : Math.min(viewport.h - 140, 580);
   const paperWidth = Math.round(Math.min(maxW, maxH / 1.414));
   const paperHeight = Math.round(paperWidth * 1.414);
-  const sceneHeight = paperHeight + (isMobile ? 32 : 56);
 
   // URL PDF yang tersimpan di admin/backend atau Cloudflare R2
   const storedPdfUrl = currentDoc?.pdfUrl?.trim() || "";
@@ -323,8 +329,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     : `/api/cv-pdf?role=${effectiveKey}`;
 
   const currentTitle = currentDoc?.title || currentDetail.title;
-
-  return (
+  return createPortal(
     <div
       ref={dialogRef}
       role="dialog"
@@ -381,14 +386,14 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       </div>
 
       {/* Area Tengah: Lembar Kertas Asli Mengambang Bebas (Tanpa Container Box / Border) */}
-      <div className="relative z-10 flex items-center justify-center w-full max-w-full select-none">
+      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
         {hasWebGL && !reducedMotion ? (
           <PaperCrumple
+            className="pointer-events-auto h-full w-full"
             src={pagesList[currentPage]}
             alt={`Curriculum Vitae Zakaria Mujur P. Halaman ${currentPage + 1}`}
             width={paperWidth}
             height={paperHeight}
-            sceneHeight={sceneHeight}
             releaseBehavior="restore"
             crumpleAmount={0.85}
             crumpleDuration={0.55}
@@ -471,7 +476,8 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           <ArrowUpRight className="size-3.5 text-white/80" />
         </a>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

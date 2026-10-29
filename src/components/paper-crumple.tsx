@@ -13,7 +13,7 @@ export interface PaperCrumpleProps {
   backSrc?: string;
   width?: number;
   height?: number;
-  sceneHeight?: number;
+  sceneHeight?: number | string;
   imageFit?: 'cover' | 'contain';
   releaseBehavior?: PaperCrumpleRelease;
   crumpleAmount?: number;
@@ -300,7 +300,7 @@ const PaperCrumple = ({
   backSrc = '',
   width = 320,
   height = 400,
-  sceneHeight = 560,
+  sceneHeight,
   imageFit = 'cover',
   releaseBehavior = 'restore',
   crumpleAmount = 0.85,
@@ -728,8 +728,10 @@ const PaperCrumple = ({
         plane.constant = -anchor.z;
         setPointer(pointerX, pointerY);
         if (raycaster.ray.intersectPlane(plane, world)) {
-          posX.value = posX.target = world.x - anchor.x;
-          posY.value = posY.target = world.y - anchor.y;
+          const maxDragX = Math.max(30, (viewportWidth - scale * 0.6) / 2);
+          const maxDragY = Math.max(30, (viewportHeight - scale * aspect * 0.6) / 2);
+          posX.value = posX.target = clamp(world.x - anchor.x, -maxDragX, maxDragX);
+          posY.value = posY.target = clamp(world.y - anchor.y, -maxDragY, maxDragY);
           posX.velocity = posY.velocity = 0;
         }
       }
@@ -1155,7 +1157,7 @@ const PaperCrumple = ({
     <div
       ref={rootRef}
       className={`relative isolate w-full overflow-hidden ${className}`}
-      style={{ height: sceneHeight, ...style }}
+      style={{ height: sceneHeight !== undefined ? (typeof sceneHeight === 'number' ? `${sceneHeight}px` : sceneHeight) : undefined, ...style }}
       data-status={status}
     >
       <canvas

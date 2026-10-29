@@ -1084,10 +1084,17 @@ const Lanyard = ({
     const frameView = () => {
       const s = settingsRef.current!;
       const aspect = view.width / view.height;
-      const strapRatio = mix(0.12, 0.44, clamp(s.strapLength, 0, 1));
-      const neededHeight = (layout.height * 1.5) / Math.max(0.2, 1 - strapRatio);
-      let viewHeight = Math.max(layout.height / clamp(s.size, 0.15, 0.8), neededHeight);
-      const minimumWidth = Math.max(layout.width * 2.5, 3.8);
+      const cardDiag = Math.hypot(layout.width, layout.height);
+      const strapRatio = mix(0.18, 0.44, clamp(s.strapLength, 0, 1));
+      
+      // Jamin headroom atas yang cukup agar kartu yang berputar diagonal dan berayun tidak pernah terpotong
+      const minHeadroom = cardDiag * 0.55 + 0.45;
+      const headroom = Math.max(minHeadroom, layout.height * 1.15 * strapRatio + 0.35);
+
+      // Kebutuhan tinggi frustum: headroom atas + tinggi kartu + ruang ayunan bawah
+      const neededHeight = headroom + layout.height + cardDiag * 0.45;
+      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight);
+      const minimumWidth = Math.max(layout.width * 2.6, cardDiag * 1.6, 4.2);
       if (viewHeight * aspect < minimumWidth) viewHeight = minimumWidth / aspect;
       const viewWidth = viewHeight * aspect;
       frustum.width = viewWidth;
@@ -1105,8 +1112,8 @@ const Lanyard = ({
       const anchorRatio = (ANCHORS[s.anchor] ?? 0.5) - 0.5;
       const maxAnchorX = Math.max(0, viewWidth / 2 - layout.width * 0.9);
       const anchorX = clamp(anchorRatio * viewWidth, -maxAnchorX, maxAnchorX);
-      const anchorY = viewHeight / 2 + 0.18;
-      const cardTop = viewHeight / 2 - viewHeight * strapRatio;
+      const anchorY = viewHeight / 2 + 0.22;
+      const cardTop = viewHeight / 2 - headroom;
       const hangTop = cardTop + (layout.hangY - layout.height / 2);
       sim.anchor.set(anchorX, anchorY, 0);
       configureSimulation(sim, layout, anchorY - hangTop);
@@ -1390,10 +1397,10 @@ const Lanyard = ({
       if (sim.grab) {
         if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) press = null;
         raycaster.ray.at(sim.grab.reach, sim.grab.target);
-        const marginX = layout.width * 0.65;
-        const maxGrabX = Math.max(0.2, frustum.width / 2 - marginX);
-        const minGrabY = -frustum.height / 2 + layout.height * 0.55;
-        const maxGrabY = frustum.height / 2 - 0.45;
+        const cardDiag = Math.hypot(layout.width, layout.height);
+        const maxGrabX = Math.max(0.2, frustum.width / 2 - cardDiag * 0.52);
+        const minGrabY = -frustum.height / 2 + (cardDiag * 0.52 + 0.2);
+        const maxGrabY = frustum.height / 2 - (cardDiag * 0.52 + 0.25);
         sim.grab.target.x = clamp(sim.grab.target.x, -maxGrabX, maxGrabX);
         sim.grab.target.y = clamp(sim.grab.target.y, minGrabY, maxGrabY);
         start();

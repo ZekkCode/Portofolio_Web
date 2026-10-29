@@ -157,7 +157,6 @@ export async function POST(request: Request) {
 
     // 5. Nama objek acak kriptografis (Random UUID) dan pembatasan folder
     const uniqueId = crypto.randomUUID();
-    const sanitizedFilename = `${folder}/${uniqueId}.${verifiedType.ext}`;
 
     if (isR2Configured()) {
       try {

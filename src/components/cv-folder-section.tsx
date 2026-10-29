@@ -70,7 +70,10 @@ export function CvFolderSection() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleKey>("all");
-  const [isFolderOpen, setIsFolderOpen] = useState(false);
+  const [isFolderOpen, setIsFolderOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+  });
   const [isMobile, setIsMobile] = useState(false);
 
   const isDark = mounted && resolvedTheme === "dark";
@@ -88,7 +91,6 @@ export function CvFolderSection() {
     if (!el || typeof window === "undefined") return;
 
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setIsFolderOpen(true);
       return;
     }
 
@@ -103,7 +105,7 @@ export function CvFolderSection() {
     });
 
     if (trigger.isActive) {
-      setIsFolderOpen(true);
+      queueMicrotask(() => setIsFolderOpen(true));
     }
 
     return () => {

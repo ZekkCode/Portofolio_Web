@@ -147,8 +147,19 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [viewport, setViewport] = useState({ w: 1200, h: 800 });
-  const [hasWebGL, setHasWebGL] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [hasWebGL] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const canvas = document.createElement("canvas");
+      return Boolean(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
+    } catch {
+      return false;
+    }
+  });
+  const [reducedMotion, setReducedMotion] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
 
   const openerRef = useRef<HTMLElement | null>(null);
 
@@ -162,19 +173,10 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Deteksi WebGL & preferensi reduced-motion
+  // Preferensi reduced-motion listener
   useEffect(() => {
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-      if (!gl) setHasWebGL(false);
-    } catch {
-      setHasWebGL(false);
-    }
-
     if (typeof window !== "undefined" && window.matchMedia) {
       const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-      setReducedMotion(media.matches);
       const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
       media.addEventListener("change", listener);
       return () => media.removeEventListener("change", listener);

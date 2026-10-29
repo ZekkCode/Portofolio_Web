@@ -32,7 +32,8 @@ export default function AdminLoginPage() {
       }
 
       // Berhasil login, arahkan ke dashboard
-      window.location.href = "/admin";
+      router.push("/admin");
+      router.refresh();
     } catch {
       setError("Tidak dapat terhubung ke server autentikasi.");
       setLoading(false);

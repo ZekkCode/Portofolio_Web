@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const wantsJson = request.headers.get("accept")?.includes("application/json") || searchParams.get("format") === "json";
 
   const doc = await getStoredCvDoc(role);
-  let targetUrl = (directUrl || doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
+  const targetUrl = (directUrl || doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
 
   // 1. Jika URL berada di Cloudflare R2
   const isR2KeyOrUrl =
@@ -113,3 +113,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

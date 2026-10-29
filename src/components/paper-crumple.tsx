@@ -352,27 +352,28 @@ const PaperCrumple = ({
     onStateChange,
     onError
   });
-  options.current = {
-    releaseBehavior,
-    crumpleAmount,
-    crumpleDuration,
-    releaseDuration,
-    creaseStrength,
-    draggable,
-    dragRotation,
-    dragRadius,
-    returnToOrigin,
-    disabled,
-    onStateChange,
-    onError
-  };
+  useEffect(() => {
+    options.current = {
+      releaseBehavior,
+      crumpleAmount,
+      crumpleDuration,
+      releaseDuration,
+      creaseStrength,
+      draggable,
+      dragRotation,
+      dragRadius,
+      returnToOrigin,
+      disabled,
+      onStateChange,
+      onError
+    };
+  });
 
   useEffect(() => {
     const root = rootRef.current,
       canvas = canvasRef.current,
       hit = hitRef.current;
     if (!root || !canvas || !hit) return;
-    setStatus('loading');
     hit.disabled = true;
     hit.dataset.held = 'false';
     hit.setAttribute('aria-pressed', 'false');
@@ -390,7 +391,7 @@ const PaperCrumple = ({
     try {
       renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
     } catch (error) {
-      setStatus('error');
+      queueMicrotask(() => setStatus('error'));
       options.current.onError?.(error instanceof Error ? error : new Error('WebGL is unavailable.'));
       return;
     }
@@ -1083,7 +1084,7 @@ const PaperCrumple = ({
           options.current.onError?.(error);
         });
     } else {
-      setStatus('error');
+      queueMicrotask(() => setStatus('error'));
       options.current.onError?.(new Error('PaperCrumple requires an image src.'));
     }
 
@@ -1164,6 +1165,7 @@ const PaperCrumple = ({
         style={{ visibility: status === 'ready' ? 'visible' : 'hidden', filter: shadowFilter }}
       />
       {status !== 'ready' && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           className="pointer-events-none absolute left-1/2 top-1/2 h-[var(--pc-image-height,72%)] w-[var(--pc-image-width,60%)] select-none"
           src={src || undefined}

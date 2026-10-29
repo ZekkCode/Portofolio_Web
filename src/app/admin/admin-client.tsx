@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Lanyard from "@/components/lanyard";
 import ProfileCard from "@/components/profile-card";
 import {
@@ -16,9 +17,8 @@ import {
   type CvDocConfig,
   type SiteConfig,
 } from "@/lib/site-store";
-import { profile } from "@/lib/profile";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
-import { ArrowLeft, ArrowRight, FileText, LogOut, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, FileText, LogOut } from "lucide-react";
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
 
@@ -84,32 +84,8 @@ const GROUPS: { title: string; fields: Field[] }[] = [
 const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-line/60 dark:bg-[#151928]";
 
-const readImage = (file: File, max = 1400) =>
-  new Promise<string>((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const scale = Math.min(1, max / Math.max(image.width, image.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(image.width * scale);
-      canvas.height = Math.round(image.height * scale);
-      const ctx = canvas.getContext("2d");
-      URL.revokeObjectURL(url);
-      if (!ctx) {
-        reject(new Error("Canvas tidak tersedia"));
-        return;
-      }
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/webp", 0.9));
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Gagal membaca gambar"));
-    };
-    image.src = url;
-  });
-
 export default function AdminClient({ userEmail }: { userEmail?: string }) {
+  const router = useRouter();
   const storedConfig = useSiteConfig();
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [status, setStatus] = useState<string>("");
@@ -132,7 +108,8 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
-      window.location.href = "/admin/login";
+      router.push("/admin/login");
+      router.refresh();
     }
   };
 
@@ -181,11 +158,6 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const updateProfileCard = <K extends keyof ProfileCardConfig>(key: K, value: ProfileCardConfig[K]) => {
     setDraft({ ...config, profileCard: { ...config.profileCard, [key]: value } });
     setStatus("Draft Profile Card diubah");
-  };
-
-  const updateHeaderLogo = (url: string) => {
-    setDraft({ ...config, headerLogoUrl: url });
-    setStatus("Logo header diubah");
   };
 
   const addProject = () => {

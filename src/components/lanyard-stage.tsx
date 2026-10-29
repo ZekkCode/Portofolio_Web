@@ -1,24 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Lanyard from "@/components/lanyard";
 import { useSiteConfig } from "@/lib/site-store";
 
 export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
-  const [hasWebGL, setHasWebGL] = useState(true);
-
-  useEffect(() => {
+  const [hasWebGL] = useState(() => {
+    if (typeof window === "undefined") return true;
     try {
       const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-      if (!gl) {
-        setHasWebGL(false);
-      }
+      return Boolean(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
     } catch {
-      setHasWebGL(false);
+      return false;
     }
-  }, []);
+  });
 
   return (
     <div className={`relative w-full ${className || "h-[500px] sm:h-[580px] lg:h-[640px]"}`}>

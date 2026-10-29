@@ -150,6 +150,14 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [touchDeltaX, setTouchDeltaX] = useState(0);
   const [modalMode, setModalMode] = useState<"doc" | "crumple">("crumple");
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   if (initialRole !== prevInitialRole) {
     setPrevInitialRole(initialRole);
@@ -164,7 +172,14 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const currentDoc = cvDocs.find((d) => d.roleKey === effectiveKey);
   const currentDetail = ROLE_DETAILS[effectiveKey];
 
-  const totalPages = 4;
+  const pagesList = currentDoc?.pages && currentDoc.pages.length > 0
+    ? currentDoc.pages
+    : ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
+
+  const totalPages = pagesList.length;
+  const paperWidth = isMobile ? 300 : 420;
+  const paperHeight = isMobile ? 424 : 594;
+  const sceneHeight = isMobile ? 520 : 660;
 
   const prevPage = () => {
     setCurrentPage((p) => {
@@ -437,30 +452,36 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             </>
           )}
 
-          {/* If 3D Crumple Mode active, render PaperCrumple physics sheet */}
+          {/* 3D Paper Crumple Physics Stage (Spacious, No Constraining Div) */}
           {modalMode === "crumple" ? (
-            <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center p-2">
-              <div className="mb-3 flex items-center justify-between w-full max-w-md px-2 text-xs text-body">
+            <div className="mx-auto flex h-full w-full flex-col items-center justify-center py-2">
+              <div className="mb-2 flex items-center justify-between w-full max-w-lg px-3 text-xs text-body">
                 <div className="flex items-center gap-1.5 font-semibold text-ink">
                   <Sparkles className="size-3.5 text-brand" />
-                  <span>Simulasi Fisik Remas Kertas 3D • Halaman {currentPage + 1}</span>
+                  <span>Simulasi Fisik 3D • Halaman {currentPage + 1}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCrumpleResetKey((k) => k + 1)}
-                  className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] font-semibold text-body hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-                >
-                  <RotateCcw className="size-3" />
-                  <span>Ratakan</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline text-[11px] text-muted">Tahan & geser untuk meremas</span>
+                  <button
+                    type="button"
+                    onClick={() => setCrumpleResetKey((k) => k + 1)}
+                    className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] font-semibold text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
+                    title="Ratakan Lembar Kertas"
+                  >
+                    <RotateCcw className="size-3" />
+                    <span>Ratakan</span>
+                  </button>
+                </div>
               </div>
-              <div className="relative w-full overflow-hidden rounded-2xl border border-line bg-white shadow-xl dark:border-line/50 dark:bg-[#0c0e17]">
+
+              {/* Seamless Full-Bleed 3D Paper Stage */}
+              <div className="relative flex items-center justify-center w-full select-none">
                 <PaperCrumple
-                  src={currentDoc?.pages?.[currentPage] || `/cv-page-${currentPage + 1}.png`}
-                  alt={`Halaman ${currentPage + 1}`}
-                  width={340}
-                  height={480}
-                  sceneHeight={530}
+                  src={pagesList[currentPage]}
+                  alt={`Curriculum Vitae Halaman ${currentPage + 1}`}
+                  width={paperWidth}
+                  height={paperHeight}
+                  sceneHeight={sceneHeight}
                   releaseBehavior="restore"
                   crumpleAmount={0.85}
                   crumpleDuration={0.55}
@@ -476,6 +497,10 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                   resetKey={crumpleResetKey}
                 />
               </div>
+
+              <p className="mt-2 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                Pencet untuk melihat bersih • Tahan & geser kursor / sentuhan untuk meremas kertas
+              </p>
             </div>
           ) : currentDoc?.pdfUrl && !currentDoc.pages?.length ? (
             <div className="mx-auto flex h-full max-w-4xl flex-col items-center justify-center">
@@ -503,288 +528,18 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
                       transform: `translateX(-${currentPage * 100}%)`,
                     }}
                   >
-                    {/* Render custom uploaded pages OR high-fidelity clean demo CV pages */}
-                    {currentDoc?.pages && currentDoc.pages.length > 0 ? (
-                      currentDoc.pages.map((pageImg, idx) => (
-                        <div key={idx} className="w-full shrink-0 flex justify-center p-2">
-                          <div className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-2xl">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={pageImg}
-                              alt={`Halaman ${idx + 1}`}
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
+                    {pagesList.map((pageImg, idx) => (
+                      <div key={idx} className="w-full shrink-0 flex justify-center p-2">
+                        <div className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-2xl">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={pageImg}
+                            alt={`Halaman ${idx + 1}`}
+                            className="h-full w-full object-contain"
+                          />
                         </div>
-                      ))
-                    ) : (
-                      /* Demo Pages: Page 1, Page 2, (Page 3) */
-                      [
-                        // --- HALAMAN 1: IDENTITAS & KOMPETENSI INTI ---
-                        <div key="page-1" className="w-full shrink-0 flex justify-center p-1 sm:p-2">
-                          <article
-                            className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-6 sm:p-10 shadow-2xl text-slate-900 select-text flex flex-col justify-between"
-                            style={{
-                              background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
-                            }}
-                          >
-                            {/* Document Accent Top Bar */}
-                            <div
-                              className="absolute top-0 left-0 right-0 h-2"
-                              style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
-                            />
-
-                            <div>
-                              {/* Header Dokumen CV */}
-                              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
-                                <div>
-                                  <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
-                                    {profile.name}
-                                  </h1>
-                                  <p
-                                    className="mt-1 text-sm sm:text-base font-bold"
-                                    style={{ color: currentDoc?.color || currentDetail.color }}
-                                  >
-                                    {currentDoc?.title || currentDetail.title} • {currentDoc?.subtitle || currentDetail.subtitle}
-                                  </p>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    {profile.location} · Mahasiswa S1 Teknik Informatika (2024–Sekarang) · Freelancer sejak 2020
-                                  </p>
-                                </div>
-                                <div className="text-right text-xs text-slate-600 space-y-1">
-                                  <p className="font-semibold">{profile.contact.email}</p>
-                                  <p className="font-medium">{profile.contact.whatsapp}</p>
-                                  <p className="font-mono text-[11px] text-slate-400">zekktech.biz.id</p>
-                                </div>
-                              </div>
-
-                              {/* Ringkasan Eksekutif & Filosofi */}
-                              <div className="mt-5">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                  Ringkasan Profesional
-                                </h3>
-                                <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-slate-700">
-                                  {currentDetail.desc}
-                                </p>
-                              </div>
-
-                              {/* Keahlian Utama & Tools */}
-                              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                                <div>
-                                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                    Keahlian Kunci
-                                  </h3>
-                                  <ul className="mt-2 space-y-1 text-xs text-slate-700">
-                                    {currentDetail.skills.map((s) => (
-                                      <li key={s} className="flex items-center gap-1.5">
-                                        <span className="size-1 rounded-full bg-slate-400" />
-                                        <span>{s}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                    Perangkat & Stack
-                                  </h3>
-                                  <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {currentDetail.tools.map((t) => (
-                                      <span
-                                        key={t}
-                                        className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-800"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Tanggung Jawab & Kontribusi */}
-                              <div className="mt-5 border-t border-slate-100 pt-4">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                  Tanggung Jawab Lapangan
-                                </h3>
-                                <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
-                                  {currentDetail.responsibilities.map((r) => (
-                                    <li key={r} className="flex items-start gap-2">
-                                      <span className="font-bold text-slate-400">•</span>
-                                      <span>{r}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
-
-                            {/* Document Footer Page 1 */}
-                            <div className="mt-6 border-t border-slate-200 pt-3 flex items-center justify-between text-[11px] text-slate-400">
-                              <span>Curriculum Vitae — {profile.name}</span>
-                              <span className="font-mono font-semibold">Halaman 1 dari {totalPages}</span>
-                            </div>
-                          </article>
-                        </div>,
-
-                        // --- HALAMAN 2: PENGALAMAN KERJA & PORTOFOLIO ---
-                        <div key="page-2" className="w-full shrink-0 flex justify-center p-1 sm:p-2">
-                          <article
-                            className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-6 sm:p-10 shadow-2xl text-slate-900 select-text flex flex-col justify-between"
-                            style={{
-                              background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
-                            }}
-                          >
-                            {/* Document Accent Top Bar */}
-                            <div
-                              className="absolute top-0 left-0 right-0 h-2"
-                              style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
-                            />
-
-                            <div>
-                              <div className="border-b border-slate-200 pb-3">
-                                <h2 className="font-display text-lg font-bold text-slate-950">
-                                  Rekam Jejak Lapangan & Portofolio Proyek
-                                </h2>
-                                <p className="text-xs text-slate-500">
-                                  Pengalaman profesional, kontribusi organisasi, dan studi kasus sistem nyata.
-                                </p>
-                              </div>
-
-                              {/* Portofolio Proyek Terpilih */}
-                              <div className="mt-4">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                  Proyek Terpilih Sesuai Spesialisasi
-                                </h3>
-                                <div className="mt-2.5 space-y-2.5">
-                                  {currentDetail.keyProjects.map((p) => (
-                                    <div key={p.name} className="rounded-lg border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="font-bold text-slate-900">{p.name}</h4>
-                                        {p.url && (
-                                          <a
-                                            href={p.url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-brand hover:underline"
-                                          >
-                                            <span>GitHub Repo</span>
-                                            <ArrowUpRight className="size-2.5" />
-                                          </a>
-                                        )}
-                                      </div>
-                                      <p className="mt-1 text-slate-600 leading-relaxed text-[11px] sm:text-xs">{p.desc}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Riwayat Pengalaman Kerja */}
-                              <div className="mt-5 border-t border-slate-100 pt-4">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                  Riwayat Kerja & Kepemimpinan
-                                </h3>
-                                <div className="mt-2.5 space-y-3">
-                                  {profile.experience.slice(0, 3).map((exp) => (
-                                    <div key={exp.org} className="border-l-2 border-slate-200 pl-3">
-                                      <div className="flex items-center justify-between">
-                                        <p className="font-bold text-xs text-slate-900">{exp.role}</p>
-                                        <span className="text-[10px] font-mono text-slate-500">{exp.period}</span>
-                                      </div>
-                                      <p className="text-[11px] font-medium text-slate-600">{exp.org} • {exp.place}</p>
-                                      <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{exp.desc}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Pendidikan Formal */}
-                              <div className="mt-5 border-t border-slate-100 pt-4">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                  Pendidikan Formal
-                                </h3>
-                                <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-                                  <div>
-                                    <p className="font-bold text-slate-900">S1 Teknik Informatika</p>
-                                    <p className="text-slate-600">Universitas Trunojoyo Madura</p>
-                                    <p className="text-[10px] text-slate-400">2024 - Sekarang</p>
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-slate-900">SMK Jurusan Multimedia</p>
-                                    <p className="text-slate-600">Lulusan 2024</p>
-                                    <p className="text-[10px] text-slate-400">Grafis, Animasi, Video, Hardware</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Document Footer Page 2 */}
-                            <div className="mt-6 border-t border-slate-200 pt-3 flex items-center justify-between text-[11px] text-slate-400">
-                              <span>Curriculum Vitae — {profile.name}</span>
-                              <span className="font-mono font-semibold">Halaman 2 dari {totalPages}</span>
-                            </div>
-                          </article>
-                        </div>,
-
-                        // --- HALAMAN 3 (JIKA 3 HALAMAN): SERTIFIKASI & PRESTASI ---
-                        totalPages >= 3 && (
-                          <div key="page-3" className="w-full shrink-0 flex justify-center p-1 sm:p-2">
-                            <article
-                              className="relative aspect-[1/1.414] w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200/90 bg-white p-6 sm:p-10 shadow-2xl text-slate-900 select-text flex flex-col justify-between"
-                              style={{
-                                background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
-                              }}
-                            >
-                              {/* Document Accent Top Bar */}
-                              <div
-                                className="absolute top-0 left-0 right-0 h-2"
-                                style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
-                              />
-
-                              <div>
-                                <div className="border-b border-slate-200 pb-3">
-                                  <h2 className="font-display text-lg font-bold text-slate-950">
-                                    Lampiran Sertifikasi & Dokumen Kompetensi
-                                  </h2>
-                                  <p className="text-xs text-slate-500">
-                                    Total 29 sertifikat terverifikasi di bidang rekayasa web, visual digital, dan administrasi sistem.
-                                  </p>
-                                </div>
-
-                                <div className="mt-4 space-y-3">
-                                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <h4 className="text-xs font-bold text-slate-900">29 Sertifikat Pelatihan & Keikutsertaan</h4>
-                                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                                      Meliputi pelatihan web development modern, UI/UX design thinking, seminar open source Linux,
-                                      dan workshop keahlian jaringan dasar.
-                                    </p>
-                                  </div>
-
-                                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <h4 className="text-xs font-bold text-slate-900">Verifikasi Berkas Asli</h4>
-                                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                                      Dokumen lengkap sertifikat, transkrip nilai, dan surat rekomendasi dapat diakses melalui portal blog resmi:
-                                    </p>
-                                    <a
-                                      href="https://zekktech.biz.id"
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline"
-                                    >
-                                      <span>https://zekktech.biz.id</span>
-                                      <ArrowUpRight className="size-3" />
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Document Footer Page 3 */}
-                              <div className="mt-6 border-t border-slate-200 pt-3 flex items-center justify-between text-[11px] text-slate-400">
-                                <span>Curriculum Vitae — {profile.name}</span>
-                                <span className="font-mono font-semibold">Halaman 3 dari {totalPages}</span>
-                              </div>
-                            </article>
-                          </div>
-                        ),
-                      ].filter(Boolean)
-                    )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

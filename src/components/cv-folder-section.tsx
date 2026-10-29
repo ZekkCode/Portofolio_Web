@@ -6,11 +6,10 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import Folder, { type FolderEntry } from "@/components/folder";
 import { CvPreviewModal, type RoleKey, ROLE_DETAILS } from "@/components/cv-preview-modal";
-import PaperCrumple from "@/components/paper-crumple";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig } from "@/lib/site-store";
-import { ArrowUpRight, FileText, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowUpRight, FileText, Sparkles } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -143,8 +142,6 @@ export function CvFolderSection() {
   const [folderMode, setFolderMode] = useState<"flap" | "book">("flap");
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [activeCrumplePage, setActiveCrumplePage] = useState<number>(1);
-  const [crumpleResetKey, setCrumpleResetKey] = useState<number>(0);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -189,8 +186,7 @@ export function CvFolderSection() {
     setModalOpen(true);
   };
 
-  const handleSelectPage = (page: number, roleKey: Exclude<RoleKey, "all">) => {
-    setActiveCrumplePage(page);
+  const handleSelectPage = (_page: number, roleKey: Exclude<RoleKey, "all">) => {
     openPreview(roleKey);
   };
 
@@ -206,8 +202,6 @@ export function CvFolderSection() {
       />
     ),
   }));
-
-  const activeCrumpleItem = CV_PAGES.find((p) => p.page === activeCrumplePage) || CV_PAGES[0];
 
   return (
     <section id="cv" ref={sectionRef} className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28">
@@ -268,22 +262,11 @@ export function CvFolderSection() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Reset Paper Fold Button */}
-            <button
-              type="button"
-              onClick={() => setCrumpleResetKey((k) => k + 1)}
-              className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-              title="Ratakan Lembar Kertas"
-            >
-              <RotateCcw className="size-3" />
-              <span className="hidden sm:inline">Ratakan Kertas</span>
-            </button>
-
             {/* Direct Open Button */}
             <button
               type="button"
               onClick={() => openPreview("all")}
-              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1 text-xs font-semibold text-white transition-all duration-150 hover:bg-black active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-white dark:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 text-xs font-semibold text-white transition-all duration-150 hover:bg-black active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-white dark:text-ink shadow-2xs"
             >
               <Sparkles className="size-3.5 text-sky-400" />
               <span>{t("cv.openAll")}</span>
@@ -325,99 +308,20 @@ export function CvFolderSection() {
               }}
             />
 
-            {/* Floating Center Button: "Lihat & Remas CV 3D" */}
+            {/* Floating Center Button: "Lihat CV ATS" */}
             <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
               <button
                 type="button"
                 onClick={() => openPreview("all")}
-                className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/50 bg-ink/90 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black hover:shadow-2xl active:scale-95 dark:border-white/20 dark:bg-white/95 dark:text-ink dark:hover:bg-white"
+                className="pointer-events-auto group inline-flex items-center gap-2 rounded-full border border-white/50 bg-ink/90 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black hover:shadow-2xl active:scale-95 dark:border-white/20 dark:bg-white/95 dark:text-ink dark:hover:bg-white"
               >
                 <FileText className="size-4 text-sky-400 dark:text-brand transition-transform group-hover:scale-110" />
-                <span>Lihat & Remas CV 3D</span>
+                <span>Lihat CV ATS</span>
                 <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
             </div>
           </div>
         </Parallax>
-
-        {/* Connected Tactile Paper Crumple Tray: "Folder + Paper Crumple" Unified! */}
-        <div className="relative z-10 mt-2 rounded-2xl border border-line/80 bg-slate-50/70 p-4 sm:p-6 dark:border-line/40 dark:bg-[#0c0e17]/60">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/60 pb-3">
-            <div className="flex items-center gap-2 text-xs">
-              <Sparkles className="size-4 text-brand" />
-              <span className="font-bold text-ink">
-                Lembar Fisik Terpilih: Hal {activeCrumplePage} — {activeCrumpleItem.title}
-              </span>
-              <span className="hidden sm:inline text-slate-400">•</span>
-              <span className="hidden sm:inline text-slate-500 text-[11px]">
-                Tahan & geser untuk meremas / melepaskan lembar kertas ATS asli
-              </span>
-            </div>
-
-            {/* Page Switcher for the Crumple Tray */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex rounded-full border border-line bg-white p-0.5 text-xs font-medium text-body dark:border-line/50 dark:bg-[#191e32]">
-                {CV_PAGES.map((p) => (
-                  <button
-                    key={p.page}
-                    type="button"
-                    onClick={() => setActiveCrumplePage(p.page)}
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
-                      activeCrumplePage === p.page
-                        ? "bg-brand text-white shadow-2xs"
-                        : "hover:text-ink"
-                    }`}
-                  >
-                    Hal {p.page}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setCrumpleResetKey((k) => k + 1)}
-                className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-body hover:text-ink dark:border-line/50 dark:bg-[#191e32]"
-                title="Ratakan Lembar Kertas"
-              >
-                <RotateCcw className="size-3" />
-                <span className="hidden sm:inline">Ratakan</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => openPreview(activeCrumpleItem.roleKey)}
-                className="inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-black dark:bg-white dark:text-ink"
-              >
-                <span>Layar Penuh</span>
-                <ArrowUpRight className="size-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Three.js Paper Crumple Canvas */}
-          <div className="mt-4 flex justify-center">
-            <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-white shadow-sm dark:border-line/40 dark:bg-[#07080d]">
-              <PaperCrumple
-                src={activeCrumpleItem.image}
-                alt={`Curriculum Vitae Zakaria Mujur P. - ${activeCrumpleItem.title}`}
-                width={320}
-                height={452}
-                sceneHeight={520}
-                releaseBehavior="restore"
-                crumpleAmount={0.85}
-                crumpleDuration={0.55}
-                releaseDuration={0.4}
-                foldCount={6}
-                foldSharpness={0.6}
-                wrinkleDepth={0.65}
-                creaseStrength={0.18}
-                paperColor="#f8fafc"
-                paperTexture={0.08}
-                draggable
-                returnToOrigin
-                resetKey={crumpleResetKey}
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Bottom Role Quick-Access Badges */}
         <ScrollReveal y={20} delay={0.1} className="relative z-10 mt-6 border-t border-line/70 pt-6 dark:border-line/40">

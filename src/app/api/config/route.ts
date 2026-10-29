@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
@@ -27,8 +28,8 @@ export async function GET() {
 
     if (error) {
       return NextResponse.json(
-        { configured: true, error: error.message, config: null },
-        { status: 200 }
+        { configured: true, error: "Gagal membaca konfigurasi database", config: null },
+        { status: 500 }
       );
     }
 
@@ -49,9 +50,8 @@ export async function GET() {
       config: normalized,
       updatedAt: data.updated_at,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Gagal memuat konfigurasi cloud";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Gagal memuat konfigurasi cloud" }, { status: 500 });
   }
 }
 
@@ -105,10 +105,10 @@ export async function POST(request: Request) {
       {
         success: false,
         configured: false,
-        message:
-          "Supabase Cloud belum dikonfigurasi di server environment. Perubahan hanya tersimpan di draft lokal perangkat Anda dan belum terpublikasi ke server.",
+        error:
+          "Supabase Cloud belum dikonfigurasi di server environment. Operasi tulis ditolak.",
       },
-      { status: 200 }
+      { status: 503 }
     );
   }
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
     if (!supabase) {
       return NextResponse.json(
-        { success: false, message: "Klien Supabase tidak tersedia" },
+        { success: false, error: "Klien Supabase tidak tersedia" },
         { status: 500 }
       );
     }
@@ -134,9 +134,17 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json(
-        { success: false, error: `Database Supabase menolak operasi: ${error.message}` },
+        { success: false, error: "Gagal memperbarui konfigurasi pada database." },
         { status: 500 }
       );
+    }
+
+    // 5. Segarkan cache halaman publik setelah penyimpanan berhasil
+    try {
+      revalidatePath("/");
+      revalidatePath("/admin");
+    } catch {
+      // Abaikan jika dipanggil di luar konteks Next.js cache
     }
 
     return NextResponse.json({
@@ -144,9 +152,10 @@ export async function POST(request: Request) {
       message: "Konfigurasi berhasil disimpan dan dipublikasikan ke Supabase Cloud",
       updatedAt: new Date().toISOString(),
     });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Terjadi kesalahan server saat menyimpan konfigurasi";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server saat menyimpan konfigurasi" },
+      { status: 500 }
+    );
   }
 }

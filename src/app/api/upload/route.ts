@@ -192,8 +192,10 @@ export async function POST(request: Request) {
       provider: "fallback-data-uri",
       warning: "Storage cloud belum dikonfigurasi. Berkas disimpan sementara sebagai data URI.",
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Terjadi kesalahan saat unggah";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server saat memproses unggah berkas" },
+      { status: 500 }
+    );
   }
 }

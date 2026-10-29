@@ -148,9 +148,11 @@ export async function POST(request: Request) {
       { success: false, error: "Email atau kata sandi tidak valid" },
       { status: 401 }
     );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Kesalahan server internal saat login";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server saat memproses login" },
+      { status: 500 }
+    );
   }
 }
 

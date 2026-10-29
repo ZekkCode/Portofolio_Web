@@ -26,9 +26,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: "Berhasil keluar" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Gagal logout";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server saat keluar" },
+      { status: 500 }
+    );
   }
 }
 

@@ -5,7 +5,7 @@ import { createClient as createServerSupabaseClient } from "@/lib/supabase/serve
 export const ADMIN_COOKIE_NAME = "zekk_admin_session";
 export const SESSION_DURATION_SECONDS = 8 * 60 * 60; // 8 jam
 
-function getSigningKey(): string {
+function getSigningKey(): string | null {
   const secret =
     process.env.ADMIN_SESSION_SECRET ||
     process.env.ADMIN_SECRET ||
@@ -15,7 +15,12 @@ function getSigningKey(): string {
     return secret;
   }
 
-  // Fallback deterministik di host jika environment variable belum diset
+  // Di produksi, tolak penggunaan salt default publik jika secret belum disetel
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
+  // Fallback deterministik di host untuk testing lokal & check.mjs
   return crypto
     .createHash("sha256")
     .update("zekktech-admin-default-signing-key-salt")
@@ -23,9 +28,13 @@ function getSigningKey(): string {
 }
 
 export function signSessionToken(payload: { email: string; role: "admin"; exp: number }): string {
+  const key = getSigningKey();
+  if (!key) {
+    throw new Error("Konfigurasi signing key auth server belum disetel");
+  }
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", getSigningKey())
+    .createHmac("sha256", key)
     .update(data)
     .digest("base64url");
   return `${data}.${signature}`;
@@ -36,11 +45,16 @@ export function verifySessionToken(token: string): { valid: boolean; email?: str
     return { valid: false };
   }
 
+  const key = getSigningKey();
+  if (!key) {
+    return { valid: false };
+  }
+
   const [dataPart, signaturePart] = token.split(".");
   if (!dataPart || !signaturePart) return { valid: false };
 
   const expectedSignature = crypto
-    .createHmac("sha256", getSigningKey())
+    .createHmac("sha256", key)
     .update(dataPart)
     .digest("base64url");
 

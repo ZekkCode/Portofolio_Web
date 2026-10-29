@@ -57,7 +57,7 @@ export function ProjectsSection() {
                 href="https://github.com/ZekkCode"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs font-semibold text-ink shadow-2xs transition hover:border-brand/40 hover:bg-surface active:scale-[0.97] dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928]"
+                className="inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
               >
                 <span>Lihat Repositori di GitHub</span>
                 <ArrowUpRight className="size-3.5" />
@@ -147,7 +147,7 @@ export function ProjectsSection() {
                       <button
                         type="button"
                         onClick={() => setSelectedProject(project)}
-                        className="inline-flex min-h-[38px] items-center gap-1 rounded-full border border-line bg-surface px-3.5 py-1.5 text-xs font-semibold text-body hover:border-brand/40 hover:text-ink active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-slate-800"
+                        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line/80 bg-transparent px-4 py-2 text-xs sm:text-sm font-semibold text-body transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
                       >
                         <span>{t("projects.previewBtn")}</span>
                         <ArrowUpRight className="size-3.5" />
@@ -158,7 +158,7 @@ export function ProjectsSection() {
                           href={project.repo}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-[38px] items-center gap-1.5 text-xs font-bold text-ink transition-all duration-150 hover:text-brand active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-white dark:hover:text-blue-400"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
                         >
                           <span>{t("projects.viewRepo")}</span>
                           <ArrowRight className="size-3.5" />

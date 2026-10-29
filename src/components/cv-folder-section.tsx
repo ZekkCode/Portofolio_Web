@@ -174,11 +174,11 @@ export function CvFolderSection() {
           <button
             type="button"
             onClick={() => openPreview("all")}
-            className="pointer-events-auto group inline-flex items-center gap-2.5 rounded-full border border-white/40 bg-ink/90 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black hover:shadow-2xl active:scale-95 dark:border-white/20 dark:bg-white/95 dark:text-ink dark:hover:bg-white"
+            className="pointer-events-auto group inline-flex min-h-[44px] h-11 items-center gap-2.5 rounded-xl border border-brand-light/30 bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
-            <FileText className="size-4 text-sky-400 dark:text-brand transition-transform group-hover:scale-110" />
+            <FileText className="size-4 text-sky-200 transition-transform group-hover:scale-110 motion-reduce:transform-none" />
             <span>Buka Berkas CV Lengkap</span>
-            <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-white/70 dark:text-ink/70" />
+            <ArrowUpRight className="size-4 text-white/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
           </button>
         </div>
       </div>

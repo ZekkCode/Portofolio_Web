@@ -77,7 +77,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-muted transition hover:bg-slate-100 hover:text-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-slate-800"
+            className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-muted transition-all duration-150 hover:bg-brand/5 hover:text-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/10"
             aria-label={t("repoModal.closeAria")}
           >
             <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -157,15 +157,15 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-3 border-t border-line/70 bg-surface/50 px-5 py-3.5 dark:border-line/40 dark:bg-slate-900/50">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line/70 bg-surface/50 px-5 py-3.5 dark:border-line/40 dark:bg-slate-900/50">
           <button
             type="button"
             onClick={handleCopyLink}
             disabled={!project.repo}
-            className="inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs font-semibold text-muted hover:text-ink transition disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-muted hover:text-brand hover:bg-brand/5 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/10"
           >
             {copied ? (
-              <span className="text-emerald-600 dark:text-emerald-400">{t("repoModal.copied")}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t("repoModal.copied")}</span>
             ) : (
               <span>{t("repoModal.copyUrl")}</span>
             )}
@@ -177,7 +177,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 href={project.previewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-xs font-semibold text-ink transition hover:border-brand/40 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-slate-900"
+                className="inline-flex min-h-[44px] h-11 items-center gap-1.5 rounded-xl border border-line/80 bg-transparent px-4 py-2.5 text-xs sm:text-sm font-semibold text-ink transition-all duration-150 hover:border-brand/40 hover:bg-brand/5 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10"
               >
                 <span>{t("repoModal.liveDemo")}</span>
                 <ArrowUpRight className="size-3.5" />
@@ -189,7 +189,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 href={project.repo}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand px-5 py-2 text-xs font-semibold text-white transition hover:bg-brand-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                className="inline-flex min-h-[44px] h-11 items-center gap-1.5 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
                 <span>{t("repoModal.openGithub")}</span>
                 <ArrowRight className="size-3.5" />

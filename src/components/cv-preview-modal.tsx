@@ -317,7 +317,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           <button
             type="button"
             onClick={() => setCrumpleResetKey((k) => k + 1)}
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md shadow-md transition hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             title="Ratakan Lembar Kertas"
           >
             <RotateCcw className="size-3.5" />
@@ -327,7 +327,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           <button
             type="button"
             onClick={handleClose}
-            className="flex min-h-[40px] min-w-[40px] size-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-md shadow-md transition hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             aria-label="Tutup pratinjau CV"
           >
             <X className="size-4.5" />
@@ -385,12 +385,12 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       >
         {/* Navigasi Halaman Ringkas (Hanya Muncul Jika Lebih dari 1 Halaman) */}
         {totalPages > 1 ? (
-          <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 py-1.5 backdrop-blur-md shadow-lg text-white select-none">
+          <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-2.5 py-1.5 backdrop-blur-md text-white select-none">
             <button
               type="button"
               onClick={prevPage}
               disabled={currentPage === 0}
-              className="flex min-h-[36px] min-w-[36px] size-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-white/80 transition-all duration-150 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               aria-label="Halaman sebelumnya"
               title="Halaman Sebelumnya"
             >
@@ -403,7 +403,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
               type="button"
               onClick={nextPage}
               disabled={currentPage >= totalPages - 1}
-              className="flex min-h-[36px] min-w-[36px] size-9 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-white/80 transition-all duration-150 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               aria-label="Halaman berikutnya"
               title="Halaman Berikutnya"
             >
@@ -419,9 +419,9 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           href={pdfHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xl shadow-brand/35 backdrop-blur-sm transition-all duration-150 hover:bg-brand-ink hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="pointer-events-auto inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
-          <FileText className="size-4" />
+          <FileText className="size-4 text-sky-200" />
           <span>Buka PDF</span>
           <ArrowUpRight className="size-3.5 text-white/80" />
         </a>

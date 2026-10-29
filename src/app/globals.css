@@ -144,4 +144,8 @@
     opacity: 1;
     transform: none;
   }
+  button, a {
+    transition-property: color, background-color, border-color, opacity, box-shadow !important;
+    transform: none !important;
+  }
 }

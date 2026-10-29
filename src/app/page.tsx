@@ -68,9 +68,10 @@ function Header() {
           <ThemeToggle />
           <a
             href={`mailto:${profile.contact.email}`}
-            className="hidden min-h-[44px] items-center rounded-full bg-ink px-5 py-2 text-xs font-semibold text-white transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:inline-flex dark:bg-white dark:text-slate-900 shadow-2xs"
+            className="hidden md:inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
-            {t("nav.contactBtn")}
+            <Mail className="size-4" />
+            <span>{t("nav.contactBtn")}</span>
           </a>
         </div>
       </div>
@@ -105,17 +106,17 @@ function Hero() {
             </p>
 
             {/* Action Buttons: Direct Contact & Verified Credentials */}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-1">
               <a
                 href={`mailto:${profile.contact.email}`}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition-all duration-150 hover:bg-brand-ink active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
                 <Mail className="size-4" />
                 <span>{t("hero.emailBtn", "Kirim Email")}</span>
               </a>
               <SmoothNavLink
                 href="#cv"
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-surface active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928]"
+                className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
               >
                 <span>{t("hero.cvBtn", "Folder Berkas Karir")}</span>
                 <ArrowRight className="size-3.5" />
@@ -413,17 +414,17 @@ function Contact() {
                   </div>
 
                   {/* Action Buttons: Direct Gmail & Career Folder */}
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-2">
                     <a
                       href={`mailto:${profile.contact.email}`}
-                      className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm shadow-brand/20 transition-all duration-150 hover:bg-brand-ink active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                     >
                       <Mail className="size-4" />
                       <span>{profile.contact.email}</span>
                     </a>
                     <SmoothNavLink
                       href="#cv"
-                      className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-surface active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-slate-900 dark:text-white"
+                      className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
                     >
                       <FileText className="size-3.5 text-brand dark:text-blue-400" />
                       <span>{t("hero.cvBtn", "Folder Berkas Karir")}</span>
@@ -455,7 +456,7 @@ function Contact() {
                             href={social.href}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-xs font-semibold text-body transition-colors duration-150 hover:text-brand hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800/40"
+                            className="inline-flex min-h-[44px] items-center rounded-xl px-3.5 text-xs font-semibold text-body transition-colors duration-150 hover:text-brand hover:bg-brand/5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-brand/10"
                           >
                             {social.label}
                           </a>
@@ -480,8 +481,6 @@ function Footer() {
     {
       label: "GitHub",
       href: "https://github.com/ZekkCode",
-      hoverClasses:
-        "hover:text-slate-900 hover:bg-slate-100/80 dark:hover:text-white dark:hover:bg-slate-800/50",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -495,8 +494,6 @@ function Footer() {
     {
       label: "Instagram",
       href: "https://www.instagram.com/zekksparow",
-      hoverClasses:
-        "hover:text-[#E4405F] hover:bg-[#E4405F]/10 dark:hover:text-[#ff5c8a] dark:hover:bg-[#ff5c8a]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -508,8 +505,6 @@ function Footer() {
     {
       label: "TikTok",
       href: "https://www.tiktok.com/@zekksparow",
-      hoverClasses:
-        "hover:text-[#00f2fe] hover:bg-[#00f2fe]/10 dark:hover:text-[#00f2fe] dark:hover:bg-[#00f2fe]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.42a6.34 6.34 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.18 8.18 0 0 0 4.77 1.52V6.82a4.85 4.85 0 0 1-1-.13z" />
@@ -519,8 +514,6 @@ function Footer() {
     {
       label: "Behance",
       href: "https://www.behance.net/zakariamp",
-      hoverClasses:
-        "hover:text-[#0057ff] hover:bg-[#0057ff]/10 dark:hover:text-[#3b82f6] dark:hover:bg-[#3b82f6]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 3-4.726 3-3.666 0-5.5-2.583-5.5-5.875 0-3.328 1.944-5.125 5.25-5.125 3.32 0 4.975 2.115 4.975 4.875 0 .422-.057.822-.125 1.125h-6.852c.071 1.579 1.094 2.658 2.457 2.658 1.157 0 1.916-.625 2.292-1.658h2.229zm-4.75-5.167c-1.125 0-1.875.75-2.083 1.833h4.167c-.042-1.042-.875-1.833-2.084-1.833zm-10.976-1.833h-4v-4h4c1.104 0 2 .896 2 2s-.896 2-2 2zm-4 2h4.5c1.381 0 2.5 1.119 2.5 2.5s-1.119 2.5-2.5 2.5h-4.5v-7zm0-6h-4v13h8.5c2.485 0 4.5-2.015 4.5-4.5 0-1.578-.814-2.969-2.05-3.774 1.246-.777 2.05-2.148 2.05-3.726 0-2.485-2.015-4.5-4.5-4.5h-4.5z" />
@@ -530,8 +523,6 @@ function Footer() {
     {
       label: "LinkedIn",
       href: "https://www.linkedin.com/in/zakariamp",
-      hoverClasses:
-        "hover:text-[#0A66C2] hover:bg-[#0A66C2]/10 dark:hover:text-[#0a66c2] dark:hover:bg-[#0a66c2]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.2a1.66 1.66 0 0 0-1.66 1.66c0 .92.74 1.66 1.66 1.66.92 0 1.66-.74 1.66-1.66 0-.92-.74-1.66-1.66-1.66z" />
@@ -556,7 +547,7 @@ function Footer() {
           <div>
             <a
               href={`mailto:${profile.contact.email}`}
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-4 py-2 text-xs font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:bg-white hover:text-brand dark:border-line/60 dark:bg-[#111422] dark:hover:bg-[#151928] dark:hover:text-blue-400"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line/80 bg-transparent px-4 py-2 text-xs sm:text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
             >
               <Mail className="size-3.5 text-brand dark:text-blue-400" />
               <span>{profile.contact.email}</span>
@@ -576,9 +567,9 @@ function Footer() {
                   rel="noreferrer"
                   aria-label={s.label}
                   title={s.label}
-                  className={`group flex size-11 items-center justify-center rounded-xl text-body transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-slate-400 ${s.hoverClasses}`}
+                  className="group flex size-11 items-center justify-center rounded-xl text-body transition-colors duration-150 hover:text-brand hover:bg-brand/5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-blue-400 dark:hover:bg-brand/10"
                 >
-                  <span className="transition-transform duration-150 group-hover:scale-110">
+                  <span className="transition-transform duration-150 group-hover:scale-110 motion-reduce:transform-none">
                     {s.icon}
                   </span>
                 </a>

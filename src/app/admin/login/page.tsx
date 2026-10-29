@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ArrowRight, ShieldAlert, ArrowLeft } from "lucide-react";
+import { Lock, Mail, ArrowRight, ShieldAlert, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-body hover:text-ink transition"
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-body hover:text-brand transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg"
           >
             <ArrowLeft className="size-3.5" />
             <span>Kembali ke Portofolio</span>
@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Card Shell */}
-        <div className="rounded-3xl border border-line bg-white p-6 sm:p-8 shadow-xl dark:border-line/60 dark:bg-[#0f121d]">
+        <div className="rounded-2xl border border-line bg-white p-6 sm:p-8 shadow-xl dark:border-line/60 dark:bg-[#0f121d]">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-blue-950/40 dark:text-blue-400">
               <Lock className="size-5" />
@@ -117,10 +117,19 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-ink active:scale-[0.98] disabled:opacity-50"
+              className="mt-2 flex w-full min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-wait disabled:pointer-events-none"
             >
-              <span>{loading ? "Memverifikasi Sesi..." : "Masuk ke Panel Admin"}</span>
-              <ArrowRight className="size-3.5" />
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin text-white" />
+                  <span>Memverifikasi Sesi...</span>
+                </>
+              ) : (
+                <>
+                  <span>Masuk ke Panel Admin</span>
+                  <ArrowRight className="size-3.5" />
+                </>
+              )}
             </button>
           </form>
 

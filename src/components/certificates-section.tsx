@@ -41,10 +41,10 @@ export function CertificatesSection() {
             key={tab.key}
             type="button"
             onClick={() => setFilter(tab.key)}
-            className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+            className={`min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none ${
               filter === tab.key
-                ? "bg-brand text-white shadow-2xs"
-                : "border border-line bg-white text-body hover:border-brand/40 hover:text-ink dark:border-line/60 dark:bg-[#111422] dark:text-slate-300"
+                ? "bg-brand text-white border border-brand/30 shadow-xs"
+                : "border border-line/80 bg-transparent text-body hover:bg-brand/5 hover:border-brand/40 hover:text-brand dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
             }`}
           >
             {t(tab.labelKey)}
@@ -82,10 +82,10 @@ export function CertificatesSection() {
                       href={cert.credentialUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400"
+                      className="inline-flex min-h-[40px] items-center gap-1.5 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       <span>{t("certificates.viewCredential")}</span>
-                      <ArrowUpRight className="size-3" />
+                      <ArrowUpRight className="size-3.5" />
                     </a>
                   </div>
                 )}

@@ -168,7 +168,7 @@ function About() {
                   return (
                     <div
                       key={stat.label}
-                      className="group relative overflow-hidden rounded-2xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
+                      className="group relative overflow-hidden rounded-xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
                     >
                       <dt className="sr-only">{stat.label}</dt>
                       <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
@@ -262,7 +262,7 @@ function Stack() {
           {[disciplines[0], disciplines[2]].map((item) => (
             <div
               key={item.category}
-              className="rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
+              className="rounded-xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
             >
               <h3 className="font-display text-base font-bold text-ink">
                 {item.category}
@@ -278,15 +278,21 @@ function Stack() {
                   return (
                     <span
                       key={tool.name}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-xs font-semibold text-ink dark:border-line/60 dark:bg-slate-900"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
                     >
-                      <Image
-                        src={tool.icon}
-                        alt={tool.name}
-                        width={16}
-                        height={16}
-                        className="size-4 shrink-0 object-contain"
-                      />
+                      <div className="flex size-4 shrink-0 items-center justify-center">
+                        <Image
+                          src={tool.icon}
+                          alt={tool.name}
+                          width={16}
+                          height={16}
+                          className={`max-h-3.5 max-w-3.5 object-contain ${
+                            tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                              ? "dark:invert"
+                              : ""
+                          }`}
+                        />
+                      </div>
                       <span>{tool.name}</span>
                     </span>
                   );
@@ -300,7 +306,7 @@ function Stack() {
           {[disciplines[1], disciplines[3]].map((item) => (
             <div
               key={item.category}
-              className="rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
+              className="rounded-xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
             >
               <h3 className="font-display text-base font-bold text-ink">
                 {item.category}
@@ -316,15 +322,21 @@ function Stack() {
                   return (
                     <span
                       key={tool.name}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3 py-1 text-xs font-semibold text-ink dark:border-line/60 dark:bg-slate-900"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
                     >
-                      <Image
-                        src={tool.icon}
-                        alt={tool.name}
-                        width={16}
-                        height={16}
-                        className="size-4 shrink-0 object-contain"
-                      />
+                      <div className="flex size-4 shrink-0 items-center justify-center">
+                        <Image
+                          src={tool.icon}
+                          alt={tool.name}
+                          width={16}
+                          height={16}
+                          className={`max-h-3.5 max-w-3.5 object-contain ${
+                            tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                              ? "dark:invert"
+                              : ""
+                          }`}
+                        />
+                      </div>
                       <span>{tool.name}</span>
                     </span>
                   );
@@ -335,32 +347,38 @@ function Stack() {
         </Parallax>
       </div>
 
-      {/* Seamless Ribbon Ticker with Tangible Parallax */}
-      <Parallax speed={0.16} className="relative w-full overflow-hidden rounded-2xl border border-line/60 bg-surface/60 py-3 dark:border-line/40 dark:bg-[#111422]/60">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
+      {/* Seamless Ribbon Ticker */}
+      <div className="relative w-full overflow-hidden py-3">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
 
-        <div className="animate-marquee flex items-center gap-3">
+        <div className="animate-marquee flex items-center gap-8 py-1">
           {duplicatedStack.map((tool, idx) => (
             <div
               key={`${tool.name}-${idx}`}
               aria-hidden={idx >= profile.stack.length ? "true" : undefined}
-              className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-ink shadow-2xs dark:border-line/60 dark:bg-[#151928] dark:text-slate-200"
+              className="flex shrink-0 items-center gap-2.5 text-sm font-medium text-ink dark:text-slate-200"
             >
-              <Image
-                src={tool.icon}
-                alt={tool.name}
-                width={18}
-                height={18}
-                className="size-4 shrink-0 object-contain"
-              />
-              <span className="whitespace-nowrap font-medium">
+              <div className="flex size-6 shrink-0 items-center justify-center">
+                <Image
+                  src={tool.icon}
+                  alt={tool.name}
+                  width={20}
+                  height={20}
+                  className={`max-h-5 max-w-5 object-contain ${
+                    tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                      ? "dark:invert"
+                      : ""
+                  }`}
+                />
+              </div>
+              <span className="whitespace-nowrap font-medium text-ink dark:text-slate-200">
                 {tool.name}
               </span>
             </div>
           ))}
         </div>
-      </Parallax>
+      </div>
     </section>
   );
 }
@@ -373,7 +391,7 @@ function Contact() {
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full">
         <Parallax speed={0.12} className="w-full">
-          <div className="relative overflow-hidden rounded-3xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
+          <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
             <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
               {/* KIRI: Lanyard 3D Stage */}
               <div className="relative flex flex-col justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-6">
@@ -437,7 +455,7 @@ function Contact() {
                             href={social.href}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:text-brand active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/50 dark:bg-[#181d30] dark:text-slate-200"
+                            className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-xs font-semibold text-body transition-colors duration-150 hover:text-brand hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:text-blue-400 dark:hover:bg-slate-800/40"
                           >
                             {social.label}
                           </a>
@@ -463,7 +481,7 @@ function Footer() {
       label: "GitHub",
       href: "https://github.com/ZekkCode",
       hoverClasses:
-        "hover:text-slate-900 hover:border-slate-800 hover:bg-slate-100 hover:shadow-md dark:hover:text-white dark:hover:border-slate-300 dark:hover:bg-slate-800/80",
+        "hover:text-slate-900 hover:bg-slate-100/80 dark:hover:text-white dark:hover:bg-slate-800/50",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -478,7 +496,7 @@ function Footer() {
       label: "Instagram",
       href: "https://www.instagram.com/zekksparow",
       hoverClasses:
-        "hover:text-[#E4405F] hover:border-[#E4405F]/50 hover:bg-[#E4405F]/10 hover:shadow-[0_0_14px_rgba(228,64,95,0.25)] dark:hover:text-[#ff5c8a] dark:hover:border-[#ff5c8a]/50 dark:hover:bg-[#ff5c8a]/10",
+        "hover:text-[#E4405F] hover:bg-[#E4405F]/10 dark:hover:text-[#ff5c8a] dark:hover:bg-[#ff5c8a]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
@@ -491,7 +509,7 @@ function Footer() {
       label: "TikTok",
       href: "https://www.tiktok.com/@zekksparow",
       hoverClasses:
-        "hover:text-[#00f2fe] hover:border-[#00f2fe]/50 hover:bg-[#00f2fe]/10 hover:shadow-[0_0_14px_rgba(0,242,254,0.25)] dark:hover:text-[#00f2fe] dark:hover:border-[#00f2fe]/50 dark:hover:bg-[#00f2fe]/10",
+        "hover:text-[#00f2fe] hover:bg-[#00f2fe]/10 dark:hover:text-[#00f2fe] dark:hover:bg-[#00f2fe]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.42a6.34 6.34 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75a8.18 8.18 0 0 0 4.77 1.52V6.82a4.85 4.85 0 0 1-1-.13z" />
@@ -502,7 +520,7 @@ function Footer() {
       label: "Behance",
       href: "https://www.behance.net/zakariamp",
       hoverClasses:
-        "hover:text-[#0057ff] hover:border-[#0057ff]/50 hover:bg-[#0057ff]/10 hover:shadow-[0_0_14px_rgba(0,87,255,0.25)] dark:hover:text-[#3b82f6] dark:hover:border-[#3b82f6]/50 dark:hover:bg-[#3b82f6]/10",
+        "hover:text-[#0057ff] hover:bg-[#0057ff]/10 dark:hover:text-[#3b82f6] dark:hover:bg-[#3b82f6]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 3-4.726 3-3.666 0-5.5-2.583-5.5-5.875 0-3.328 1.944-5.125 5.25-5.125 3.32 0 4.975 2.115 4.975 4.875 0 .422-.057.822-.125 1.125h-6.852c.071 1.579 1.094 2.658 2.457 2.658 1.157 0 1.916-.625 2.292-1.658h2.229zm-4.75-5.167c-1.125 0-1.875.75-2.083 1.833h4.167c-.042-1.042-.875-1.833-2.084-1.833zm-10.976-1.833h-4v-4h4c1.104 0 2 .896 2 2s-.896 2-2 2zm-4 2h4.5c1.381 0 2.5 1.119 2.5 2.5s-1.119 2.5-2.5 2.5h-4.5v-7zm0-6h-4v13h8.5c2.485 0 4.5-2.015 4.5-4.5 0-1.578-.814-2.969-2.05-3.774 1.246-.777 2.05-2.148 2.05-3.726 0-2.485-2.015-4.5-4.5-4.5h-4.5z" />
@@ -513,7 +531,7 @@ function Footer() {
       label: "LinkedIn",
       href: "https://www.linkedin.com/in/zakariamp",
       hoverClasses:
-        "hover:text-[#0A66C2] hover:border-[#0A66C2]/50 hover:bg-[#0A66C2]/10 hover:shadow-[0_0_14px_rgba(10,102,194,0.25)] dark:hover:text-[#0a66c2] dark:hover:border-[#0a66c2]/50 dark:hover:bg-[#0a66c2]/10",
+        "hover:text-[#0A66C2] hover:bg-[#0A66C2]/10 dark:hover:text-[#0a66c2] dark:hover:bg-[#0a66c2]/10",
       icon: (
         <svg className="size-4.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.2a1.66 1.66 0 0 0-1.66 1.66c0 .92.74 1.66 1.66 1.66.92 0 1.66-.74 1.66-1.66 0-.92-.74-1.66-1.66-1.66z" />
@@ -558,9 +576,9 @@ function Footer() {
                   rel="noreferrer"
                   aria-label={s.label}
                   title={s.label}
-                  className={`group flex size-9 sm:size-10 items-center justify-center rounded-full border border-line bg-white text-body shadow-2xs backdrop-blur-xs transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 active:scale-95 dark:border-line/60 dark:bg-[#111422] dark:text-slate-400 ${s.hoverClasses}`}
+                  className={`group flex size-11 items-center justify-center rounded-xl text-body transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-slate-400 ${s.hoverClasses}`}
                 >
-                  <span className="transition-transform duration-200 group-hover:scale-110">
+                  <span className="transition-transform duration-150 group-hover:scale-110">
                     {s.icon}
                   </span>
                 </a>

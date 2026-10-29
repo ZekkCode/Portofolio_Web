@@ -28,9 +28,9 @@ export function ProjectsSection() {
         <Parallax speed={0.015}>
           <div
             id="proyek-empty"
-            className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
+            className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
           >
-            <div className="flex size-14 items-center justify-center rounded-2xl border border-line/60 bg-surface text-muted shadow-2xs dark:border-line/40 dark:bg-[#151928]">
+            <div className="flex size-14 items-center justify-center rounded-xl border border-line/60 bg-surface text-muted shadow-2xs dark:border-line/40 dark:bg-[#151928]">
               <svg
                 className="size-6 text-muted"
                 fill="none"

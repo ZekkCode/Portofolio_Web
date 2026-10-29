@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
+import TechText from "@/components/tech-text";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
@@ -94,9 +95,32 @@ function Hero() {
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
         {/* Left Column: Editorial Information - Stable, readable layout without parallax displacement */}
         <div className="relative z-10 flex flex-col items-start gap-5 text-start">
-          <ScrollReveal y={24} duration={0.75} className="space-y-3.5">
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.05]">
-              Zakaria Mujur Prasetyo
+          <ScrollReveal y={24} duration={0.75} className="space-y-3.5 w-full">
+            <h1 className="font-display font-extrabold tracking-tight text-ink">
+              <span className="sr-only">Zakaria Mujur Prasetyo</span>
+              <div
+                className="w-full h-14 sm:h-18 lg:h-22 -ml-2 max-w-[640px]"
+                aria-hidden="true"
+              >
+                <TechText
+                  text="Zakaria Mujur Prasetyo"
+                  fontWeight={700}
+                  fontSize={62}
+                  letterSpacing={-0.03}
+                  align="left"
+                  color="currentColor"
+                  accentColor="#1b45c4"
+                  reveal="letter"
+                  dashLength={4}
+                  dashGap={2}
+                  specks={12}
+                  intro="none"
+                  clickKick
+                  draggable
+                  guides={false}
+                  className="w-full h-full text-ink font-display"
+                />
+              </div>
             </h1>
             <p className="text-base sm:text-lg font-semibold text-body">
               {t("hero.roles")}

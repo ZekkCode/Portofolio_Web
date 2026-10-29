@@ -55,7 +55,7 @@ export interface PillNavProps {
 
 interface LinkProps {
   className: string;
-  'aria-current'?: 'page';
+  'aria-current'?: 'page' | 'location' | boolean;
   'aria-label'?: string;
   tabIndex?: number;
   onClick?: (event: ReactMouseEvent<HTMLElement>) => void;
@@ -162,11 +162,11 @@ const TRACK = 'relative h-full';
 const LIST = 'm-0 flex h-full list-none items-stretch gap-[var(--pn-item-gap,2px)] p-0';
 const SLOT = 'group/slot flex';
 const ITEM =
-  'relative isolate inline-flex h-full cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap rounded-full border-0 px-[var(--pn-x)] [background:none] [font-family:inherit] [font-size:inherit] [line-height:inherit] font-medium tracking-[-0.005em] text-[var(--pn-text)] no-underline outline-none transition-[color] duration-[250ms] ease-[ease] group-data-[lit]/slot:text-[var(--pn-strong)] aria-[current=page]:text-[var(--pn-strong)] group-data-[items=pill]/nav:[background:var(--pn-tile)] group-data-[items=pill]/nav:[box-shadow:var(--pn-tile-rim)] group-data-[items=pill]/nav:text-[var(--pn-strong)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+  'relative isolate inline-flex h-full cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap rounded-full border-0 px-[var(--pn-x)] [background:none] [font-family:inherit] [font-size:inherit] [line-height:inherit] font-medium tracking-[-0.005em] text-[var(--pn-text)] no-underline outline-none transition-[color] duration-[250ms] ease-[ease] group-data-[lit]/slot:text-[var(--pn-strong)] aria-[current]:text-[var(--pn-strong)] group-data-[items=pill]/nav:[background:var(--pn-tile)] group-data-[items=pill]/nav:[box-shadow:var(--pn-tile-rim)] group-data-[items=pill]/nav:text-[var(--pn-strong)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
 const FACE =
-  'inline-flex items-center gap-[0.45em] transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none group-data-[on]/slot:-translate-y-[var(--pn-roll)] group-data-[on]/slot:duration-500 group-data-[hover]/slot:-translate-y-[var(--pn-roll)] group-data-[hover]/slot:duration-500 motion-reduce:transition-none';
+  'inline-flex items-center gap-[7px] transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] [&_svg]:size-4 [&_svg]:flex-none group-data-[on]/slot:-translate-y-[var(--pn-roll)] group-data-[on]/slot:duration-500 group-data-[hover]/slot:-translate-y-[var(--pn-roll)] group-data-[hover]/slot:duration-500 motion-reduce:transition-none';
 const FACE_ALT =
-  'absolute inset-0 inline-flex translate-y-[var(--pn-roll)] items-center justify-center gap-[0.45em] text-[var(--pn-pill-ink)] transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none group-data-[on]/slot:translate-y-0 group-data-[on]/slot:duration-500 group-data-[hover]/slot:translate-y-0 group-data-[hover]/slot:duration-500 motion-reduce:transition-none';
+  'absolute inset-0 inline-flex translate-y-[var(--pn-roll)] items-center justify-center gap-[7px] text-[var(--pn-pill-ink)] transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] [&_svg]:size-4 [&_svg]:flex-none group-data-[on]/slot:translate-y-0 group-data-[on]/slot:duration-500 group-data-[hover]/slot:translate-y-0 group-data-[hover]/slot:duration-500 motion-reduce:transition-none';
 const FILL =
   'pointer-events-none absolute left-1/2 top-full z-[-1] h-[var(--pn-fill,200%)] w-[var(--pn-fill,200%)] scale-0 rounded-full [background:var(--pn-pill)] [margin:calc(var(--pn-fill,200%)/-2)_0_0_calc(var(--pn-fill,200%)/-2)] transition-transform duration-[360ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-data-[on]/slot:scale-100 group-data-[on]/slot:duration-[550ms] group-data-[on]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[hover]/slot:scale-100 group-data-[hover]/slot:duration-[550ms] group-data-[hover]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
 const GLIDE =
@@ -174,7 +174,7 @@ const GLIDE =
 const INK =
   'pointer-events-none absolute inset-0 flex items-stretch gap-[var(--pn-item-gap,2px)] text-[var(--pn-pill-ink)] [clip-path:inset(0_100%_0_0)]';
 const INK_ITEM =
-  'inline-flex h-full items-center justify-center gap-[0.45em] whitespace-nowrap px-[var(--pn-x)] font-medium tracking-[-0.005em] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none';
+  'inline-flex h-full items-center justify-center gap-[7px] whitespace-nowrap px-[var(--pn-x)] font-medium tracking-[-0.005em] [&_svg]:size-4 [&_svg]:flex-none';
 
 const DOT =
   'pointer-events-none absolute bottom-[calc((var(--pn-inner)_-_var(--pn-font))/4_-_2px)] left-0 -ml-[2px] h-[4px] w-[4px] rounded-full opacity-0 [background:var(--pn-dot)] transition-[background-color] duration-300 ease-[ease] will-change-[transform,opacity] group-data-[dot-lit]/nav:[background:var(--pn-pill-ink)]';
@@ -190,7 +190,7 @@ const PANEL =
   'absolute inset-x-0 top-0 z-[1] box-border rounded-[24px] px-[6px] pb-[6px] pt-[calc(var(--pn-h)_+_10px)] group-data-[layout=joined]/nav:pt-[calc(var(--pn-h)_+_4px)]';
 const MENU = 'm-0 flex list-none flex-col gap-[2px] p-0';
 const ROW =
-  'box-border flex h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+  'box-border flex h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[8px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:size-4 [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current]:[background:var(--pn-pill)] aria-[current]:[box-shadow:var(--pn-pill-shadow)] aria-[current]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
 const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
 
 const DEFAULT_ITEMS: PillNavItem[] = [
@@ -827,8 +827,12 @@ export const PillNav = ({
 
   const face = (item: PillNavItem) => (
     <>
-      {item.icon}
-      {item.label}
+      {item.icon && (
+        <span aria-hidden="true" className="inline-flex shrink-0 items-center justify-center pointer-events-none">
+          {item.icon}
+        </span>
+      )}
+      <span>{item.label}</span>
     </>
   );
 
@@ -877,7 +881,7 @@ export const PillNav = ({
                     item,
                     {
                       className: ITEM,
-                      'aria-current': index === activeIndex ? 'page' : undefined,
+                      'aria-current': index === activeIndex ? 'location' : undefined,
                       'aria-label': item.ariaLabel,
                       onClick: event => choose(item, index, event)
                     },
@@ -937,7 +941,7 @@ export const PillNav = ({
                   item,
                   {
                     className: ROW,
-                    'aria-current': index === activeIndex ? 'page' : undefined,
+                    'aria-current': index === activeIndex ? 'location' : undefined,
                     tabIndex: open ? undefined : -1,
                     onClick: event => {
                       choose(item, index, event);

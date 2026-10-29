@@ -1,48 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import PillNav, { type PillNavItem } from "@/components/pill-nav";
 import { useSmoothScrollTo } from "@/components/parallax";
 import { profile } from "@/lib/profile";
+import { FileText, FolderOpen, Layers3, Mail, UserRound } from "lucide-react";
+
+const SECTION_NAV_MAP: Record<string, string> = {
+  tentang: "#tentang",
+  services: "#tentang",
+  cv: "#cv",
+  stack: "#stack",
+  proyek: "#proyek",
+  certificates: "#proyek",
+  faq: "#proyek",
+  kontak: "#kontak",
+};
+
+const TRACKED_SECTIONS = [
+  "tentang",
+  "services",
+  "cv",
+  "stack",
+  "proyek",
+  "certificates",
+  "faq",
+  "kontak",
+];
 
 function useActiveSection() {
-  const [active, setActive] = useState<string>("#atas");
+  const [active, setActive] = useState<string>("");
+  const activeRef = useRef<string>("");
 
   useEffect(() => {
-    const sectionIds = [
-      "atas",
-      "tentang",
-      "services",
-      "cv",
-      "stack",
-      "proyek",
-      "certificates",
-      "faq",
-      "kontak",
-    ];
-    const handleScroll = () => {
+    const updateActiveSection = () => {
       const scrollY = window.scrollY;
-      const offset = 180;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
 
-      for (let i = sectionIds.length - 1; i >= 0; i--) {
-        const id = sectionIds[i];
+      // When near bottom of page, activate the last nav section (#kontak)
+      if (scrollY + windowHeight >= docHeight - 60) {
+        const target = "#kontak";
+        if (activeRef.current !== target) {
+          activeRef.current = target;
+          setActive(target);
+        }
+        return;
+      }
+
+      // Section is active when its top enters the upper viewing zone (45% of viewport)
+      const ACTIVATION_THRESHOLD = Math.round(windowHeight * 0.45);
+      let nextActive = "";
+
+      for (let i = TRACKED_SECTIONS.length - 1; i >= 0; i--) {
+        const id = TRACKED_SECTIONS[i];
         const el = document.getElementById(id);
         if (el) {
-          const top = el.offsetTop;
-          if (scrollY >= top - offset) {
-            setActive(`#${id}`);
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= ACTIVATION_THRESHOLD) {
+            nextActive = SECTION_NAV_MAP[id] || `#${id}`;
             break;
           }
         }
       }
+
+      // Prevent continuous state updates if active section hasn't changed
+      if (activeRef.current !== nextActive) {
+        activeRef.current = nextActive;
+        setActive(nextActive);
+      }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection, { passive: true });
+    document.fonts?.ready?.then(updateActiveSection).catch(() => {});
+
+    // ResizeObserver to track layout shifts (images loaded, dynamic data)
+    const resizeObserver = new ResizeObserver(() => {
+      updateActiveSection();
+    });
+    if (document.body) {
+      resizeObserver.observe(document.body);
+    }
+
+    updateActiveSection();
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+      resizeObserver.disconnect();
+    };
   }, []);
 
   return active;
@@ -89,20 +139,41 @@ export function PortfolioPillNav() {
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
 
   const desktopNavItems: PillNavItem[] = [
-    { label: t("nav.about"), href: "#tentang" },
-    { label: t("nav.cv"), href: "#cv" },
-    { label: t("nav.stack"), href: "#stack" },
-    { label: t("nav.projects"), href: "#proyek" },
-    { label: t("nav.contact"), href: "#kontak" },
+    {
+      label: t("nav.about"),
+      href: "#tentang",
+      icon: <UserRound size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
+    {
+      label: t("nav.cv"),
+      href: "#cv",
+      ariaLabel: t("nav.cv"),
+      icon: <FileText size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
+    {
+      label: t("nav.stack"),
+      href: "#stack",
+      icon: <Layers3 size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
+    {
+      label: t("nav.projects"),
+      href: "#proyek",
+      icon: <FolderOpen size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
+    {
+      label: t("nav.contact"),
+      href: "#kontak",
+      icon: <Mail size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
   ];
 
   const mobileNavItems: PillNavItem[] = [
-    { label: t("nav.about"), href: "#tentang" },
-    { label: t("nav.cv"), href: "#cv" },
-    { label: t("nav.stack"), href: "#stack" },
-    { label: t("nav.projects"), href: "#proyek" },
-    { label: t("nav.contact"), href: "#kontak" },
-    { label: t("nav.email", "Email"), href: `mailto:${profile.contact.email}` },
+    ...desktopNavItems,
+    {
+      label: t("nav.email", "Email"),
+      href: `mailto:${profile.contact.email}`,
+      icon: <Mail size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
+    },
   ];
 
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {

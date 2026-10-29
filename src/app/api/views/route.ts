@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import crypto from "node:crypto";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/auth-server";
 
 interface ViewsData {
   count: number;
@@ -151,6 +152,16 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { ip, hash: visitorHash } = extractClientInfo(request);
+
+  // Rate limiting per-IP: maksimal 20 request per menit untuk mencegah spam
+  const rateLimit = checkRateLimit(ip, { maxRequests: 20, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan. Silakan coba lagi nanti." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
   let projectId = "portfolio";
   try {
     const body = (await request.json()) as { project_id?: string };
@@ -161,7 +172,6 @@ export async function POST(request: Request) {
     // Body kosong atau format bukan JSON
   }
 
-  const { hash: visitorHash } = extractClientInfo(request);
   const now = Date.now();
   const visitKey = `${projectId}:${visitorHash}`;
   const stored = await getStoredViews();

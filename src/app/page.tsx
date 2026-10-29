@@ -96,25 +96,11 @@ function Hero() {
         {/* Left Column: Editorial Information - Stable, readable layout without parallax displacement */}
         <div className="relative z-10 flex flex-col items-start gap-5 text-start">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5 w-full">
-            <TechText
-              as="h1"
-              text="Zakaria Mujur Prasetyo"
-              fontWeight={700}
-              fontSize={62}
-              letterSpacing={-0.03}
-              align="left"
-              color="currentColor"
-              accentColor="#1b45c4"
-              reveal="letter"
-              dashLength={4}
-              dashGap={2}
-              specks={12}
-              intro="none"
-              clickKick
-              draggable
-              guides={false}
-              className="font-display font-extrabold tracking-tight text-ink w-full h-14 sm:h-18 lg:h-22 -ml-2 max-w-[640px]"
-            />
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.08]">
+              Zakaria Mujur
+              <br />
+              Prasetyo
+            </h1>
             <p className="text-base sm:text-lg font-semibold text-body">
               {t("hero.roles")}
             </p>

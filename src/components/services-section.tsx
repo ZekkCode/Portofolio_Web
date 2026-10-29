@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { Parallax, ScrollReveal } from "@/components/parallax";
+import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 
 interface ServiceItem {
@@ -47,26 +47,30 @@ export function ServicesSection() {
     return (
       <div
         key={service.key}
-        className="group relative flex flex-col justify-between rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
+        className="group relative flex h-full flex-col justify-between rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
       >
         <div>
-          <div className="flex size-9 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400">
-            <svg
-              className="size-4.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.75}
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d={service.iconPath} />
-            </svg>
+          {/* Header: Icon di Kiri, Teks Judul Layanan di Sebelah Kanan Icon */}
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400">
+              <svg
+                className="size-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.75}
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d={service.iconPath} />
+              </svg>
+            </div>
+
+            <h3 className="font-display text-base sm:text-lg font-bold text-brand dark:text-blue-400 transition-colors group-hover:text-brand-ink dark:group-hover:text-blue-300">
+              {title}
+            </h3>
           </div>
 
-          <h3 className="mt-4 font-display text-base font-bold text-ink group-hover:text-brand transition-colors">
-            {title}
-          </h3>
-          <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body">
+          <p className="mt-3.5 text-xs sm:text-sm leading-relaxed text-body">
             {desc}
           </p>
         </div>
@@ -81,15 +85,12 @@ export function ServicesSection() {
         <SectionTitle title={t("services.title")} desc={t("services.desc")} />
       </ScrollReveal>
 
-      <div className="grid gap-4 sm:grid-cols-2 mb-2 items-start">
-        <Parallax speed={-0.06} className="space-y-4">
-          {[services[0], services[2]].map(renderCard)}
-        </Parallax>
-
-        <Parallax speed={0.08} className="space-y-4 sm:pt-4">
-          {[services[1], services[3]].map(renderCard)}
-        </Parallax>
-      </div>
+      {/* Grid Banner Layanan: Sejajar, Rapi, Simetris 2x2 Tanpa Disparitas Parallax */}
+      <ScrollReveal y={20}>
+        <div className="grid gap-4 sm:grid-cols-2 items-stretch">
+          {services.map(renderCard)}
+        </div>
+      </ScrollReveal>
     </section>
   );
 }

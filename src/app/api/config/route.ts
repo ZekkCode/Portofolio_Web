@@ -20,11 +20,23 @@ export async function GET() {
       return NextResponse.json({ configured: false, config: null });
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("site_config")
       .select("config, updated_at")
       .eq("id", "current")
       .maybeSingle();
+
+    // Fallback: Jika ID "current" belum ada, coba baca konfigurasi lama dengan ID "main"
+    if (!error && (!data || !data.config)) {
+      const { data: mainData, error: mainErr } = await supabase
+        .from("site_config")
+        .select("config, updated_at")
+        .eq("id", "main")
+        .maybeSingle();
+      if (!mainErr && mainData?.config) {
+        data = mainData;
+      }
+    }
 
     if (error) {
       return NextResponse.json(

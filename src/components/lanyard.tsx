@@ -861,6 +861,21 @@ const stepSimulation = (sim: Simulation, dt: number, physics: Physics, time: num
     if (body.angular.lengthSq() > 1600) body.angular.setLength(40);
 
     nodes[JOINTS].copy(body.hang).applyQuaternion(body.quaternion).add(body.position);
+
+    // Batas fisik anti-clipping: pastikan kartu dan simpul tali tidak pernah menembus batas atas canvas
+    const safeTopLimit = (sim.anchor.y || 4) - 0.25;
+    for (let i = 1; i < JOINTS; i++) {
+      if (nodes[i].y > safeTopLimit) {
+        nodes[i].y = safeTopLimit;
+        if (velocities[i].y > 0) velocities[i].y *= -0.3;
+      }
+    }
+    const cardTopWorld = body.position.y + body.hang.y;
+    if (cardTopWorld > safeTopLimit) {
+      body.position.y -= (cardTopWorld - safeTopLimit);
+      if (body.velocity.y > 0) body.velocity.y *= -0.3;
+    }
+
     for (let i = 0; i < JOINTS; i++) sim.lengths[i] = nodes[i].distanceTo(nodes[i + 1]);
   }
 
@@ -1088,13 +1103,14 @@ const Lanyard = ({
       const strapRatio = mix(0.18, 0.44, clamp(s.strapLength, 0, 1));
       
       // Jamin headroom atas yang cukup agar kartu yang berputar diagonal dan berayun tidak pernah terpotong
-      const minHeadroom = cardDiag * 0.55 + 0.45;
-      const headroom = Math.max(minHeadroom, layout.height * 1.15 * strapRatio + 0.35);
+      // Headroom dermawan: beri ruang minimal 1.2x diagonal kartu di atas kartu agar ayunan ekstrem tidak pernah terpotong
+      const minHeadroom = cardDiag * 0.75 + 0.85;
+      const headroom = Math.max(minHeadroom, layout.height * 1.35 * strapRatio + 0.65);
 
-      // Kebutuhan tinggi frustum: headroom atas + tinggi kartu + ruang ayunan bawah
-      const neededHeight = headroom + layout.height + cardDiag * 0.45;
-      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight);
-      const minimumWidth = Math.max(layout.width * 2.6, cardDiag * 1.6, 4.2);
+      // Total viewHeight mencakup headroom atas + tinggi kartu + ruang ayunan bawah
+      const neededHeight = headroom + layout.height + cardDiag * 0.65 + 0.5;
+      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight, 7.2);
+      const minimumWidth = Math.max(layout.width * 2.8, cardDiag * 1.8, 4.8);
       if (viewHeight * aspect < minimumWidth) viewHeight = minimumWidth / aspect;
       const viewWidth = viewHeight * aspect;
       frustum.width = viewWidth;
@@ -1112,7 +1128,8 @@ const Lanyard = ({
       const anchorRatio = (ANCHORS[s.anchor] ?? 0.5) - 0.5;
       const maxAnchorX = Math.max(0, viewWidth / 2 - layout.width * 0.9);
       const anchorX = clamp(anchorRatio * viewWidth, -maxAnchorX, maxAnchorX);
-      const anchorY = viewHeight / 2 + 0.22;
+      const anchorY = viewHeight / 2 + 0.35;
+      // Posisi kartu diturunkan aman ke tengah stage sehingga tidak pernah membentur batas atas
       const cardTop = viewHeight / 2 - headroom;
       const hangTop = cardTop + (layout.hangY - layout.height / 2);
       sim.anchor.set(anchorX, anchorY, 0);
@@ -1398,9 +1415,9 @@ const Lanyard = ({
         if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) press = null;
         raycaster.ray.at(sim.grab.reach, sim.grab.target);
         const cardDiag = Math.hypot(layout.width, layout.height);
-        const maxGrabX = Math.max(0.2, frustum.width / 2 - cardDiag * 0.52);
-        const minGrabY = -frustum.height / 2 + (cardDiag * 0.52 + 0.2);
-        const maxGrabY = frustum.height / 2 - (cardDiag * 0.52 + 0.25);
+        const maxGrabX = Math.max(0.2, frustum.width / 2 - cardDiag * 0.58);
+        const minGrabY = -frustum.height / 2 + (cardDiag * 0.58 + 0.35);
+        const maxGrabY = frustum.height / 2 - (cardDiag * 0.58 + 0.45);
         sim.grab.target.x = clamp(sim.grab.target.x, -maxGrabX, maxGrabX);
         sim.grab.target.y = clamp(sim.grab.target.y, minGrabY, maxGrabY);
         start();

@@ -728,8 +728,15 @@ const PaperCrumple = ({
         plane.constant = -anchor.z;
         setPointer(pointerX, pointerY);
         if (raycaster.ray.intersectPlane(plane, world)) {
-          const maxDragX = Math.max(30, (viewportWidth - scale * 0.6) / 2);
-          const maxDragY = Math.max(30, (viewportHeight - scale * aspect * 0.6) / 2);
+          const bounds = geometry.boundingBox;
+          const spanX = bounds ? Math.max(bounds.max.x - bounds.min.x, 0.4) : 1;
+          const spanY = bounds ? Math.max(bounds.max.y - bounds.min.y, 0.4 * aspect) : aspect;
+          const halfWidth = (spanX * scale) / 2;
+          const halfHeight = (spanY * scale) / 2;
+          const safePadX = 36;
+          const safePadY = 56;
+          const maxDragX = Math.max(20, viewportWidth / 2 - halfWidth - safePadX);
+          const maxDragY = Math.max(20, viewportHeight / 2 - halfHeight - safePadY);
           posX.value = posX.target = clamp(world.x - anchor.x, -maxDragX, maxDragX);
           posY.value = posY.target = clamp(world.y - anchor.y, -maxDragY, maxDragY);
           posX.velocity = posY.velocity = 0;

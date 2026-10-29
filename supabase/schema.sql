@@ -85,10 +85,11 @@ ALTER TABLE public.project_views ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read project_views" ON public.project_views;
 DROP POLICY IF EXISTS "Allow insert project_views" ON public.project_views;
 
-CREATE POLICY "Public read project_views"
+-- Kebijakan privasi: hanya admin terautentikasi yang boleh membaca log visitor
+CREATE POLICY "Admin read project_views"
   ON public.project_views
   FOR SELECT
-  TO anon, authenticated
+  TO authenticated
   USING (true);
 
 -- Izinkan penambahan log view tervalidasi dengan validasi panjang hash sha256 (64 hex chars)
@@ -124,5 +125,7 @@ END;
 $$;
 
 -- Berikan izin eksekusi ke anon & authenticated hanya untuk RPC ini
+-- Proteksi eksekusi: hanya service_role server & admin terautentikasi yang boleh memanggil RPC ini
 REVOKE ALL ON FUNCTION public.increment_page_view(text, bigint) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.increment_page_view(text, bigint) TO anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.increment_page_view(text, bigint) FROM anon;
+GRANT EXECUTE ON FUNCTION public.increment_page_view(text, bigint) TO service_role, authenticated;

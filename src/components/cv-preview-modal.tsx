@@ -148,7 +148,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [zoom, setZoom] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchDeltaX, setTouchDeltaX] = useState(0);
-  const [modalMode, setModalMode] = useState<"doc" | "crumple">("crumple");
+  const [modalMode, setModalMode] = useState<"doc" | "crumple">("doc");
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -163,7 +163,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     setPrevInitialRole(initialRole);
     setActiveRole(initialRole);
     setCurrentPage(ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
-    setModalMode("crumple");
+    setModalMode("doc");
   }
 
   // Active role mapped from current page index
@@ -269,15 +269,15 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       <div className="relative flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-line bg-white shadow-2xl dark:border-line/60 dark:bg-[#0c0e17]">
         {/* Top Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-white/95 px-4 py-3 backdrop-blur-md sm:px-6 dark:border-line/40 dark:bg-[#0c0e17]/95">
-          <div className="flex items-center gap-2.5">
-            <span
-              className="size-3 rounded-full"
+          <div className="flex items-center gap-3">
+            <div
+              className="h-8 w-1 rounded-full"
               style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
               aria-hidden="true"
             />
             <div>
               <p className="text-[10px] font-bold tracking-[0.12em] text-body uppercase">
-                Berkas CV • zekktech.biz.id
+                Berkas Karir ATS
               </p>
               <h2 id="cv-modal-title" className="text-sm font-bold text-ink sm:text-base">
                 {profile.name} — <span style={{ color: currentDoc?.color || currentDetail.color }}>{currentDoc?.title || currentDetail.title}</span>

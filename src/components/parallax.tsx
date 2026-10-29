@@ -26,7 +26,7 @@ interface ParallaxProps {
  */
 export function Parallax({
   children,
-  speed = 0.2,
+  speed = 0.15,
   offset,
   align = "center",
   className = "",
@@ -41,34 +41,50 @@ export function Parallax({
     const content = contentRef.current;
     if (!trigger || !content) return;
 
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
+    const mm = gsap.matchMedia();
 
-    // Tangible distance: speed * 550 or explicit pixel offset
-    const distance = typeof offset === "number" ? offset : speed * 550;
+    mm.add(
+      {
+        desktop: "(min-width: 768px)",
+        mobile: "(max-width: 767px)",
+        reduceMotion: "(prefers-reduced-motion: reduce)",
+      },
+      (context) => {
+        const { mobile, reduceMotion } = context.conditions as {
+          desktop: boolean;
+          mobile: boolean;
+          reduceMotion: boolean;
+        };
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        content,
-        {
-          y: align === "top" ? 0 : -distance * 0.5,
-        },
-        {
-          y: align === "top" ? distance : distance * 0.5,
-          ease: "none",
-          scrollTrigger: {
-            trigger,
-            start: align === "top" ? "top top" : "top bottom",
-            end: align === "top" ? "bottom top" : "bottom top",
-            scrub: typeof scrub === "number" ? scrub : 0.7,
-            invalidateOnRefresh: true,
-          },
+        if (reduceMotion) {
+          gsap.set(content, { y: 0 });
+          return;
         }
-      );
-    }, triggerRef);
 
-    return () => ctx.revert();
+        // Amplitudo desktop halus (~240px baseline), mobile ringan (~80px baseline)
+        const baseDistance = typeof offset === "number" ? offset : speed * (mobile ? 90 : 260);
+
+        gsap.fromTo(
+          content,
+          {
+            y: align === "top" ? 0 : -baseDistance * 0.5,
+          },
+          {
+            y: align === "top" ? baseDistance : baseDistance * 0.5,
+            ease: "none",
+            scrollTrigger: {
+              trigger,
+              start: align === "top" ? "top top" : "top bottom",
+              end: align === "top" ? "bottom top" : "bottom top",
+              scrub: typeof scrub === "number" ? scrub : 0.7,
+              invalidateOnRefresh: true,
+            },
+          }
+        );
+      }
+    );
+
+    return () => mm.revert();
   }, [align, speed, scrub, offset]);
 
   return (
@@ -98,8 +114,8 @@ export function ScrollReveal({
   children,
   className = "",
   style,
-  y = 32,
-  duration = 0.85,
+  y = 24,
+  duration = 0.75,
   delay = 0,
   stagger = 0,
 }: ScrollRevealProps) {
@@ -109,34 +125,50 @@ export function ScrollReveal({
     const el = ref.current;
     if (!el) return;
 
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
+    const mm = gsap.matchMedia();
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        {
-          opacity: 0,
-          y,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          duration,
-          delay,
-          stagger,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 90%",
-            once: true,
-          },
+    mm.add(
+      {
+        mobile: "(max-width: 767px)",
+        reduceMotion: "(prefers-reduced-motion: reduce)",
+      },
+      (context) => {
+        const { mobile, reduceMotion } = context.conditions as {
+          mobile: boolean;
+          reduceMotion: boolean;
+        };
+
+        if (reduceMotion) {
+          gsap.set(el, { opacity: 1, y: 0 });
+          return;
         }
-      );
-    }, ref);
 
-    return () => ctx.revert();
+        const effectiveY = mobile ? Math.min(y, 16) : y;
+
+        gsap.fromTo(
+          el,
+          {
+            opacity: 0,
+            y: effectiveY,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: mobile ? Math.min(duration, 0.6) : duration,
+            delay,
+            stagger,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 90%",
+              once: true,
+            },
+          }
+        );
+      }
+    );
+
+    return () => mm.revert();
   }, [y, duration, delay, stagger]);
 
   return (
@@ -227,12 +259,24 @@ export function useSmoothScrollTo() {
 
   const scrollTo = (target: string | HTMLElement, offset = -88) => {
     if (lenis) {
-      lenis.scrollTo(target, { offset, duration: 1.1, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+      lenis.scrollTo(target, {
+        offset,
+        duration: 1.05,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
     } else {
       const el = typeof target === "string" ? document.querySelector(target) : target;
       if (el) {
         const top = el.getBoundingClientRect().top + window.scrollY + offset;
         window.scrollTo({ top, behavior: "smooth" });
+      }
+    }
+
+    if (typeof target === "string" && target.startsWith("#") && typeof window !== "undefined") {
+      try {
+        window.history.pushState(null, "", target);
+      } catch {
+        // Fallback jika iframe/sandbox membatasi pushState
       }
     }
   };

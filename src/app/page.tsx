@@ -89,7 +89,7 @@ function Hero() {
     >
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
-        {/* Left Column: Editorial Information */}
+        {/* Left Column: Editorial Information - Stable, readable layout without parallax displacement */}
         <div className="flex flex-col items-start gap-5 text-start">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5">
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.05]">
@@ -100,7 +100,7 @@ function Hero() {
             </p>
           </ScrollReveal>
 
-          <Parallax speed={-0.08} align="top" className="space-y-6 w-full max-w-xl">
+          <div className="space-y-6 w-full max-w-xl">
             <p className="text-sm sm:text-base leading-relaxed text-body">
               {t("hero.desc")}
             </p>
@@ -122,12 +122,12 @@ function Hero() {
                 <ArrowRight className="size-3.5" />
               </SmoothNavLink>
             </div>
-          </Parallax>
+          </div>
         </div>
 
         {/* Right Column: Disciplined 3D Card Presentation Frame with Living Parallax */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full">
-          <Parallax speed={0.24} align="top" className="w-full max-w-[320px]">
+          <Parallax speed={0.14} align="top" className="w-full max-w-[320px]">
             <ProfileCardStage />
           </Parallax>
         </div>
@@ -152,16 +152,16 @@ function About() {
 
       <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <Parallax speed={-0.08} className="space-y-6">
+          <div className="space-y-6">
             <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
               {profile.bio.map((par) => (
                 <p key={par.slice(0, 24)}>{par}</p>
               ))}
             </div>
-          </Parallax>
+          </div>
 
           {/* Grounded Metric Cards */}
-          <Parallax speed={0.12}>
+          <Parallax speed={0.06}>
             <div className="mt-8">
               <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {profile.stats.map((stat, idx) => {
@@ -377,18 +377,17 @@ function Contact() {
     <section id="kontak" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full">
-        <Parallax speed={0.12} className="w-full">
-          <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
-            <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
-              {/* KIRI: Lanyard 3D Stage */}
-              <div className="relative flex flex-col justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-6">
-                <div className="relative my-auto flex items-center justify-center py-2 sm:py-4">
-                  <LanyardStage className="h-[340px] sm:h-[440px] lg:h-[480px]" />
-                </div>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
+          <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
+            {/* KIRI: Lanyard 3D Stage dengan parallax fisik halus */}
+            <div className="relative flex flex-col justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-6">
+              <Parallax speed={0.08} className="relative my-auto flex items-center justify-center py-2 sm:py-4">
+                <LanyardStage className="h-[340px] sm:h-[440px] lg:h-[480px]" />
+              </Parallax>
+            </div>
 
-              {/* KANAN: Panel Informasi Kontak */}
-              <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-6">
+            {/* KANAN: Panel Informasi Kontak (Stabil, Mudah Diklik) */}
+            <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-6">
                 <div className="space-y-4">
                   <div>
                     <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
@@ -454,7 +453,6 @@ function Contact() {
               </div>
             </div>
           </div>
-        </Parallax>
       </ScrollReveal>
     </section>
   );
@@ -581,15 +579,17 @@ function Footer() {
         </div>
       </div>
 
-      {/* Blue Pixelated Signature Watermark: zakaria mp (DIBAWAH FOOTER) */}
-      <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mt-10 sm:mt-14 -mb-4 sm:-mb-6">
-        <p
-          aria-hidden="true"
-          className="font-pixel text-[13vw] sm:text-[11vw] md:text-[10vw] lg:text-[112px] font-bold leading-none tracking-wider uppercase bg-gradient-to-b from-blue-600 via-blue-500/40 to-transparent dark:from-blue-400 dark:via-blue-500/35 dark:to-transparent bg-clip-text text-transparent"
-        >
-          zakaria mp
-        </p>
-      </div>
+      {/* Blue Pixelated Signature Watermark: zakaria mp (DIBAWAH FOOTER - parallax halus, tautan di atas tetap diam) */}
+      <Parallax speed={-0.06} align="center">
+        <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mt-10 sm:mt-14 -mb-4 sm:-mb-6">
+          <p
+            aria-hidden="true"
+            className="font-pixel text-[13vw] sm:text-[11vw] md:text-[10vw] lg:text-[112px] font-bold leading-none tracking-wider uppercase bg-gradient-to-b from-blue-600 via-blue-500/40 to-transparent dark:from-blue-400 dark:via-blue-500/35 dark:to-transparent bg-clip-text text-transparent"
+          >
+            zakaria mp
+          </p>
+        </div>
+      </Parallax>
     </footer>
   );
 }

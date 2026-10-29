@@ -10,24 +10,79 @@ if (typeof window !== "undefined") {
 }
 
 function ScrollTriggerBridge() {
+  const lenis = useLenis();
+
+  // 1. Sinkronisasi Lenis scroll event dengan ScrollTrigger.update
   useLenis(() => {
     ScrollTrigger.update();
   });
 
+  // 2. Navigasi Anchor (#cv, #proyek, dll) & Browser Back/Forward history
   useEffect(() => {
-    const handleRefresh = () => ScrollTrigger.refresh();
+    if (!lenis || typeof window === "undefined") return;
 
-    window.addEventListener("resize", handleRefresh);
-    window.addEventListener("load", handleRefresh);
+    // Gulir langsung ke target anchor bila halaman dibuka dengan hash
+    const initialHash = window.location.hash;
+    if (initialHash) {
+      const targetEl = document.querySelector(initialHash);
+      if (targetEl) {
+        requestAnimationFrame(() => {
+          lenis.scrollTo(initialHash, { offset: -88, immediate: true });
+        });
+      }
+    }
 
-    const timer1 = setTimeout(handleRefresh, 150);
-    const timer2 = setTimeout(handleRefresh, 600);
+    // Tangani navigasi mundur/maju di browser
+    const handlePopState = () => {
+      const currentHash = window.location.hash;
+      if (currentHash) {
+        lenis.scrollTo(currentHash, { offset: -88 });
+      } else {
+        lenis.scrollTo(0, { offset: 0 });
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [lenis]);
+
+  // 3. Refresh pengukuran ScrollTrigger hanya ketika layout benar-benar berubah
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let resizeTimer: NodeJS.Timeout | null = null;
+    const debouncedRefresh = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 120);
+    };
+
+    // Saat seluruh web fonts siap dirender
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        ScrollTrigger.refresh();
+      });
+    }
+
+    // Saat aset gambar/halaman selesai dimuat
+    window.addEventListener("load", debouncedRefresh);
+    window.addEventListener("resize", debouncedRefresh);
+
+    // Pantau perubahan tinggi konten dinamis secara presisi tanpa polling berkala
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && document.body) {
+      resizeObserver = new ResizeObserver(() => {
+        debouncedRefresh();
+      });
+      resizeObserver.observe(document.body);
+    }
 
     return () => {
-      window.removeEventListener("resize", handleRefresh);
-      window.removeEventListener("load", handleRefresh);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      window.removeEventListener("load", debouncedRefresh);
+      window.removeEventListener("resize", debouncedRefresh);
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeObserver?.disconnect();
     };
   }, []);
 
@@ -37,6 +92,7 @@ function ScrollTriggerBridge() {
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<LenisRef>(null);
 
+  // Single RAF Loop: Lenis dikendalikan langsung oleh GSAP ticker tunggal
   useEffect(() => {
     function update(time: number) {
       lenisRef.current?.lenis?.raf(time * 1000);
@@ -55,10 +111,16 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       ref={lenisRef}
       root
       autoRaf={false}
-      options={{ lerp: 0.08, duration: 1.2, smoothWheel: true }}
+      options={{
+        lerp: 0.08,
+        duration: 1.15,
+        smoothWheel: true,
+      }}
     >
       <ScrollTriggerBridge />
       {children}
     </ReactLenis>
   );
 }
+
+export default SmoothScroll;

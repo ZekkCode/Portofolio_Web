@@ -33,6 +33,7 @@ type Word = {
 type Kick = { index: number; at: number; velocity: number };
 
 export interface TechTextProps {
+  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'div' | 'span';
   text?: string;
   fontFamily?: string;
   fontWeight?: number;
@@ -63,7 +64,7 @@ export interface TechTextProps {
   style?: CSSProperties;
 }
 
-type Settings = Required<Omit<TechTextProps, 'className' | 'style'>>;
+type Settings = Required<Omit<TechTextProps, 'className' | 'style' | 'as'>>;
 
 const LABEL_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const FALLOFF_STEPS = 8;
@@ -96,6 +97,7 @@ const noise = (...values: number[]) => {
 const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '0');
 
 const TechText = ({
+  as = 'div',
   text = 'React Bits',
   fontFamily = '',
   fontWeight = 600,
@@ -129,8 +131,7 @@ const TechText = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const settingsRef = useRef<Settings | null>(null);
   const wakeRef = useRef<() => void>(() => {});
-
-  useEffect(() => {
+    useEffect(() => {
     settingsRef.current = {
       text,
       fontFamily,
@@ -805,8 +806,15 @@ const TechText = ({
       let moving = false;
       glyphs.forEach((glyph, i) => {
         if (i === dragging) {
-          glyph.offset.x = approach(glyph.offset.x, pointer.x - grab.x, dt, 0.03);
-          glyph.offset.y = approach(glyph.offset.y, pointer.y - grab.y, dt, 0.03);
+          const targetX = pointer.x - grab.x;
+          const targetY = pointer.y - grab.y;
+          // Soft clamp drag within canvas margins so glyph is never sliced by rectangular edges
+          const minX = -glyph.box.x1 + 6;
+          const maxX = width - glyph.box.x2 - 6;
+          const minY = -glyph.box.y1 + 6;
+          const maxY = height - glyph.box.y2 - 6;
+          glyph.offset.x = approach(glyph.offset.x, Math.max(minX, Math.min(maxX, targetX)), dt, 0.03);
+          glyph.offset.y = approach(glyph.offset.y, Math.max(minY, Math.min(maxY, targetY)), dt, 0.03);
           glyph.velocity.x = 0;
           glyph.velocity.y = 0;
           moving = true;
@@ -953,9 +961,15 @@ const TechText = ({
     wakeRef.current = wake;
 
     const resize = () => {
-      width = Math.max(1, container.clientWidth);
-      height = Math.max(1, container.clientHeight);
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (!container || !canvas) return;
+      const rect = container.getBoundingClientRect();
+      const nextWidth = Math.max(1, Math.round(rect.width));
+      const nextHeight = Math.max(1, Math.round(rect.height));
+      const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (nextWidth === width && nextHeight === height && nextDpr === dpr) return;
+      width = nextWidth;
+      height = nextHeight;
+      dpr = nextDpr;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       layoutKey = '';
@@ -1059,16 +1073,19 @@ const TechText = ({
     };
   }, []);
 
+  const Component = as;
+
   return (
-    <div
-      ref={containerRef}
-      className={`relative w-full h-full touch-pan-y select-none ${className}`.trim()}
+    <Component
+      ref={containerRef as any}
+      className={`relative touch-pan-y select-none ${className}`.trim()}
       style={style}
-      role="img"
-      aria-label={text}
+      role={as === 'div' ? 'img' : undefined}
+      aria-label={as === 'div' ? text : undefined}
     >
+      <span className="sr-only">{text}</span>
       <canvas ref={canvasRef} className="block w-full h-full" />
-    </div>
+    </Component>
   );
 };
 

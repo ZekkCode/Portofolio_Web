@@ -1,0 +1,12 @@
+/* Scoped styles for ZekkTech Miss Minute Companion */
+
+.buddy-pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buddy-container {
+    transition: none !important;
+  }
+}

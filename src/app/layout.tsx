@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Plus_Jakarta_Sans, Space_Grotesk, Pixelify_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
+import { BuddyClient } from "@/components/buddy/buddy-client";
 import { profile } from "@/lib/profile";
 import "./globals.css";
 
@@ -233,7 +234,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
-          <SmoothScroll>{children}</SmoothScroll>
+          <SmoothScroll>
+            {children}
+            <BuddyClient />
+          </SmoothScroll>
         </ThemeProvider>
       </body>
     </html>

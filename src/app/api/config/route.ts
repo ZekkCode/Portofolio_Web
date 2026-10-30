@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
@@ -15,16 +15,18 @@ export async function GET() {
   }
 
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getServiceRoleClient() || getSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ configured: false, config: null });
     }
 
-    let { data, error } = await supabase
+    const { data: initialData, error } = await supabase
       .from("site_config")
       .select("config, updated_at")
       .eq("id", "current")
       .maybeSingle();
+
+    let data = initialData;
 
     // Fallback: Jika ID "current" belum ada, coba baca konfigurasi lama dengan ID "main"
     if (!error && (!data || !data.config)) {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import crypto from "node:crypto";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/auth-server";
 
 interface ViewsData {
@@ -89,7 +89,7 @@ async function saveViews(count: number, newVisitKey?: string, timestamp?: number
 
   if (isSupabaseConfigured()) {
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getServiceRoleClient() || getSupabaseClient();
       if (supabase) {
         await supabase.from("page_views").upsert(
           {
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
   // 1. Cek di Supabase jika terhubung
   if (isSupabaseConfigured()) {
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getServiceRoleClient() || getSupabaseClient();
       if (supabase) {
         const cutoff = new Date(now - TWENTY_FOUR_HOURS_MS).toISOString();
         const { data: existing, error } = await supabase

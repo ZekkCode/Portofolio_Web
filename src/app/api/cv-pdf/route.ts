@@ -75,8 +75,8 @@ async function resolveSafeLocalFile(inputPath: string): Promise<{ fullPath: stri
 function isAllowedR2Url(url: string): boolean {
   if (!url || typeof url !== "string") return false;
 
-  // Path internal R2 key
-  if (url.startsWith("cv/") || url.startsWith("uploads/")) {
+  // Path internal R2 key atau rute proxy backend
+  if (url.startsWith("cv/") || url.startsWith("uploads/") || url.startsWith("/api/r2-file")) {
     return true;
   }
 

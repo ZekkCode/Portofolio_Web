@@ -173,8 +173,8 @@ export async function POST(request: Request) {
           key: result.key,
           provider: "r2",
         });
-      } catch {
-        // Jangan pernah menampilkan internal error stack trace atau AWS detail ke client
+      } catch (err) {
+        console.error("[api/upload] Gagal menyimpan berkas ke Cloudflare R2:", err instanceof Error ? err.message : "Unknown error");
         return NextResponse.json(
           { error: "Gagal menyimpan berkas ke Cloudflare R2. Periksa konfigurasi storage server." },
           { status: 500 }
@@ -182,16 +182,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback mode jika R2 belum dikonfigurasi di server
-    const base64 = buffer.toString("base64");
-    const dataUrl = `data:${verifiedType.mime};base64,${base64}`;
-
-    return NextResponse.json({
-      success: true,
-      url: dataUrl,
-      provider: "fallback-data-uri",
-      warning: "Storage cloud belum dikonfigurasi. Berkas disimpan sementara sebagai data URI.",
-    });
+    // Tolak upload jika R2 belum dikonfigurasi (menolak upload semu via fallback data URI)
+    return NextResponse.json(
+      {
+        error:
+          "Storage Cloudflare R2 belum dikonfigurasi di server environment. Unggah berkas ditolak.",
+      },
+      { status: 503 }
+    );
   } catch {
     return NextResponse.json(
       { error: "Terjadi kesalahan server saat memproses unggah berkas" },

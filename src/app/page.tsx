@@ -207,7 +207,15 @@ function About() {
 
 function Stack() {
   const { t } = useTranslation();
-  const duplicatedStack = [...profile.stack, ...profile.stack];
+
+  // 6 pengulangan stack agar pita marquee tidak pernah putus di layar resolusi tinggi (4K/ultrawide)
+  const stackRow1 = Array.from({ length: 6 }, () => profile.stack).flat();
+  // Baris kedua di-offset 6 item agar urutan logo bervariasi antar baris
+  const offsetTools = [
+    ...profile.stack.slice(6),
+    ...profile.stack.slice(0, 6),
+  ];
+  const stackRow2 = Array.from({ length: 6 }, () => offsetTools).flat();
 
   const disciplines = [
     {
@@ -323,32 +331,71 @@ function Stack() {
         </Parallax>
       </div>
 
-      {/* Seamless Ribbon Ticker */}
-      <div className="relative w-full overflow-hidden py-3">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
+      {/* Seamless Dual-Direction Ribbon Ticker */}
+      <div className="relative w-full overflow-hidden py-6 sm:py-8 space-y-4">
+        {/* Soft edge fade masks */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16 sm:w-24 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16 sm:w-24 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
 
-        <div className="animate-marquee flex items-center gap-8 py-1">
-          {duplicatedStack.map((tool, idx) => (
+        {/* Baris 1: Bergerak ke Kiri */}
+        <div className="animate-marquee flex items-center gap-3.5 sm:gap-4 py-2">
+          {stackRow1.map((tool, idx) => (
             <div
-              key={`${tool.name}-${idx}`}
+              key={`row1-${tool.name}-${idx}`}
               aria-hidden={idx >= profile.stack.length ? "true" : undefined}
-              className="flex shrink-0 items-center gap-2.5 text-sm font-medium text-ink dark:text-slate-200"
+              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/80 p-2.5 shadow-2xs backdrop-blur-xs transition-all duration-300 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md hover:shadow-brand/5 dark:border-line/40 dark:bg-slate-900/60 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
+              title={tool.name}
+              aria-label={tool.name}
             >
-              <div className="flex size-6 shrink-0 items-center justify-center">
-                <Image
-                  src={tool.icon}
-                  alt={tool.name}
-                  width={20}
-                  height={20}
-                  className={`max-h-5 max-w-5 object-contain ${
-                    tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
-                      ? "dark:invert"
-                      : ""
-                  }`}
-                />
-              </div>
-              <span className="whitespace-nowrap font-medium text-ink dark:text-slate-200">
+              <Image
+                src={tool.icon}
+                alt={tool.name}
+                width={28}
+                height={28}
+                className={`max-h-7 max-w-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
+                  tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                    ? "dark:invert"
+                    : ""
+                }`}
+              />
+
+              {/* Tooltip Keterangan on Hover (Row 1: Muncul di Atas) */}
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 scale-90 group-hover/tool:opacity-100 group-hover/tool:scale-100 transition-all duration-200 z-30 whitespace-nowrap rounded-md bg-slate-900/90 px-2.5 py-0.5 text-[11px] font-medium text-white shadow-md backdrop-blur-xs dark:bg-white dark:text-slate-900 dark:border dark:border-slate-200 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-slate-900/90 dark:after:border-t-white"
+              >
+                {tool.name}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Baris 2: Bergerak ke Kanan */}
+        <div className="animate-marquee-reverse flex items-center gap-3.5 sm:gap-4 py-2" aria-hidden="true">
+          {stackRow2.map((tool, idx) => (
+            <div
+              key={`row2-${tool.name}-${idx}`}
+              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/80 p-2.5 shadow-2xs backdrop-blur-xs transition-all duration-300 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md hover:shadow-brand/5 dark:border-line/40 dark:bg-slate-900/60 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
+              title={tool.name}
+              aria-label={tool.name}
+            >
+              <Image
+                src={tool.icon}
+                alt={tool.name}
+                width={28}
+                height={28}
+                className={`max-h-7 max-w-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
+                  tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                    ? "dark:invert"
+                    : ""
+                }`}
+              />
+
+              {/* Tooltip Keterangan on Hover (Row 2: Muncul di Bawah) */}
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 scale-90 group-hover/tool:opacity-100 group-hover/tool:scale-100 transition-all duration-200 z-30 whitespace-nowrap rounded-md bg-slate-900/90 px-2.5 py-0.5 text-[11px] font-medium text-white shadow-md backdrop-blur-xs dark:bg-white dark:text-slate-900 dark:border dark:border-slate-200 after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-b-slate-900/90 dark:after:border-b-white"
+              >
                 {tool.name}
               </span>
             </div>

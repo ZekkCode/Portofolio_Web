@@ -246,90 +246,51 @@ function Stack() {
         />
       </ScrollReveal>
 
-      {/* Discipline-Grouped Taxonomy Grid with Staggered Parallax Columns */}
-      <div className="grid gap-4 sm:grid-cols-2 mb-8 items-start">
-        <Parallax speed={-0.08} className="space-y-4">
-          {[disciplines[0], disciplines[2]].map((item) => (
+      {/* Grid Kategori Tech Stack: Sejajar, Rapi, Simetris 2x2 */}
+      <ScrollReveal y={20}>
+        <div className="grid gap-4 sm:grid-cols-2 mb-8 auto-rows-fr items-stretch">
+          {disciplines.map((item) => (
             <div
               key={item.category}
-              className="rounded-xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
+              className="flex flex-col justify-between rounded-xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
             >
-              <h3 className="font-display text-base font-bold text-ink">
-                {item.category}
-              </h3>
+              <div>
+                <h3 className="font-display text-base font-bold text-ink">
+                  {item.category}
+                </h3>
 
-              <div className="mt-3.5 flex flex-wrap gap-2">
-                {item.tools.map((toolName) => {
-                  const tool = profile.stack.find((s) => s.name === toolName);
-                  if (!tool) return null;
-                  return (
-                    <span
-                      key={tool.name}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
-                    >
-                      <div className="flex size-4 shrink-0 items-center justify-center">
-                        <Image
-                          src={tool.icon}
-                          alt={tool.name}
-                          width={16}
-                          height={16}
-                          className={`max-h-3.5 max-w-3.5 object-contain ${
-                            tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
-                              ? "dark:invert"
-                              : ""
-                          }`}
-                        />
-                      </div>
-                      <span>{tool.name}</span>
-                    </span>
-                  );
-                })}
+                <div className="mt-3.5 flex flex-wrap gap-2">
+                  {item.tools.map((toolName) => {
+                    const tool = profile.stack.find((s) => s.name === toolName);
+                    if (!tool) return null;
+                    return (
+                      <span
+                        key={tool.name}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
+                      >
+                        <div className="flex size-4 shrink-0 items-center justify-center">
+                          <Image
+                            src={tool.icon}
+                            alt={tool.name}
+                            width={16}
+                            height={16}
+                            className={`max-h-3.5 max-w-3.5 object-contain ${
+                              tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                                ? "dark:invert"
+                                : ""
+                            }`}
+                          />
+                        </div>
+                        <span>{tool.name}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ))}
-        </Parallax>
-
-        <Parallax speed={0.10} className="space-y-4 sm:pt-4">
-          {[disciplines[1], disciplines[3]].map((item) => (
-            <div
-              key={item.category}
-              className="rounded-xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs dark:border-line/60 dark:bg-[#111422]"
-            >
-              <h3 className="font-display text-base font-bold text-ink">
-                {item.category}
-              </h3>
-
-              <div className="mt-3.5 flex flex-wrap gap-2">
-                {item.tools.map((toolName) => {
-                  const tool = profile.stack.find((s) => s.name === toolName);
-                  if (!tool) return null;
-                  return (
-                    <span
-                      key={tool.name}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
-                    >
-                      <div className="flex size-4 shrink-0 items-center justify-center">
-                        <Image
-                          src={tool.icon}
-                          alt={tool.name}
-                          width={16}
-                          height={16}
-                          className={`max-h-3.5 max-w-3.5 object-contain ${
-                            tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
-                              ? "dark:invert"
-                              : ""
-                          }`}
-                        />
-                      </div>
-                      <span>{tool.name}</span>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </Parallax>
-      </div>
+        </div>
+      </ScrollReveal>
 
       {/* Seamless Dual-Direction Ribbon Ticker */}
       <div className="relative w-full overflow-hidden py-6 sm:py-8 space-y-4">

@@ -5,16 +5,17 @@ export const BUDDY_CONFIG: BuddyConfig = {
   fallbackSpritesheetUrl: "/pets/miss-minute-original.webp",
   cols: 8,
   rows: 9,
-  // 192x208 frame aspect ratio = ~1:1.083
-  desktopSize: { width: 58, height: 63 },
+  // 192x208 frame aspect ratio = 1:1.0833
+  desktopSize: { width: 60, height: 65 },
+  tabletSize: { width: 50, height: 54 },
   mobileSize: { width: 44, height: 48 },
-  speed: 28, // 28 px/s gentle walking speed
+  speed: 26, // 26 px/s gentle walking speed (between 24–32px/s)
   idleIntervalMin: 3500, // pause 3.5s - 7s
   idleIntervalMax: 7000,
-  walkIntervalMin: 4000, // walk 4s - 8s
-  walkIntervalMax: 8000,
-  boundsPadding: 16,
-  rightAvoidMargin: 84, // keep clear of ScrollToTop button on right
+  walkIntervalMin: 3500, // walk 3.5s - 7s
+  walkIntervalMax: 7000,
+  boundsPadding: 20,
+  rightAvoidMargin: 90, // keep clear of ScrollToTop button on right
   storageKey: "zekktech:buddy:state",
   hiddenKey: "zekktech:buddy:hidden",
 };

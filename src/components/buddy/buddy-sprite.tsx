@@ -2,27 +2,30 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { BUDDY_CONFIG, BUDDY_ROW_MAP, BuddyRowKey } from "@/lib/buddy/buddy-config";
-import { BuddyState } from "@/lib/buddy/buddy-types";
+import { BuddyState, DeviceMode } from "@/lib/buddy/buddy-types";
 
 interface BuddySpriteProps {
   state: BuddyState;
-  isMobile: boolean;
+  deviceMode: DeviceMode;
   onClick?: () => void;
   onHover?: () => void;
 }
 
 export function BuddySprite({
   state,
-  isMobile,
+  deviceMode,
   onClick,
   onHover,
 }: BuddySpriteProps) {
   const [frame, setFrame] = useState(0);
   const frameRef = useRef(0);
 
-  const { width, height } = isMobile
-    ? BUDDY_CONFIG.mobileSize
-    : BUDDY_CONFIG.desktopSize;
+  const { width, height } =
+    deviceMode === "mobile"
+      ? BUDDY_CONFIG.mobileSize
+      : deviceMode === "tablet"
+      ? BUDDY_CONFIG.tabletSize
+      : BUDDY_CONFIG.desktopSize;
 
   // Determine row definition from current state
   const rowDef = useMemo(() => {
@@ -64,16 +67,16 @@ export function BuddySprite({
       onClick={onClick}
       onMouseEnter={onHover}
       aria-label="Tanya Miss Minute (ZekkTech Companion)"
-      title="Miss Minute — Klik untuk mengobrol atau bertanya seputar Zekk"
-      className="group relative cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 rounded-xl transition-transform active:scale-95 pointer-events-auto"
+      title="Miss Minute — Klik atau ketuk untuk bertanya seputar Zekk"
+      className="group buddy-interactive relative flex items-center justify-center cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-2xl transition-transform active:scale-95 pointer-events-auto touch-manipulation min-w-[44px] min-h-[44px]"
       style={{
         width: `${width}px`,
         height: `${height}px`,
       }}
     >
-      {/* Sprite element */}
+      {/* Sprite element with crisp pixel rendering */}
       <div
-        className="w-full h-full"
+        className="w-full h-full buddy-pixelated"
         style={{
           backgroundImage: `url(${BUDDY_CONFIG.spritesheetUrl})`,
           backgroundPosition: `${bgPosX}px ${bgPosY}px`,

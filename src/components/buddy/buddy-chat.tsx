@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, X, ExternalLink, Sparkles, Minus } from "lucide-react";
+import { Send, X, ExternalLink, Sparkles, Minus, ArrowUpRight } from "lucide-react";
 import { useSmoothScrollTo } from "@/components/parallax";
+import { BuddyChatMessage, DeviceMode } from "@/lib/buddy/buddy-types";
 
 interface BuddyChatProps {
   isOpen: boolean;
+  deviceMode: DeviceMode;
   onClose: () => void;
   onMinimize: () => void;
   onSendMessage: (message: string) => Promise<void>;
@@ -18,30 +20,71 @@ interface BuddyChatProps {
 
 export function BuddyChat({
   isOpen,
+  deviceMode,
   onClose,
   onMinimize,
   onSendMessage,
   isLoading,
   lastReply,
-  quickReplies = ["Siapa Zekk?", "Proyek Unggulan", "Lihat CV", "Hubungi Zekk"],
+  quickReplies = ["Siapa Zekk?", "Lihat Proyek", "Tech Stack", "Download CV"],
   actionLink,
   actionLinkLabel,
 }: BuddyChatProps) {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<BuddyChatMessage[]>([
+    {
+      id: "initial",
+      sender: "buddy",
+      text: "Hi! Aku Miss Minute, companion portofolio Zekk. Mau lihat proyek, tech stack, CV ATS, atau tanya sesuatu?",
+      timestamp: Date.now(),
+    },
+  ]);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollTo = useSmoothScrollTo();
 
-  // Focus input on open
+  // Append new reply to message list when lastReply changes
+  useEffect(() => {
+    if (lastReply) {
+      setMessages((prev) => {
+        // Prevent duplicate appending of the same message
+        const last = prev[prev.length - 1];
+        if (last && last.sender === "buddy" && last.text === lastReply) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            sender: "buddy",
+            text: lastReply,
+            timestamp: Date.now(),
+          },
+        ];
+      });
+    }
+  }, [lastReply]);
+
+  // Auto-scroll messages container
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isOpen, isLoading]);
+
+  // Focus input when opened
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
         inputRef.current?.focus();
-      }, 100);
+      }, 120);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
-  // Handle Escape key to close
+  // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -56,137 +99,207 @@ export function BuddyChat({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    const msg = input.trim();
+    const trimmed = input.trim();
+    if (!trimmed || isLoading) return;
+
+    // Append user message immediately
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        sender: "user",
+        text: trimmed,
+        timestamp: Date.now(),
+      },
+    ]);
+
     setInput("");
-    await onSendMessage(msg);
+    await onSendMessage(trimmed);
   };
 
   const handleQuickClick = async (text: string) => {
     if (isLoading) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        sender: "user",
+        text,
+        timestamp: Date.now(),
+      },
+    ]);
     await onSendMessage(text);
   };
 
   const handleLinkClick = (target: string) => {
-    scrollTo(target, 0);
+    if (target.startsWith("#")) {
+      scrollTo(target, 0);
+    } else if (target.startsWith("http") || target.endsWith(".pdf")) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    } else {
+      scrollTo(target, 0);
+    }
     onClose();
   };
 
+  const isMobile = deviceMode === "mobile";
+
   return (
-    <div
-      ref={containerRef}
-      role="dialog"
-      aria-label="Obrolan Miss Minute"
-      className="pointer-events-auto absolute bottom-[calc(100%+12px)] left-0 z-50 w-72 sm:w-80 select-text rounded-2xl border border-line/80 bg-white/95 p-3.5 shadow-xl backdrop-blur-md transition-all duration-300 dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-100"
-      style={{
-        maxWidth: "calc(100vw - 32px)",
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-line/60 pb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="flex size-5 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-blue-500/20 dark:text-blue-400">
-            <Sparkles className="size-3" />
-          </div>
-          <div>
-            <h4 className="font-display text-xs font-bold text-ink">Miss Minute</h4>
-            <div className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] text-body">Zekk Companion</span>
+    <>
+      {/* Mobile Subtle Backdrop */}
+      {isMobile && (
+        <div
+          role="presentation"
+          onClick={onClose}
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-2xs transition-opacity md:hidden"
+        />
+      )}
+
+      {/* Main Chat Window */}
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-label="Obrolan Miss Minute"
+        className={
+          isMobile
+            ? "buddy-chat-bottom-sheet flex flex-col rounded-3xl border border-line/80 bg-white/95 shadow-2xl backdrop-blur-xl transition-all duration-300 dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-100 overflow-hidden"
+            : "buddy-chat-floating flex flex-col rounded-2xl border border-line/80 bg-white/95 shadow-2xl backdrop-blur-xl transition-all duration-300 dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-100 overflow-hidden"
+        }
+        style={{
+          width: isMobile ? "calc(100vw - 24px)" : "320px",
+          maxHeight: isMobile ? "60dvh" : "440px",
+        }}
+      >
+        {/* Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-line/60 bg-surface/50 px-3.5 py-2.5 dark:bg-slate-900/40">
+          <div className="flex items-center gap-2">
+            <div className="flex size-7 items-center justify-center rounded-xl bg-brand/10 text-brand shadow-2xs dark:bg-blue-500/20 dark:text-blue-400">
+              <Sparkles className="size-3.5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h4 className="font-display text-xs font-bold text-ink">Miss Minute</h4>
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-body">ZekkTech AI Pet</span>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onMinimize}
-            aria-label="Kecilkan Miss Minute"
-            title="Kecilkan ke dock pojok bawah"
-            className="flex size-6 items-center justify-center rounded-lg text-body hover:bg-surface hover:text-ink transition-colors dark:hover:bg-slate-800"
-          >
-            <Minus className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup obrolan"
-            title="Tutup dialog"
-            className="flex size-6 items-center justify-center rounded-lg text-body hover:bg-surface hover:text-ink transition-colors dark:hover:bg-slate-800"
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Bubble Message Body */}
-      <div className="my-3 space-y-2.5 text-xs">
-        <div className="rounded-xl border border-line/60 bg-surface/70 p-2.5 leading-relaxed text-body dark:bg-slate-900/60 dark:text-slate-200">
-          {isLoading ? (
-            <div className="flex items-center gap-2 py-1 text-brand dark:text-blue-400">
-              <span className="size-2 rounded-full bg-brand animate-ping dark:bg-blue-400" />
-              <span className="text-[11px] font-medium">Sedang berpikir...</span>
-            </div>
-          ) : (
-            <p className="whitespace-pre-line">{lastReply}</p>
-          )}
-
-          {actionLink && !isLoading && (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => handleLinkClick(actionLink)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand transition-colors hover:bg-brand hover:text-white dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white"
+              onClick={onMinimize}
+              aria-label="Sembunyikan Miss Minute"
+              title="Sembunyikan ke pojok"
+              className="flex size-7 items-center justify-center rounded-lg text-body hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
             >
-              <span>{actionLinkLabel || "Buka Halaman"}</span>
-              <ExternalLink className="size-3" />
+              <Minus className="size-3.5" />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Tutup Obrolan"
+              title="Tutup Obrolan (Esc)"
+              className="flex size-7 items-center justify-center rounded-lg text-body hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Quick Suggestion Chips */}
-        {!isLoading && quickReplies.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {quickReplies.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => handleQuickClick(chip)}
-                className="rounded-full border border-line/70 bg-white/80 px-2.5 py-0.5 text-[10px] font-medium text-body transition-all hover:border-brand/50 hover:bg-brand/10 hover:text-brand dark:border-line/40 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:border-blue-400 dark:hover:text-blue-300"
+        {/* Scrollable Message History */}
+        <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-2.5 text-xs">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-2xs ${
+                  msg.sender === "user"
+                    ? "rounded-tr-xs bg-brand text-white dark:bg-blue-600"
+                    : "rounded-tl-xs border border-line/60 bg-surface/80 text-ink dark:border-line/40 dark:bg-slate-900/60"
+                }`}
               >
-                {chip}
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {/* Action Link Button if Available */}
+          {actionLink && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => handleLinkClick(actionLink)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand hover:text-white transition-all shadow-2xs dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white"
+              >
+                <span>{actionLinkLabel || "Buka Tautan"}</span>
+                <ArrowUpRight className="size-3.5" />
               </button>
-            ))}
+            </div>
+          )}
+
+          {/* Thinking / Loading Indicator */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-line/60 bg-surface/80 px-3 py-2 text-xs text-body dark:border-line/40 dark:bg-slate-900/60">
+                <span className="size-1.5 rounded-full bg-blue-500 animate-bounce" />
+                <span className="size-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]" />
+                <span className="size-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]" />
+                <span className="text-[11px] text-body ms-1">Sedang berpikir...</span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Suggested Quick Question Chips */}
+        {quickReplies.length > 0 && (
+          <div className="shrink-0 border-t border-line/40 bg-surface/30 px-3 py-2 dark:bg-slate-900/20">
+            <div className="flex flex-wrap gap-1.5">
+              {quickReplies.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleQuickClick(q)}
+                  className="rounded-lg border border-line/70 bg-white/90 px-2 py-1 text-[11px] font-medium text-ink transition-all hover:border-brand/50 hover:bg-brand/5 hover:text-brand disabled:opacity-50 dark:border-line/40 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Input Field */}
-      <form onSubmit={handleSubmit} className="relative mt-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Tanya tentang Zekk..."
-          maxLength={300}
-          disabled={isLoading}
-          className="w-full rounded-xl border border-line/80 bg-surface/60 py-2 pl-3 pr-9 text-xs text-ink placeholder:text-body/60 outline-none transition-colors focus:border-brand focus:bg-white focus:ring-1 focus:ring-brand dark:border-line/60 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:bg-slate-950"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || isLoading}
-          aria-label="Kirim pertanyaan"
-          className="absolute right-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-brand text-white transition-opacity disabled:opacity-30 dark:bg-blue-600"
+        {/* Pinned Input Form */}
+        <form
+          onSubmit={handleSubmit}
+          className="shrink-0 border-t border-line/60 bg-white p-2.5 dark:bg-[#111422]"
         >
-          <Send className="size-3" />
-        </button>
-      </form>
-
-      {/* Subtle speech pointer notch at bottom */}
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-1.5 left-6 size-3 rotate-45 border-b border-r border-line/80 bg-white dark:border-line/60 dark:bg-[#111422]"
-      />
-    </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Tanya seputar Zekk..."
+              disabled={isLoading}
+              className="flex-1 rounded-xl border border-line/70 bg-surface/50 px-3 py-2 text-xs text-ink placeholder:text-body focus:border-brand focus:bg-white focus:outline-none dark:border-line/40 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:bg-slate-900 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              aria-label="Kirim Pesan"
+              className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand text-white transition-transform active:scale-95 hover:bg-brand/90 disabled:opacity-40 disabled:pointer-events-none dark:bg-blue-600 dark:hover:bg-blue-500 shadow-2xs"
+            >
+              <Send className="size-3.5" />
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
   );
 }

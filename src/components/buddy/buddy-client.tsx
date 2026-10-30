@@ -10,12 +10,11 @@ import "@/components/buddy/buddy.css";
 
 export function BuddyClient() {
   const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastReply, setLastReply] = useState<string>(
-    "Hi! Aku Miss Minute, buddy-nya Zekk. Mau lihat proyek, skill, CV, atau tanya sesuatu?"
+    "Hi! Aku Miss Minute, companion portofolio Zekk. Mau lihat proyek, tech stack, CV ATS, atau tanya sesuatu?"
   );
   const [quickReplies, setQuickReplies] = useState<string[]>([
     "Siapa Zekk?",
@@ -28,17 +27,10 @@ export function BuddyClient() {
 
   const replyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize client environment & preferences
+  // Initialize client preferences
   useEffect(() => {
     setMounted(true);
 
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile, { passive: true });
-
-    // Read stored hidden state
     try {
       const storedHidden = localStorage.getItem(BUDDY_CONFIG.hiddenKey);
       if (storedHidden === "true") {
@@ -47,19 +39,15 @@ export function BuddyClient() {
     } catch {
       // ignore
     }
-
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
   }, []);
 
   const isPaused = isChatOpen;
 
-  const { domRef, state, playAction, setState } = useBuddyRoaming({
-    isPaused,
-    isHidden,
-    isMobile,
-  });
+  const { domRef, state, deviceMode, isDocked, playAction, setState } =
+    useBuddyRoaming({
+      isPaused,
+      isHidden,
+    });
 
   // Toggle chat or trigger greeting
   const handleSpriteClick = useCallback(() => {
@@ -72,10 +60,10 @@ export function BuddyClient() {
   }, [isChatOpen, playAction]);
 
   const handleSpriteHover = useCallback(() => {
-    if (!isChatOpen && state === "idle") {
+    if (!isChatOpen && state === "idle" && deviceMode === "desktop") {
       playAction("waiting", 1200);
     }
-  }, [isChatOpen, playAction, state]);
+  }, [deviceMode, isChatOpen, playAction, state]);
 
   // Send message to API
   const handleSendMessage = useCallback(
@@ -182,7 +170,7 @@ export function BuddyClient() {
   // Minimized dock button when user chooses to hide Miss Minute
   if (isHidden) {
     return (
-      <div className="fixed bottom-5 left-4 z-40 pointer-events-auto">
+      <div className="fixed bottom-4 left-4 z-40 pointer-events-auto">
         <button
           type="button"
           onClick={handleShow}
@@ -202,15 +190,16 @@ export function BuddyClient() {
   return (
     <div
       ref={domRef}
-      className="fixed bottom-5 sm:bottom-6 left-0 z-40 pointer-events-none transition-transform will-change-transform"
+      className={`buddy-root pointer-events-none ${isDocked ? "opacity-90" : "opacity-100"}`}
       style={{
         transform: "translate3d(24px, 0, 0)",
       }}
     >
       <div className="relative">
-        {/* Contextual Chat Bubble */}
+        {/* Contextual Chat (Floating on Desktop, Bottom-Sheet on Mobile) */}
         <BuddyChat
           isOpen={isChatOpen}
+          deviceMode={deviceMode}
           onClose={() => setIsChatOpen(false)}
           onMinimize={handleHide}
           onSendMessage={handleSendMessage}
@@ -224,7 +213,7 @@ export function BuddyClient() {
         {/* Animated Sprite */}
         <BuddySprite
           state={state}
-          isMobile={isMobile}
+          deviceMode={deviceMode}
           onClick={handleSpriteClick}
           onHover={handleSpriteHover}
         />

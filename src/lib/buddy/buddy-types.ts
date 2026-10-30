@@ -15,6 +15,8 @@ export type BuddyState =
 
 export type BuddyDirection = -1 | 1;
 
+export type DeviceMode = "mobile" | "tablet" | "desktop";
+
 export interface BuddyPosition {
   x: number;
   y: number;
@@ -34,6 +36,7 @@ export interface BuddyConfig {
   cols: number;
   rows: number;
   desktopSize: { width: number; height: number };
+  tabletSize: { width: number; height: number };
   mobileSize: { width: number; height: number };
   speed: number; // pixels per second
   idleIntervalMin: number; // ms

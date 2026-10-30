@@ -5,8 +5,67 @@
   image-rendering: crisp-edges;
 }
 
+.buddy-root {
+  position: fixed;
+  left: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 35;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.buddy-interactive {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+/* DESKTOP & TABLET: Floating chat bubble anchored above the buddy */
+.buddy-chat-floating {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 0;
+  width: min(320px, calc(100vw - 40px));
+  max-height: min(440px, 65dvh);
+  z-index: 50;
+  pointer-events: auto;
+}
+
+/* MOBILE (<768px): Compact Bottom-Sheet Chat Layout */
+@media (max-width: 767px) {
+  .buddy-root {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .buddy-chat-bottom-sheet {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-width: 420px;
+    margin: 0 auto;
+    max-height: min(440px, 60dvh);
+    z-index: 60;
+    pointer-events: auto;
+  }
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .buddy-root {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Accessibility: Prefers Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  .buddy-container {
+  .buddy-root {
+    transition: none !important;
+  }
+
+  .buddy-roaming {
+    animation: none !important;
     transition: none !important;
   }
 }

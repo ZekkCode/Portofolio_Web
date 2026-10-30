@@ -1104,12 +1104,12 @@ const Lanyard = ({
       
       // Jamin headroom atas yang cukup agar kartu yang berputar diagonal dan berayun tidak pernah terpotong
       // Headroom dermawan: beri ruang minimal 1.2x diagonal kartu di atas kartu agar ayunan ekstrem tidak pernah terpotong
-      const minHeadroom = cardDiag * 0.75 + 0.85;
-      const headroom = Math.max(minHeadroom, layout.height * 1.35 * strapRatio + 0.65);
+      const minHeadroom = cardDiag * 0.35 + 0.3;
+      const headroom = Math.max(minHeadroom, layout.height * 1.05 * strapRatio + 0.35);
 
       // Total viewHeight mencakup headroom atas + tinggi kartu + ruang ayunan bawah
-      const neededHeight = headroom + layout.height + cardDiag * 0.65 + 0.5;
-      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight, 7.2);
+      const neededHeight = headroom + layout.height + cardDiag * 0.45 + 0.4;
+      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight, 5.8);
       const minimumWidth = Math.max(layout.width * 2.8, cardDiag * 1.8, 4.8);
       if (viewHeight * aspect < minimumWidth) viewHeight = minimumWidth / aspect;
       const viewWidth = viewHeight * aspect;

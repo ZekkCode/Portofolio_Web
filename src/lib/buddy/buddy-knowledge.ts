@@ -21,7 +21,7 @@ export function queryBuddyKnowledge(rawMessage: string, langHint: "id" | "en" = 
     return {
       reply: isEn
         ? "Hi there! I'm Miss Minute, Zekk's companion. What would you like to know about his projects, skills, or CV?"
-        : "Hai! Aku Miss Minute, buddy-nya Zekk. Mau lihat proyek unggulan, keahlian, atau tanya sesuatu tentang Zekk?",
+        : "Halo! Mau aku antar ke seksi proyek, intip tech stack, atau buka berkas CV ATS Zekk?",
       action: "greeting",
       quickReplies: isEn
         ? ["Who is Zekk?", "View Projects", "Tech Stack", "Download CV"]

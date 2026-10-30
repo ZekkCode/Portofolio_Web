@@ -14,14 +14,9 @@ export function BuddyClient() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastReply, setLastReply] = useState<string>(
-    "Hi! Aku Miss Minute, companion portofolio Zekk. Mau lihat proyek, tech stack, CV ATS, atau tanya sesuatu?"
+    "Halo! Mau aku antar ke seksi proyek, intip tech stack, atau buka berkas CV ATS Zekk?"
   );
-  const [quickReplies, setQuickReplies] = useState<string[]>([
-    "Siapa Zekk?",
-    "Lihat Proyek",
-    "Tech Stack",
-    "Download CV",
-  ]);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [actionLink, setActionLink] = useState<string | undefined>(undefined);
   const [actionLinkLabel, setActionLinkLabel] = useState<string | undefined>(undefined);
 

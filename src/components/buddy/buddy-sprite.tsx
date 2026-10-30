@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { BUDDY_CONFIG, BUDDY_ROW_MAP, BuddyRowKey } from "@/lib/buddy/buddy-config";
 import { BuddyState, DeviceMode } from "@/lib/buddy/buddy-types";
 
@@ -17,8 +17,11 @@ export function BuddySprite({
   onClick,
   onHover,
 }: BuddySpriteProps) {
-  const [frame, setFrame] = useState(0);
+  const spriteRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef(0);
+  const lastTimeRef = useRef(0);
   const frameRef = useRef(0);
+  const accRef = useRef(0);
 
   const { width, height } =
     deviceMode === "mobile"
@@ -33,33 +36,62 @@ export function BuddySprite({
     return BUDDY_ROW_MAP[key] ?? BUDDY_ROW_MAP.idle;
   }, [state]);
 
-  // Frame ticker based on row FPS
-  useEffect(() => {
-    frameRef.current = 0;
-    setFrame(0);
-
-    const interval = 1000 / rowDef.fps;
-    const timer = setInterval(() => {
-      let nextFrame = frameRef.current + 1;
-      if (nextFrame >= rowDef.frames) {
-        if (rowDef.loop) {
-          nextFrame = 0;
-        } else {
-          nextFrame = rowDef.frames - 1;
-        }
-      }
-      frameRef.current = nextFrame;
-      setFrame(nextFrame);
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [rowDef]);
-
-  // Calculate pixel offsets for the 8x9 atlas
-  const bgPosX = -(frame * width);
-  const bgPosY = -(rowDef.index * height);
+  // Precomputed atlas sizes
   const totalBgWidth = width * BUDDY_CONFIG.cols;
   const totalBgHeight = height * BUDDY_CONFIG.rows;
+
+  // RAF-based frame ticker — synced with browser paint cycle
+  const tick = useCallback(
+    (now: number) => {
+      const el = spriteRef.current;
+      if (!el) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      if (lastTimeRef.current === 0) lastTimeRef.current = now;
+      const dt = now - lastTimeRef.current;
+      lastTimeRef.current = now;
+
+      const interval = 1000 / rowDef.fps;
+      accRef.current += dt;
+
+      if (accRef.current >= interval) {
+        accRef.current -= interval;
+
+        let nextFrame = frameRef.current + 1;
+        if (nextFrame >= rowDef.frames) {
+          nextFrame = rowDef.loop ? 0 : rowDef.frames - 1;
+        }
+        frameRef.current = nextFrame;
+
+        // Direct DOM update — no React re-render
+        const bgPosX = -(nextFrame * width);
+        const bgPosY = -(rowDef.index * height);
+        el.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    },
+    [rowDef, width, height]
+  );
+
+  // Start/restart RAF on state change
+  useEffect(() => {
+    frameRef.current = 0;
+    accRef.current = 0;
+    lastTimeRef.current = 0;
+
+    // Set initial position immediately
+    const el = spriteRef.current;
+    if (el) {
+      const bgPosY = -(rowDef.index * height);
+      el.style.backgroundPosition = `0px ${bgPosY}px`;
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [tick, rowDef, height]);
 
   return (
     <button
@@ -74,12 +106,12 @@ export function BuddySprite({
         height: `${height}px`,
       }}
     >
-      {/* Sprite element with crisp pixel rendering */}
+      {/* Sprite element with crisp pixel rendering — position updated via RAF, not React state */}
       <div
+        ref={spriteRef}
         className="w-full h-full buddy-pixelated"
         style={{
           backgroundImage: `url(${BUDDY_CONFIG.spritesheetUrl})`,
-          backgroundPosition: `${bgPosX}px ${bgPosY}px`,
           backgroundSize: `${totalBgWidth}px ${totalBgHeight}px`,
           backgroundRepeat: "no-repeat",
           imageRendering: "pixelated",

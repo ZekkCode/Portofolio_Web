@@ -226,6 +226,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
+      <head>
+        <link rel="preload" as="image" type="image/webp" href="/pets/miss-minute-blue.webp" />
+      </head>
       <body className="antialiased">
         <Script
           id="structured-data"

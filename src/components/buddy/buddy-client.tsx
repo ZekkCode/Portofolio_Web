@@ -185,7 +185,7 @@ export function BuddyClient() {
   return (
     <div
       ref={domRef}
-      className={`buddy-root pointer-events-none ${isDocked ? "opacity-90" : "opacity-100"}`}
+      className={`buddy-root pointer-events-none ${isChatOpen ? "!z-50" : ""} ${isDocked ? "opacity-90" : "opacity-100"}`}
       style={{
         transform: "translate3d(24px, 0, 0)",
       }}

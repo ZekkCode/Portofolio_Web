@@ -141,6 +141,28 @@ export function BuddyChat({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Close when clicking outside chat dialog
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      if (
+        containerRef.current?.contains(target) ||
+        target.closest(".buddy-interactive")
+      ) {
+        return;
+      }
+
+      onClose();
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,32 +242,17 @@ export function BuddyChat({
     }
   };
 
-  const isMobile = deviceMode === "mobile";
-
   return (
     <>
-      {/* Mobile Backdrop */}
-      {isMobile && (
-        <div
-          role="presentation"
-          onClick={onClose}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity md:hidden"
-        />
-      )}
-
-      {/* Main Dialogue Card */}
+      {/* Main Dialogue Speech Balloon */}
       <div
         ref={containerRef}
         role="dialog"
         aria-label="Dialog Miss Minute"
-        className={
-          isMobile
-            ? "buddy-chat-bottom-sheet relative flex flex-col rounded-2xl border border-line/80 bg-white/95 shadow-2xl backdrop-blur-xl transition-all duration-200 dark:border-line/60 dark:bg-[#10131f]/95 dark:text-slate-100 overflow-hidden"
-            : "buddy-chat-floating relative flex flex-col rounded-2xl border border-line/80 bg-white/95 shadow-xl shadow-brand/5 backdrop-blur-xl transition-all duration-200 dark:border-line/60 dark:bg-[#10131f]/95 dark:text-slate-100 overflow-visible"
-        }
+        className="buddy-chat-floating relative flex flex-col rounded-2xl border border-line/80 bg-white/95 shadow-xl shadow-brand/10 backdrop-blur-xl transition-all duration-200 dark:border-line/60 dark:bg-[#10131f]/95 dark:text-slate-100 overflow-visible"
         style={{
-          width: isMobile ? "min(320px, calc(100vw - 28px))" : "296px",
-          maxHeight: isMobile ? "min(380px, 52dvh)" : "360px",
+          width: "min(296px, calc(100vw - 32px))",
+          maxHeight: "min(360px, 52dvh)",
         }}
       >
         {/* Header: Mascot Identity without AI Slop Clichés */}
@@ -404,13 +411,11 @@ export function BuddyChat({
           </div>
         </form>
 
-        {/* Speech Pointer / Caret pointing down to Miss Minute (Desktop/Tablet) */}
-        {!isMobile && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-1.5 left-6 size-2.5 rotate-45 border-b border-r border-line/80 bg-white dark:border-line/60 dark:bg-[#10131f]"
-          />
-        )}
+        {/* Speech Pointer / Caret pointing down to Miss Minute */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-1.5 left-6 size-2.5 rotate-45 border-b border-r border-line/80 bg-white dark:border-line/60 dark:bg-[#10131f]"
+        />
       </div>
     </>
   );

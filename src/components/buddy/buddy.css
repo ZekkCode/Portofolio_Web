@@ -20,31 +20,28 @@
   touch-action: manipulation;
 }
 
-/* DESKTOP & TABLET: Floating chat bubble anchored above the buddy */
+/* Floating speech bubble anchored directly above Miss Minute */
 .buddy-chat-floating {
   position: absolute;
   bottom: calc(100% + 12px);
   left: 0;
   width: min(296px, calc(100vw - 36px));
-  max-height: min(350px, 55dvh);
+  max-height: min(360px, 55dvh);
   z-index: 50;
   pointer-events: auto;
 }
 
-/* MOBILE (<768px): Compact Bottom-Sheet Chat Layout */
+/* Mobile (<768px): Compact Speech Bubble with safe area */
 @media (max-width: 767px) {
   .buddy-root {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
-  .buddy-chat-bottom-sheet {
-    position: fixed;
-    left: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    width: min(320px, calc(100vw - 24px));
+  .buddy-chat-floating {
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: min(296px, calc(100vw - 32px));
     max-height: min(360px, 52dvh);
-    z-index: 60;
-    pointer-events: auto;
   }
 }
 

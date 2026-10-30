@@ -52,7 +52,7 @@ function Header() {
           </span>
         </SmoothNavLink>
 
-        <div className="flex items-center gap-2 sm:gap-2.5 pe-14 md:pe-0">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {isVerified && (
             <span
               className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-md transition-all duration-300 ${
@@ -645,7 +645,7 @@ export default function Home() {
       <Header />
       <PortfolioPillNav />
       <ScrollToTop />
-      <main>
+      <main className="pe-11 md:pe-0 transition-[padding] duration-200">
         <Hero />
         <About />
         <ServicesSection />

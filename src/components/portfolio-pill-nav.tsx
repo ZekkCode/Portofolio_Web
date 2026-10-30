@@ -6,7 +6,6 @@ import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
 import PillNav, { type PillNavItem } from "@/components/pill-nav";
 import { useSmoothScrollTo } from "@/components/parallax";
-import { profile } from "@/lib/profile";
 import { FileText, FolderOpen, Layers3, Mail, UserRound } from "lucide-react";
 
 const SECTION_NAV_MAP: Record<string, string> = {
@@ -117,6 +116,11 @@ export function PortfolioPillNav() {
       setScrolled(scrollY > 80);
 
       // Otomatis menghilang saat mencapai area footer di paling bawah halaman
+      if (scrollY <= 250) {
+        setAtBottom(false);
+        return;
+      }
+
       const footer = document.querySelector("footer");
       if (footer) {
         const rect = footer.getBoundingClientRect();
@@ -167,15 +171,6 @@ export function PortfolioPillNav() {
     },
   ];
 
-  const mobileNavItems: PillNavItem[] = [
-    ...desktopNavItems,
-    {
-      label: t("nav.email", "Email"),
-      href: `mailto:${profile.contact.email}`,
-      icon: <Mail size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-  ];
-
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {
     if (item.href?.startsWith("#")) {
       e.preventDefault();
@@ -183,6 +178,59 @@ export function PortfolioPillNav() {
     } else if (item.href?.startsWith("http")) {
       e.preventDefault();
       window.open(item.href, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const mobileRailItems = [
+    {
+      id: "atas",
+      label: "Home",
+      href: "#atas",
+      icon: (
+        <span className="font-display text-[10.5px] font-black italic tracking-tighter text-inherit">
+          ZT
+        </span>
+      ),
+    },
+    {
+      id: "tentang",
+      label: t("nav.about", "Tentang"),
+      href: "#tentang",
+      icon: <UserRound size={17} strokeWidth={2} aria-hidden="true" />,
+    },
+    {
+      id: "cv",
+      label: t("nav.cv", "CV ATS"),
+      href: "#cv",
+      icon: <FileText size={17} strokeWidth={2} aria-hidden="true" />,
+    },
+    {
+      id: "stack",
+      label: t("nav.stack", "Tech Stack"),
+      href: "#stack",
+      icon: <Layers3 size={17} strokeWidth={2} aria-hidden="true" />,
+    },
+    {
+      id: "proyek",
+      label: t("nav.projects", "Proyek"),
+      href: "#proyek",
+      icon: <FolderOpen size={17} strokeWidth={2} aria-hidden="true" />,
+    },
+    {
+      id: "kontak",
+      label: t("nav.contact", "Kontak"),
+      href: "#kontak",
+      icon: <Mail size={17} strokeWidth={2} aria-hidden="true" />,
+    },
+  ];
+
+  const handleMobileNavClick = (href: string, e: React.MouseEvent<HTMLElement>) => {
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      scrollTo(href, -76);
+    } else if (href.startsWith("http")) {
+      e.preventDefault();
+      window.open(href, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -226,22 +274,53 @@ export function PortfolioPillNav() {
         </div>
       </div>
 
-      {/* MOBILE: Positioned on the trailing edge with safe-area top inset */}
-      <div className="fixed top-[calc(0.625rem+env(safe-area-inset-top,0px))] end-4 z-50 flex justify-end md:hidden">
-        <PillNav
-          items={mobileNavItems}
-          activeHref={activeSection}
-          onItemClick={handleItemClick}
-          collapse="always"
-          surface="solid"
-          theme={navTheme}
-          size="md"
-          highlightColor="#1b45c4"
-          highlightTextColor="#ffffff"
-          ariaLabel="Navigasi Mobile"
-          className="w-auto transition-all duration-300 data-[open]:w-60 data-[open]:max-w-[calc(100vw-2rem)] shadow-lg"
-        />
-      </div>
+      {/* MOBILE: Sleek vertical icon-only rail along the right edge */}
+      <nav
+        aria-label="Navigasi Cepat Mobile"
+        className={`fixed end-[calc(0.625rem+env(safe-area-inset-right,0px))] top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-full border border-line/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-md transition-all duration-300 md:hidden dark:border-white/10 dark:bg-[#0c0e17]/90 ${
+          !atBottom
+            ? "translate-x-0 opacity-100 pointer-events-auto"
+            : "translate-x-12 opacity-0 pointer-events-none"
+        }`}
+      >
+        {mobileRailItems.map((item, index) => {
+          const isHome = item.id === "atas";
+          const isActive = isHome
+            ? !activeSection || activeSection === "#atas"
+            : activeSection === item.href;
+
+          return (
+            <div key={item.id} className="flex flex-col items-center">
+              {/* Subtle divider below home button */}
+              {index === 1 && (
+                <span
+                  className="mb-1.5 h-px w-4 bg-line/80 dark:bg-white/10"
+                  aria-hidden="true"
+                />
+              )}
+              <a
+                href={item.href}
+                onClick={(e) => handleMobileNavClick(item.href, e)}
+                aria-label={item.label}
+                aria-current={isActive ? "location" : undefined}
+                title={item.label}
+                className={`group relative flex size-9 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                  isActive
+                    ? "bg-brand text-white shadow-md shadow-brand/35 scale-105"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10"
+                }`}
+              >
+                {item.icon}
+
+                {/* Floating tooltip label on hover/focus */}
+                <span className="pointer-events-none absolute end-[calc(100%+8px)] top-1/2 -translate-y-1/2 rounded-md bg-slate-900/95 px-2 py-1 text-[11px] font-medium text-white shadow-md backdrop-blur-xs whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 dark:bg-slate-800/95">
+                  {item.label}
+                </span>
+              </a>
+            </div>
+          );
+        })}
+      </nav>
     </>
   );
 }

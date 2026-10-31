@@ -129,6 +129,15 @@ export const translations = {
       emptyTitle: "Koleksi Proyek Segera Hadir",
       emptyDesc: "Dokumentasi dan studi kasus proyek sedang dalam tahap kurasi dan pembaruan berkala. Kunjungi repositori GitHub untuk melihat kode sumber langsung.",
     },
+    blog: {
+      title: "Latest from ZekkTech Blog",
+      desc: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.",
+      allPostsBtn: "Lihat Semua Artikel",
+      readBtn: "Baca",
+      newTabHint: "Buka di tab baru",
+      emptyTitle: "Belum Ada Artikel",
+      emptyDesc: "Kunjungi blog resmi untuk membaca artikel terbaru seputar rekayasa web dan teknologi.",
+    },
     repoModal: {
       dialogLabel: "Pratinjau Repositori:",
       closeAria: "Tutup pratinjau",
@@ -285,6 +294,15 @@ export const translations = {
       focus: "Focus:",
       emptyTitle: "Project Showcase Coming Soon",
       emptyDesc: "Case studies and project documentations are currently being curated. Visit the GitHub repository to explore direct source code.",
+    },
+    blog: {
+      title: "Latest from ZekkTech Blog",
+      desc: "Notes, discussions, and articles on technology and the digital world.",
+      allPostsBtn: "View All Articles",
+      readBtn: "Read",
+      newTabHint: "Open in new tab",
+      emptyTitle: "No Articles Yet",
+      emptyDesc: "Visit the official blog to read the latest articles on web engineering and technology.",
     },
     repoModal: {
       dialogLabel: "Repository Preview:",

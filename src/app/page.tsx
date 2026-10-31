@@ -10,6 +10,7 @@ import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
 import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ProfileCardStage } from "@/components/profile-card-stage";
 import { ProjectsSection } from "@/components/projects-section";
+import { BlogPreviewSection } from "@/components/blog-preview-section";
 import { ServicesSection } from "@/components/services-section";
 import { CertificatesSection } from "@/components/certificates-section";
 import { ExperienceTimeline } from "@/components/experience-timeline";
@@ -652,6 +653,7 @@ export default function Home() {
         <CvFolderSection />
         <Stack />
         <ProjectsSection />
+        <BlogPreviewSection />
         <CertificatesSection />
         <FaqSection />
         <Contact />

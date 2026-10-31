@@ -11,10 +11,10 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline'",
   // Fonts are bundled locally into /_next/static/media/ ('self') and data:
   "font-src 'self' data:",
-  // Allowed image sources: local, data URI, blob (Three.js/PDF), Supabase storage, Cloudflare R2, GitHub
-  "img-src 'self' data: blob: https://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://raw.githubusercontent.com https://avatars.githubusercontent.com",
-  // Allowed API & WebSocket connections: Supabase REST/Realtime, Cloudflare R2, Vercel Insights
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://vitals.vercel-insights.com",
+  // Allowed image sources: local, data URI, blob (Three.js/PDF), Supabase storage, Cloudflare R2, Workers CDN, ZekkTech Blog, GitHub
+  "img-src 'self' data: blob: https://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://raw.githubusercontent.com https://avatars.githubusercontent.com",
+  // Allowed API & WebSocket connections: Supabase REST/Realtime, Cloudflare R2, Workers CDN, ZekkTech Blog, Vercel Insights
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://vitals.vercel-insights.com",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -42,6 +42,24 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.workers.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "zekktech.biz.id",
+      },
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+      },
+    ],
   },
   async headers() {
     return [

@@ -1,5 +1,24 @@
 export const translations = {
   id: {
+    academic: {
+      title: "Perjalanan Akademik",
+      description: "Latar pendidikan dan bidang yang terus saya pelajari.",
+      present: "Sekarang",
+      focus: "Fokus pembelajaran",
+    },
+    achievements: {
+      title: "Achievements & Recognition",
+      description: "Program dan pengalaman yang memperluas kontribusi saya di komunitas.",
+      ambassador: "Program Ambassador",
+      award: "Penghargaan",
+      evidence: "Lihat Bukti",
+    },
+    projectCategories: {
+      all: "Semua Karya",
+      it: "IT & Software",
+      design: "Design & Creative",
+      noMatch: "Belum ada karya terpublikasi dalam kategori ini.",
+    },
     nav: {
       about: "Tentang",
       services: "Layanan",
@@ -166,6 +185,25 @@ export const translations = {
     },
   },
   en: {
+    academic: {
+      title: "Academic Journey",
+      description: "My educational background and the fields I continue to explore.",
+      present: "Present",
+      focus: "Areas of study",
+    },
+    achievements: {
+      title: "Achievements & Recognition",
+      description: "Programs and experiences that broaden my community involvement.",
+      ambassador: "Ambassador Program",
+      award: "Award",
+      evidence: "View Evidence",
+    },
+    projectCategories: {
+      all: "All Work",
+      it: "IT & Software",
+      design: "Design & Creative",
+      noMatch: "No published works in this category yet.",
+    },
     nav: {
       about: "About",
       services: "Services",

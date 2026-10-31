@@ -205,12 +205,15 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     statusColor: "#22c55e",
   };
 
-  const rawProjects = Array.isArray(raw.projects) ? raw.projects : defaultProjects;
-  const normalizedProjects = rawProjects
-    .filter((p): p is Project => Boolean(p && typeof p === "object" && typeof p.id === "string"))
-    .map((p) => ({
+  const rawProjects: unknown[] = Array.isArray(raw.projects) ? raw.projects : defaultProjects;
+  const normalizedProjects: Project[] = rawProjects
+    .filter((p): p is Project => {
+      if (!p || typeof p !== "object") return false;
+      return typeof (p as Partial<Project>).id === "string";
+    })
+    .map((p): Project => ({
       id: p.id,
-      category: p.category === "design" || p.category === "both" ? p.category : "it",
+      category: p.category === "design" || p.category === "both" || p.category === "it" ? p.category : "it",
       title: typeof p.title === "string" ? p.title : "Proyek",
       desc: typeof p.desc === "string" ? p.desc : "",
       tags: Array.isArray(p.tags) ? p.tags.filter((t) => typeof t === "string") : [],
@@ -243,4 +246,3 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     cvDocs: normalizedCvDocs,
   };
 };
-

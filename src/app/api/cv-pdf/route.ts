@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { createServerClient } from "@supabase/ssr";
 import { defaultCvDocs, normalizeConfig, type CvDocConfig } from "@/lib/site-config";
-import { createPresignedCvUrl, isR2Configured, getR2Config } from "@/lib/r2";
+import { createPresignedUrl, isR2Configured, getR2Config, extractR2Key } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -69,25 +69,19 @@ async function resolveSafeLocalFile(inputPath: string): Promise<{ fullPath: stri
 }
 
 /**
- * Validasi URL eksternal R2 yang diizinkan untuk redirect.
- * Mencegah Open Redirect ke sembarang domain luar.
+ * Validasi URL Cloudflare R2 yang terdaftar di konfigurasi.
  */
 function isAllowedR2Url(url: string): boolean {
   if (!url || typeof url !== "string") return false;
 
   // Path internal R2 key atau rute proxy backend
-  if (url.startsWith("cv/") || url.startsWith("uploads/") || url.startsWith("/api/r2-file")) {
+  if (url.startsWith("cv/") || url.startsWith("/api/r2-file")) {
     return true;
   }
 
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-
-    // Izinkan domain resmi Cloudflare R2
-    if (parsed.hostname.endsWith(".r2.cloudflarestorage.com")) {
-      return true;
-    }
 
     // Izinkan custom public domain R2 yang terkonfigurasi di env
     const r2Cfg = getR2Config();
@@ -108,7 +102,7 @@ function isAllowedR2Url(url: string): boolean {
  * Membaca konfigurasi cvDocs dari Supabase atau fallback lokal.
  * Standarisasi: Query ID "current" terlebih dahulu, lalu fallback ke "main".
  */
-async function getStoredCvDoc(roleKey?: string | null): Promise<CvDocConfig | undefined> {
+async function getStoredCvDoc(identifier?: string | null): Promise<CvDocConfig> {
   let cvDocs: CvDocConfig[] = defaultCvDocs;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -151,9 +145,9 @@ async function getStoredCvDoc(roleKey?: string | null): Promise<CvDocConfig | un
     }
   }
 
-  if (roleKey) {
-    const cleanRole = roleKey.toLowerCase().trim();
-    const match = cvDocs.find((d) => d.roleKey === cleanRole || d.id === cleanRole);
+  if (identifier) {
+    const cleanId = identifier.toLowerCase().trim();
+    const match = cvDocs.find((d) => d.roleKey === cleanId || d.id === cleanId);
     if (match) return match;
   }
 
@@ -175,40 +169,47 @@ export async function HEAD(request: NextRequest) {
   });
 }
 
+/**
+ * Endpoint Terverifikasi Pengambilan CV
+ * 
+ * Keamanan Ketat:
+ * 1. Tidak menerima parameter 'url' sembarang dari user untuk mencegah Open Redirect / Arbitrary Presigning.
+ * 2. Hanya menerima identifier dokumen terverifikasi ('role' atau 'docId') yang dipetakan oleh server.
+ * 3. Presigned URL menggunakan kedaluwarsa singkat (900 detik / 15 menit).
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const role = searchParams.get("role");
-  const directUrl = searchParams.get("url");
+  // Hanya baca identifier terotorisasi ('role' atau 'docId' / 'id')
+  const identifier = searchParams.get("role") || searchParams.get("docId") || searchParams.get("id");
+  const wantsDownload = searchParams.get("download") === "1";
   const wantsJson =
     request.headers.get("accept")?.includes("application/json") ||
     searchParams.get("format") === "json";
 
-  // Mencegah Open Redirect jika directUrl adalah URL eksternal yang tidak diizinkan
-  if (directUrl && /^https?:\/\//i.test(directUrl)) {
-    if (!isAllowedR2Url(directUrl)) {
-      return NextResponse.json(
-        { error: "URL eksternal tidak diizinkan. Hanya sumber terverifikasi yang diperbolehkan." },
-        { status: 400, headers: CORS_HEADERS }
-      );
-    }
-  }
+  // Resolusi dokumen hanya melalui konfigurasi server terpercaya
+  const doc = await getStoredCvDoc(identifier);
+  const targetPdf = (doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
+  const safeFilename = doc?.title
+    ? `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`
+    : "CV-ATS-ZakariaMP-2025.pdf";
 
-  const doc = await getStoredCvDoc(role);
-  const candidateUrl = (directUrl || doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
-
-  // 1. Jika URL berada di Cloudflare R2
-  if (isAllowedR2Url(candidateUrl) && isR2Configured()) {
+  // 1. Jika dokumen berada di Cloudflare R2
+  if (isAllowedR2Url(targetPdf) && isR2Configured()) {
     try {
-      const signedUrl = await createPresignedCvUrl(
-        candidateUrl,
-        "CV-ATS-ZakariaMP-2025.pdf",
-        3600
-      );
+      const config = getR2Config();
+      const key = extractR2Key(targetPdf, config?.bucketName);
+
+      // Buat presigned URL dengan kedaluwarsa singkat (15 menit)
+      const signedUrl = await createPresignedUrl(key, {
+        expiresIn: 900,
+        contentType: "application/pdf",
+        downloadFilename: wantsDownload ? safeFilename : undefined,
+      });
 
       if (signedUrl) {
         if (wantsJson) {
           return NextResponse.json(
-            { url: signedUrl, filename: "CV-ATS-ZakariaMP-2025.pdf" },
+            { url: signedUrl, filename: safeFilename },
             { headers: CORS_HEADERS }
           );
         }
@@ -219,21 +220,22 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. Jika candidateUrl adalah URL R2 terverifikasi tanpa presigning
-  if (/^https?:\/\//i.test(candidateUrl) && isAllowedR2Url(candidateUrl)) {
+  // 2. Jika dokumen adalah rute proxy backend internal
+  if (targetPdf.startsWith("/api/r2-file")) {
+    const proxyUrl = wantsDownload ? `${targetPdf}&download=1` : targetPdf;
     if (wantsJson) {
       return NextResponse.json(
-        { url: candidateUrl, filename: "CV-ATS-ZakariaMP-2025.pdf" },
+        { url: proxyUrl, filename: safeFilename },
         { headers: CORS_HEADERS }
       );
     }
-    return NextResponse.redirect(candidateUrl, 302);
+    return NextResponse.redirect(new URL(proxyUrl, request.url).toString(), 302);
   }
 
   // 3. Fallback menyajikan berkas PDF lokal yang divalidasi secara aman
-  const safeFile = await resolveSafeLocalFile(candidateUrl);
+  const safeFile = await resolveSafeLocalFile(targetPdf);
   if (!safeFile) {
-    // Fallback darurat ke berkas default jika candidateUrl tidak lolos
+    // Fallback darurat ke berkas default ATS jika targetPdf tidak lolos
     const defaultFile = await resolveSafeLocalFile("cv-ats-zakariamp-2025.pdf");
     if (!defaultFile) {
       return NextResponse.json(
@@ -245,7 +247,10 @@ export async function GET(request: NextRequest) {
     try {
       const fileBuffer = await readFile(/*turbopackIgnore: true*/ defaultFile.fullPath);
       if (wantsJson) {
-        return NextResponse.json({ url: "/cv-ats-zakariamp-2025.pdf" }, { headers: CORS_HEADERS });
+        return NextResponse.json(
+          { url: "/cv-ats-zakariamp-2025.pdf", filename: "CV-ATS-ZakariaMP-2025.pdf" },
+          { headers: CORS_HEADERS }
+        );
       }
 
       return new NextResponse(fileBuffer, {
@@ -253,7 +258,9 @@ export async function GET(request: NextRequest) {
         headers: {
           ...CORS_HEADERS,
           "Content-Type": "application/pdf",
-          "Content-Disposition": 'inline; filename="CV-ATS-ZakariaMP-2025.pdf"',
+          "Content-Disposition": wantsDownload
+            ? 'attachment; filename="CV-ATS-ZakariaMP-2025.pdf"'
+            : 'inline; filename="CV-ATS-ZakariaMP-2025.pdf"',
           "Cache-Control": "public, max-age=3600, s-maxage=86400",
         },
       });
@@ -270,7 +277,10 @@ export async function GET(request: NextRequest) {
     const contentType = safeFile.ext === ".pdf" ? "application/pdf" : `image/${safeFile.ext.replace(".", "")}`;
 
     if (wantsJson) {
-      return NextResponse.json({ url: `/${safeFile.filename}` }, { headers: CORS_HEADERS });
+      return NextResponse.json(
+        { url: `/${safeFile.filename}`, filename: safeFile.filename },
+        { headers: CORS_HEADERS }
+      );
     }
 
     return new NextResponse(fileBuffer, {
@@ -278,7 +288,9 @@ export async function GET(request: NextRequest) {
       headers: {
         ...CORS_HEADERS,
         "Content-Type": contentType,
-        "Content-Disposition": `inline; filename="${safeFile.filename}"`,
+        "Content-Disposition": wantsDownload
+          ? `attachment; filename="${safeFile.filename}"`
+          : `inline; filename="${safeFile.filename}"`,
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
       },
     });

@@ -50,6 +50,7 @@ export type ProfileCardConfig = {
 
 export type Project = {
   id: string;
+  category?: "it" | "design" | "both";
   title: string;
   desc: string;
   tags: string[];
@@ -209,6 +210,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     .filter((p): p is Project => Boolean(p && typeof p === "object" && typeof p.id === "string"))
     .map((p) => ({
       id: p.id,
+      category: p.category === "design" || p.category === "both" ? p.category : "it",
       title: typeof p.title === "string" ? p.title : "Proyek",
       desc: typeof p.desc === "string" ? p.desc : "",
       tags: Array.isArray(p.tags) ? p.tags.filter((t) => typeof t === "string") : [],

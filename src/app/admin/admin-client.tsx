@@ -226,6 +226,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     const newProj: Project = {
       id: "project-" + Date.now(),
       title: "Proyek Baru",
+      category: "it",
       desc: "Deskripsi singkat mengenai proyek...",
       image: "/profile.webp",
       previewUrl: "",
@@ -689,6 +690,18 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                         onChange={(e) => updateProject(proj.id, { title: e.target.value })}
                         className={`mt-1 ${inputClass}`}
                       />
+                    </label>
+                    <label className="block text-xs font-semibold text-body">
+                      Kategori Karya
+                      <select
+                        value={proj.category || "it"}
+                        onChange={(event) => updateProject(proj.id, { category: event.target.value as "it" | "design" | "both" })}
+                        className={"mt-1 " + inputClass}
+                      >
+                        <option value="it">IT &amp; Software</option>
+                        <option value="design">Design &amp; Creative</option>
+                        <option value="both">IT + Design</option>
+                      </select>
                     </label>
                     <label className="block text-xs font-semibold text-body">
                       Peran Anda

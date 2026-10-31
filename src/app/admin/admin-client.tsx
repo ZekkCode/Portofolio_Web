@@ -37,9 +37,9 @@ const GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: "Gambar",
     fields: [
-      { key: "frontImage", label: "Gambar depan", kind: "image", hint: "Rasio kartu ≈ 0.71 (mis. 640×900)" },
-      { key: "backImage", label: "Gambar belakang", kind: "image", hint: "Kosong = pakai gambar depan" },
-      { key: "strapImage", label: "Gambar tali", kind: "image", hint: "Gambar lebar, diulang sepanjang tali" },
+      { key: "frontImage", label: "Gambar depan", kind: "image", hint: "Rasio kartu ≈ 0.71 (mis. 640×900). PNG/JPG otomatis dikonversi ke WebP." },
+      { key: "backImage", label: "Gambar belakang", kind: "image", hint: "Kosong = pakai gambar depan. PNG/JPG otomatis dikonversi ke WebP." },
+      { key: "strapImage", label: "Gambar tali", kind: "image", hint: "Gambar lebar, diulang sepanjang tali. PNG/JPG otomatis dikonversi ke WebP." },
       { key: "imageFit", label: "Image fit", kind: "select", options: ["cover", "contain"] },
     ],
   },
@@ -84,6 +84,59 @@ const GROUPS: { title: string; fields: Field[] }[] = [
 const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-line/60 dark:bg-[#151928]";
 
+/**
+ * Konversi gambar raster (PNG, JPG, JPEG) ke format WebP terkompresi
+ * langsung di sisi klien menggunakan HTML5 Canvas.
+ */
+async function convertImageToWebP(file: File, quality = 0.92): Promise<File> {
+  if (file.type === "image/webp") return file;
+  if (!file.type.startsWith("image/")) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const cleanName = file.name.replace(/\.[^/.]+$/, "");
+            const webpFile = new File([blob], `${cleanName}.webp`, {
+              type: "image/webp",
+              lastModified: Date.now(),
+            });
+            resolve(webpFile);
+          },
+          "image/webp",
+          quality
+        );
+      } catch {
+        resolve(file);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
 export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const router = useRouter();
   const storedConfig = useSiteConfig();
@@ -120,10 +173,19 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     fieldKey: string
   ) => {
     setUploadingImage(fieldKey);
-    setStatus("Mengunggah berkas...");
+    setStatus("Memeriksa dan memproses berkas...");
     try {
+      // Konversi otomatis file PNG/JPG ke format WebP
+      let fileToUpload = file;
+      const isPngOrJpg = file.type === "image/png" || file.type === "image/jpeg" || /\.(png|jpe?g)$/i.test(file.name);
+      if (isPngOrJpg) {
+        setStatus("Mengonversi PNG/JPG ke WebP...");
+        fileToUpload = await convertImageToWebP(file);
+      }
+
+      setStatus("Mengunggah berkas WebP...");
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("folder", folder);
 
       const res = await fetch("/api/upload", {
@@ -140,7 +202,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
       callback(data.url);
       setStatus(
         data.provider === "r2"
-          ? "Berkas berhasil diunggah ke Cloudflare R2"
+          ? "Berkas WebP berhasil disimpan ke Cloudflare R2"
           : "Berkas disimpan sebagai data URI"
       );
     } catch (err) {
@@ -496,7 +558,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <input
                                 type="text"
-                                placeholder="/path/ke/gambar.png"
+                                placeholder="/path/ke/gambar.webp"
                                 value={String(value ?? "")}
                                 onChange={(event) => update(field.key, event.target.value as never)}
                                 className={`flex-1 ${inputClass}`}
@@ -505,7 +567,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                                 {uploadingImage === field.key ? "Mengunggah..." : "Pilih File"}
                                 <input
                                   type="file"
-                                  accept="image/*"
+                                  accept="image/png,image/jpeg,image/webp,image/*"
                                   className="hidden"
                                   onChange={async (event) => {
                                     const file = event.target.files?.[0];

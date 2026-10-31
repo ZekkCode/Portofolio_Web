@@ -82,7 +82,7 @@ export type SiteConfig = {
 };
 
 export const defaultLanyard: LanyardConfig = {
-  frontImage: "/card-front.svg",
+  frontImage: "/card-front.webp",
   backImage: "",
   strapImage: "",
   imageFit: "cover",

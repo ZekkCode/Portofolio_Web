@@ -24,19 +24,40 @@ function ScrollTriggerBridge() {
     // Gulir langsung ke target anchor bila halaman dibuka dengan hash
     const initialHash = window.location.hash;
     if (initialHash) {
-      const targetEl = document.querySelector(initialHash);
-      if (targetEl) {
-        requestAnimationFrame(() => {
-          lenis.scrollTo(initialHash, { offset: -88, immediate: true });
-        });
+      const scrollToHash = (immediate = true) => {
+        const targetEl = document.querySelector(initialHash);
+        if (targetEl) {
+          const header = document.querySelector("header");
+          const headerHeight = header ? header.getBoundingClientRect().height : 64;
+          const offset = -(headerHeight + 16);
+          lenis.scrollTo(targetEl as HTMLElement, { offset, immediate });
+        }
+      };
+
+      // 1. Initial attempt
+      requestAnimationFrame(() => scrollToHash(true));
+
+      // 2. Re-scroll when fonts are ready (prevents font load layout shift)
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+          requestAnimationFrame(() => scrollToHash(true));
+        }).catch(() => {});
       }
+
+      // 3. Re-scroll on window load (when Three.js, images, and full layout settle)
+      window.addEventListener("load", () => {
+        requestAnimationFrame(() => scrollToHash(true));
+      }, { once: true });
     }
 
     // Tangani navigasi mundur/maju di browser
     const handlePopState = () => {
       const currentHash = window.location.hash;
       if (currentHash) {
-        lenis.scrollTo(currentHash, { offset: -88 });
+        const header = document.querySelector("header");
+        const headerHeight = header ? header.getBoundingClientRect().height : 64;
+        const offset = -(headerHeight + 16);
+        lenis.scrollTo(currentHash, { offset });
       } else {
         lenis.scrollTo(0, { offset: 0 });
       }

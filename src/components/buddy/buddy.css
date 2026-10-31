@@ -25,8 +25,8 @@
   position: absolute;
   bottom: calc(100% + 12px);
   left: 0;
-  width: min(296px, calc(100vw - 36px));
-  max-height: min(360px, 55dvh);
+  width: min(312px, calc(100vw - 32px));
+  max-height: min(420px, calc(100dvh - 120px));
   z-index: 50;
   pointer-events: auto;
 }
@@ -40,8 +40,8 @@
   .buddy-chat-floating {
     bottom: calc(100% + 10px);
     left: 0;
-    width: min(296px, calc(100vw - 32px));
-    max-height: min(360px, 52dvh);
+    width: min(312px, calc(100vw - 28px));
+    max-height: min(400px, calc(100dvh - 110px));
   }
 }
 
@@ -49,6 +49,13 @@
 @media (min-width: 768px) and (max-width: 1023px) {
   .buddy-root {
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .buddy-chat-floating {
+    bottom: calc(100% + 12px);
+    left: 0;
+    width: min(312px, calc(100vw - 32px));
+    max-height: min(410px, calc(100dvh - 120px));
   }
 }
 

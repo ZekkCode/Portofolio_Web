@@ -35,9 +35,7 @@ export function useBuddyRoaming({
   const isDockedRef = useRef<boolean>(false);
   const deviceModeRef = useRef<DeviceMode>("desktop");
   const prefersReducedMotionRef = useRef<boolean>(false);
-
-  isPausedRef.current = isPaused;
-  isHiddenRef.current = isHidden;
+  const scheduleNextBehaviorRef = useRef<() => void>(() => {});
 
   const characterSize =
     deviceMode === "mobile"
@@ -95,7 +93,7 @@ export function useBuddyRoaming({
     }
 
     // Desktop (>=1024px):
-    // Left-side roaming corridor that stops before the floating pill nav (which sits at center: 50% - ~240px)
+    // Left-side roaming corridor that stops before the floating pill nav (which sits at center: 50% - ~280px)
     // Ensures buddy NEVER walks behind or over the centered navigation
     const centerNavLeft = Math.floor(windowWidth * 0.5 - 280);
     const maxX = Math.min(520, Math.max(120, centerNavLeft));
@@ -150,7 +148,7 @@ export function useBuddyRoaming({
       timerRef.current = setTimeout(() => {
         if (!isPausedRef.current && !isHiddenRef.current) {
           updateState("idle");
-          scheduleNextBehavior();
+          scheduleNextBehaviorRef.current();
         }
       }, walkDuration);
     } else if (
@@ -166,11 +164,16 @@ export function useBuddyRoaming({
 
       timerRef.current = setTimeout(() => {
         if (!isPausedRef.current && !isHiddenRef.current) {
-          scheduleNextBehavior();
+          scheduleNextBehaviorRef.current();
         }
       }, idleDuration);
     }
   }, [getSafeBounds, updateState]);
+
+  // Keep scheduleNextBehaviorRef in sync
+  useEffect(() => {
+    scheduleNextBehaviorRef.current = scheduleNextBehavior;
+  }, [scheduleNextBehavior]);
 
   // Main RAF physics loop
   useEffect(() => {
@@ -198,103 +201,86 @@ export function useBuddyRoaming({
 
       // Clamp position within safe bounds
       const { minX, maxX } = getSafeBounds();
-      if (xRef.current > maxX) {
-        xRef.current = maxX;
-        applyTransform(maxX);
-      } else if (xRef.current < minX) {
-        xRef.current = minX;
-        applyTransform(minX);
-      }
+      xRef.current = Math.max(minX, Math.min(maxX, xRef.current));
+      applyTransform(xRef.current);
     };
 
     updateDeviceMode();
+    window.addEventListener("resize", updateDeviceMode, { passive: true });
 
-    // Footer docking detector (IntersectionObserver / Scroll check)
+    // Footer Docking Detection: dock to bottom when footer comes into view
     const checkFooterDock = () => {
       const footer = document.querySelector("footer");
-      if (footer) {
-        const rect = footer.getBoundingClientRect();
-        // Dock when footer enters visible bottom area
-        const nearFooter = rect.top <= window.innerHeight - 30;
-        if (nearFooter !== isDockedRef.current) {
-          isDockedRef.current = nearFooter;
-          setIsDocked(nearFooter);
-          if (nearFooter) {
-            // Smoothly park at safe lower-left anchor
-            if (stateRef.current.startsWith("walking")) {
-              updateState("idle");
-            }
-          } else {
-            // Resumed above footer
-            scheduleNextBehavior();
-          }
+      if (!footer) return;
+
+      const rect = footer.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const docked = rect.top <= windowHeight - 40;
+
+      if (docked !== isDockedRef.current) {
+        isDockedRef.current = docked;
+        setIsDocked(docked);
+
+        if (docked && stateRef.current.startsWith("walking")) {
+          updateState("idle");
         }
       }
     };
 
     window.addEventListener("scroll", checkFooterDock, { passive: true });
-    window.addEventListener("resize", updateDeviceMode, { passive: true });
     checkFooterDock();
 
-    // Initial positioning
-    applyTransform(xRef.current);
-
-    // Initial delay before first walk
-    timerRef.current = setTimeout(() => {
-      scheduleNextBehavior();
-    }, 2200);
-
-    const onFrame = (now: number) => {
-      if (!lastTimeRef.current) lastTimeRef.current = now;
-      const dt = Math.min((now - lastTimeRef.current) / 1000, 0.05);
+    // 60FPS Physics Tick
+    const tick = (now: number) => {
+      if (lastTimeRef.current === 0) lastTimeRef.current = now;
+      const dt = Math.min(0.1, (now - lastTimeRef.current) / 1000); // clamp dt to avoid teleports
       lastTimeRef.current = now;
 
-      const currentState = stateRef.current;
-      const isWalking =
-        currentState === "walking-left" || currentState === "walking-right";
-
+      // Move when in walking state
+      const current = stateRef.current;
       if (
-        isWalking &&
+        (current === "walking-left" || current === "walking-right") &&
         !isPausedRef.current &&
         !isHiddenRef.current &&
         !isDockedRef.current &&
         !prefersReducedMotionRef.current
       ) {
+        const speed = BUDDY_CONFIG.speed; // px per second
+        const delta = speed * directionRef.current * dt;
+        let newX = xRef.current + delta;
+
         const { minX, maxX } = getSafeBounds();
 
-        let nextX = xRef.current + directionRef.current * BUDDY_CONFIG.speed * dt;
-
-        // Boundary bounce within safe corridor
-        if (nextX >= maxX) {
-          nextX = maxX;
+        // Bounce when reaching boundaries
+        if (newX >= maxX) {
+          newX = maxX;
           directionRef.current = -1;
           setDirection(-1);
           updateState("walking-left");
-        } else if (nextX <= minX) {
-          nextX = minX;
+        } else if (newX <= minX) {
+          newX = minX;
           directionRef.current = 1;
           setDirection(1);
           updateState("walking-right");
         }
 
-        xRef.current = nextX;
-        applyTransform(nextX);
+        xRef.current = newX;
+        applyTransform(newX);
       }
 
-      rafId.current = requestAnimationFrame(onFrame);
+      rafId.current = requestAnimationFrame(tick);
     };
 
-    rafId.current = requestAnimationFrame(onFrame);
+    rafId.current = requestAnimationFrame(tick);
 
-    // Pause RAF / timers when tab is hidden
+    // Pause physics tick when tab is in background to save CPU and battery
     const onVisibilityChange = () => {
       if (document.hidden) {
-        if (stateRef.current !== "hidden") {
-          updateState("idle");
-        }
+        if (rafId.current) cancelAnimationFrame(rafId.current);
+        lastTimeRef.current = 0;
       } else {
         lastTimeRef.current = performance.now();
-        scheduleNextBehavior();
+        rafId.current = requestAnimationFrame(tick);
       }
     };
 
@@ -308,10 +294,13 @@ export function useBuddyRoaming({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       motionQuery.removeEventListener("change", onMotionChange);
     };
-  }, [applyTransform, getSafeBounds, scheduleNextBehavior, updateState]);
+  }, [applyTransform, getSafeBounds, updateState]);
 
   // React to pause / unpause changes
   useEffect(() => {
+    isPausedRef.current = isPaused;
+    isHiddenRef.current = isHidden;
+
     if (isPaused || isHidden || isDocked) {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (stateRef.current.startsWith("walking")) {
@@ -329,7 +318,6 @@ export function useBuddyRoaming({
     deviceMode,
     characterSize,
     isDocked,
-    x: xRef.current,
     setState: updateState,
     playAction,
     teleport: (newX: number) => {

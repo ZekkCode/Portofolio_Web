@@ -1129,8 +1129,14 @@ const Lanyard = ({
       const maxAnchorX = Math.max(0, viewWidth / 2 - layout.width * 0.9);
       const anchorX = clamp(anchorRatio * viewWidth, -maxAnchorX, maxAnchorX);
       const anchorY = viewHeight / 2 + 0.35;
-      // Posisi kartu diturunkan aman ke tengah stage sehingga tidak pernah membentur batas atas
-      const cardTop = viewHeight / 2 - headroom;
+
+      // Posisi kartu diturunkan proporsional ke tengah stage sehingga strap menggantung anggun dari batas atas
+      const isNarrow = aspect < 1.15;
+      const targetCenterY = isNarrow
+        ? clamp(0.12, -0.2, 0.25)
+        : clamp((viewHeight / 2 - headroom - layout.height / 2) * 0.45, -0.3, 0.35);
+
+      const cardTop = targetCenterY + layout.height / 2;
       const hangTop = cardTop + (layout.hangY - layout.height / 2);
       sim.anchor.set(anchorX, anchorY, 0);
       configureSimulation(sim, layout, anchorY - hangTop);

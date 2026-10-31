@@ -40,8 +40,8 @@ function useActiveSection() {
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
 
-      // When near bottom of page, activate the last nav section (#kontak)
-      if (scrollY + windowHeight >= docHeight - 60) {
+      // 1. When near bottom of page, activate the last nav section (#kontak)
+      if (scrollY + windowHeight >= docHeight - 70) {
         const target = "#kontak";
         if (activeRef.current !== target) {
           activeRef.current = target;
@@ -50,18 +50,50 @@ function useActiveSection() {
         return;
       }
 
-      // Section is active when its top enters the upper viewing zone (45% of viewport)
-      const ACTIVATION_THRESHOLD = Math.round(windowHeight * 0.45);
-      let nextActive = "";
+      // 2. Reading focal point:
+      // Eye focus line is in the upper reading zone below the sticky header.
+      const header = document.querySelector("header");
+      const headerHeight = header ? header.getBoundingClientRect().height : 64;
+      const focalPoint = headerHeight + Math.min(windowHeight * 0.28, 200);
 
-      for (let i = TRACKED_SECTIONS.length - 1; i >= 0; i--) {
+      // If hero / top of page: check if the first tracked section (#tentang) is still below focalPoint
+      const firstSection = document.getElementById("tentang");
+      if (firstSection) {
+        const firstRect = firstSection.getBoundingClientRect();
+        if (firstRect.top > focalPoint + 40) {
+          if (activeRef.current !== "") {
+            activeRef.current = "";
+            setActive("");
+          }
+          return;
+        }
+      }
+
+      // 3. Primary check: which tracked section's boundary contains the focalPoint?
+      let nextActive = "";
+      for (let i = 0; i < TRACKED_SECTIONS.length; i++) {
         const id = TRACKED_SECTIONS[i];
         const el = document.getElementById(id);
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (rect.top <= ACTIVATION_THRESHOLD) {
+          if (rect.top <= focalPoint && rect.bottom > focalPoint) {
             nextActive = SECTION_NAV_MAP[id] || `#${id}`;
             break;
+          }
+        }
+      }
+
+      // 4. Fallback check (for transitions or padding gaps): closest section above or at focalPoint
+      if (!nextActive) {
+        for (let i = TRACKED_SECTIONS.length - 1; i >= 0; i--) {
+          const id = TRACKED_SECTIONS[i];
+          const el = document.getElementById(id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= focalPoint + 80) {
+              nextActive = SECTION_NAV_MAP[id] || `#${id}`;
+              break;
+            }
           }
         }
       }
@@ -174,7 +206,7 @@ export function PortfolioPillNav() {
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {
     if (item.href?.startsWith("#")) {
       e.preventDefault();
-      scrollTo(item.href, -88);
+      scrollTo(item.href);
     } else if (item.href?.startsWith("http")) {
       e.preventDefault();
       window.open(item.href, "_blank", "noopener,noreferrer");
@@ -227,7 +259,7 @@ export function PortfolioPillNav() {
   const handleMobileNavClick = (href: string, e: React.MouseEvent<HTMLElement>) => {
     if (href.startsWith("#")) {
       e.preventDefault();
-      scrollTo(href, -76);
+      scrollTo(href);
     } else if (href.startsWith("http")) {
       e.preventDefault();
       window.open(href, "_blank", "noopener,noreferrer");

@@ -257,7 +257,34 @@ export function ScrollScrub({
 export function useSmoothScrollTo() {
   const lenis = useLenis();
 
-  const scrollTo = (target: string | HTMLElement, offset = -88) => {
+  const scrollTo = (target: string | HTMLElement, explicitOffset?: number) => {
+    // Scroll directly to top when target is hero / atas
+    if (target === "#atas" || target === "#hero" || target === "") {
+      if (lenis) {
+        lenis.scrollTo(0, {
+          duration: 1.05,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        });
+      } else if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          window.history.pushState(null, "", "#atas");
+        } catch {
+          // Fallback jika iframe/sandbox membatasi pushState
+        }
+      }
+      return;
+    }
+
+    // Dynamic header measurement: standardizes offset across desktop and mobile
+    const header = typeof document !== "undefined" ? document.querySelector("header") : null;
+    const headerHeight = header ? header.getBoundingClientRect().height : 64;
+    const defaultOffset = -(headerHeight + 16);
+    const offset = typeof explicitOffset === "number" ? explicitOffset : defaultOffset;
+
     if (lenis) {
       lenis.scrollTo(target, {
         offset,

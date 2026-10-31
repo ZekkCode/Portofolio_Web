@@ -603,6 +603,9 @@ export const PillNav = ({
       wake();
     });
     if (trackRef.current) resizeObserver.observe(trackRef.current);
+    slotRefs.current.forEach((slot) => {
+      if (slot) resizeObserver.observe(slot);
+    });
     document.fonts?.ready?.then(() => engine.refresh()).catch(() => {});
     window.addEventListener('pointerup', engine.release);
     window.addEventListener('pointercancel', engine.release);

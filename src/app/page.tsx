@@ -89,12 +89,12 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-8 pb-12 sm:pt-14 sm:pb-16"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-4 sm:pt-14 pb-12 sm:pb-16"
     >
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
         {/* Left Column: Editorial Information - Stable, readable layout without parallax displacement */}
-        <div className="relative z-10 flex flex-col items-start gap-5 text-start order-2 lg:order-1">
+        <div className="relative z-10 flex flex-col items-start gap-5 text-start order-2 lg:order-1 pt-1 sm:pt-0">
           <ScrollReveal y={24} duration={0.75} className="space-y-3.5 w-full">
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.08]">
               Zakaria Mujur
@@ -133,7 +133,7 @@ function Hero() {
 
         {/* Right Column: Interactive 3D Lanyard ID Card */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2">
-          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[340px] sm:h-[440px] lg:h-[600px] -mt-2 sm:mt-0">
+          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[360px] sm:h-[440px] lg:h-[600px] -mt-4 sm:mt-0">
             <LanyardStage className="h-full w-full" />
           </div>
         </div>

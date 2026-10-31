@@ -13,6 +13,8 @@ import { ProjectsSection } from "@/components/projects-section";
 import { BlogPreviewSection } from "@/components/blog-preview-section";
 import { ServicesSection } from "@/components/services-section";
 import { CertificatesSection } from "@/components/certificates-section";
+import { AcademicJourneySection } from "@/components/academic-journey-section";
+import { AchievementsSection } from "@/components/achievements-section";
 import { ExperienceTimeline } from "@/components/experience-timeline";
 import { FaqSection } from "@/components/faq-section";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -649,11 +651,13 @@ export default function Home() {
       <main className="pe-11 md:pe-0 transition-[padding] duration-200">
         <Hero />
         <About />
+        <AcademicJourneySection />
         <ServicesSection />
         <CvFolderSection />
         <Stack />
         <ProjectsSection />
         <BlogPreviewSection />
+        <AchievementsSection />
         <CertificatesSection />
         <FaqSection />
         <Contact />

@@ -56,6 +56,65 @@ export const profile = {
       desc: "Mendesain materi visual workshop teknologi, mengelola branding visual media sosial, dan memproduksi konten kreatif program Google.",
     },
   ],
+  education: [
+    {
+      id: "utm",
+      institution: "Universitas Trunojoyo Madura",
+      location: "Bangkalan, Jawa Timur",
+      program: "S1 Teknik Informatika",
+      degree: "Sarjana Komputer (S.Kom)",
+      period: "2024 – Sekarang",
+      status: "Mahasiswa Aktif",
+      statusEn: "Active Student",
+      current: true,
+      focus: [
+        "Algoritma & Pemrograman",
+        "Dasar Pemrograman Web",
+        "Sistem Basis Data",
+        "Jaringan Komputer",
+      ],
+      focusEn: [
+        "Algorithms & Programming",
+        "Web Development Fundamentals",
+        "Database Systems",
+        "Computer Networks",
+      ],
+      projects: [
+        {
+          title: "TOEL — Simulator Ujian TOEFL",
+          desc: "Aplikasi web latihan simulasi TOEFL dengan batasan waktu terisolasi, pemutar audio terproteksi, dan kalkulasi skor otomatis.",
+          repo: "https://github.com/ZekkCode/OnlineTest-TOEFL_DPW",
+        },
+      ],
+    },
+    {
+      id: "smkn1jetis",
+      institution: "SMK Negeri 1 Jetis",
+      location: "Mojokerto, Jawa Timur",
+      program: "Kejurusan Multimedia",
+      degree: "Pendidikan Menengah Kejuruan",
+      period: "2021 – 2024",
+      status: "Lulus",
+      statusEn: "Graduated",
+      current: false,
+      focus: [
+        "Desain Grafis (Photoshop & CorelDRAW)",
+        "Produksi & Editing Video (Premiere Pro & Filmora)",
+        "Desain Antarmuka UI/UX Dasar",
+      ],
+      focusEn: [
+        "Graphic Design (Photoshop & CorelDRAW)",
+        "Video Production & Editing (Premiere Pro & Filmora)",
+        "Fundamental UI/UX Design",
+      ],
+      projects: [
+        {
+          title: "Prototipe UI/UX Game Edukasi 'Tebak ASEAN'",
+          desc: "Perancangan user flow dan prototipe interaktif high-fidelity dari awal hingga akhir menggunakan Figma.",
+        },
+      ],
+    },
+  ],
   projects: [
     {
       title: "SIGAP-Pangan",

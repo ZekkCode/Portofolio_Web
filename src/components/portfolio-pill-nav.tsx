@@ -10,6 +10,7 @@ import { FileText, FolderOpen, Layers3, Mail, UserRound } from "lucide-react";
 
 const SECTION_NAV_MAP: Record<string, string> = {
   tentang: "#tentang",
+  akademik: "#tentang",
   services: "#tentang",
   cv: "#cv",
   stack: "#stack",
@@ -22,6 +23,7 @@ const SECTION_NAV_MAP: Record<string, string> = {
 
 const TRACKED_SECTIONS = [
   "tentang",
+  "akademik",
   "services",
   "cv",
   "stack",

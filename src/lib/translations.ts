@@ -44,6 +44,15 @@ export const translations = {
         organizations: "Organisasi",
       },
     },
+    academic: {
+      title: "Jejak Akademik",
+      desc: "Latar belakang pendidikan formal dan bidang keilmuan yang menjadi fondasi rekayasa digital.",
+      focusTitle: "Fokus Studi & Kompetensi:",
+      projectsTitle: "Proyek Akademik Relevan:",
+      activeStatus: "Mahasiswa Aktif",
+      graduatedStatus: "Lulus",
+      viewProject: "Lihat Repositori",
+    },
     services: {
       title: "Keahlian & Layanan",
       desc: "Bidang desain antarmuka dan rekayasa web yang siap dikerjakan secara langsung.",
@@ -209,6 +218,15 @@ export const translations = {
         years: "Years Experience",
         organizations: "Organizations",
       },
+    },
+    academic: {
+      title: "Academic Journey",
+      desc: "Formal education and study tracks forming the foundation of digital engineering.",
+      focusTitle: "Academic Focus & Competencies:",
+      projectsTitle: "Relevant Academic Projects:",
+      activeStatus: "Active Student",
+      graduatedStatus: "Graduated",
+      viewProject: "View Repository",
     },
     services: {
       title: "Services & Focus",

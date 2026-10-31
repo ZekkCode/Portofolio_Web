@@ -22,18 +22,26 @@ export function ExperienceTimeline() {
 
     mm.add(
       {
+        isDesktop: "(min-width: 768px)",
+        isMobile: "(max-width: 767px)",
         reduceMotion: "(prefers-reduced-motion: reduce)",
-        default: "(prefers-reduced-motion: no-preference)",
       },
       (context) => {
-        const { reduceMotion } = context.conditions as { reduceMotion: boolean };
+        const { reduceMotion, isMobile } = context.conditions as {
+          reduceMotion: boolean;
+          isMobile: boolean;
+          isDesktop: boolean;
+        };
+
+        const cards = gsap.utils.toArray<HTMLElement>(".experience-card", container);
 
         if (reduceMotion) {
           gsap.set(line, { scaleY: 1 });
+          gsap.set(cards, { x: 0 });
           return;
         }
 
-        // Animate progress line scaleY smoothly tracking scroll progress through the timeline container
+        // 1. Progress line vertical fill
         gsap.fromTo(
           line,
           { scaleY: 0 },
@@ -48,6 +56,28 @@ export function ExperienceTimeline() {
             },
           }
         );
+
+        // 2. Individual career entry horizontal scroll-linked parallax (LEFT -> RIGHT on scroll down)
+        const startX = isMobile ? -18 : -45;
+
+        cards.forEach((card) => {
+          const triggerWrapper = card.parentElement || card;
+          gsap.fromTo(
+            card,
+            { x: startX },
+            {
+              x: 0,
+              ease: "none",
+              scrollTrigger: {
+                trigger: triggerWrapper,
+                start: "top 92%",
+                end: "top 45%",
+                scrub: 0.5,
+                invalidateOnRefresh: true,
+              },
+            }
+          );
+        });
       }
     );
 
@@ -71,29 +101,31 @@ export function ExperienceTimeline() {
       <ol className="space-y-6">
         {profile.experience.map((item) => (
           <li key={item.org} className="group relative ps-7">
-            {/* Milestone Dot on Track: 10px centered at 6px */}
+            {/* Milestone Dot on Track: fixed in layout position */}
             <span
               className="absolute start-[1px] top-1.5 size-2.5 rounded-full border-2 border-white bg-brand shadow-xs transition-transform duration-200 group-hover:scale-125 dark:border-[#08090e] dark:bg-blue-500"
               aria-hidden="true"
             />
-            <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted">
-              <span>{item.period}</span>
-              <span aria-hidden="true">·</span>
-              <span>{item.place}</span>
+            {/* Scroll-linked horizontal card: moves LEFT -> RIGHT when scrolling down */}
+            <div className="experience-card will-change-transform">
+              <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted">
+                <span>{item.period}</span>
+                <span aria-hidden="true">·</span>
+                <span>{item.place}</span>
+              </div>
+              <h4 className="mt-1 font-display text-sm font-bold text-ink">
+                {item.role}
+              </h4>
+              <p className="text-xs font-semibold text-brand dark:text-blue-400">
+                {item.org}
+              </p>
+              <p className="mt-1 text-xs sm:text-sm leading-relaxed text-body">
+                {item.desc}
+              </p>
             </div>
-            <h4 className="mt-1 font-display text-sm font-bold text-ink">
-              {item.role}
-            </h4>
-            <p className="text-xs font-semibold text-brand dark:text-blue-400">
-              {item.org}
-            </p>
-            <p className="mt-1 text-xs sm:text-sm leading-relaxed text-body">
-              {item.desc}
-            </p>
           </li>
         ))}
       </ol>
     </div>
   );
 }
-

@@ -198,9 +198,7 @@ function About() {
           <h3 className="mb-4 text-sm font-bold text-brand dark:text-blue-400">
             {t("about.expTitle")}
           </h3>
-          <ScrollReveal y={16}>
-            <ExperienceTimeline />
-          </ScrollReveal>
+          <ExperienceTimeline />
         </div>
       </div>
     </section>

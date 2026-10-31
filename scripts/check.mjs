@@ -77,7 +77,6 @@ const click = (text) =>
     const button = [...document.querySelectorAll("button")].find((item) => item.textContent.trim() === ${JSON.stringify(text)});
     if (!button) return false;
     button.click();
-    button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
     return true;
   })()`);
 
@@ -85,6 +84,11 @@ const typeInto = (selector, value, index = 0) =>
   evaluate(`(() => {
     const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
     if (!el) return false;
+    const reactKey = Object.keys(el).find(k => k.startsWith("__reactProps"));
+    if (reactKey && el[reactKey] && el[reactKey].onChange) {
+      el[reactKey].onChange({ target: { value: ${JSON.stringify(value)} } });
+      return true;
+    }
     if (el._valueTracker) el._valueTracker.setValue(el.type === "range" ? "0" : "");
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     setter.call(el, ${JSON.stringify(value)});

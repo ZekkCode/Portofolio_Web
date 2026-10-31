@@ -36,17 +36,26 @@ export function AcademicJourneySection() {
 
     mm.add(
       {
+        isDesktop: "(min-width: 768px)",
+        isMobile: "(max-width: 767px)",
         reduceMotion: "(prefers-reduced-motion: reduce)",
-        default: "(prefers-reduced-motion: no-preference)",
       },
       (context) => {
-        const { reduceMotion } = context.conditions as { reduceMotion: boolean };
+        const { reduceMotion, isMobile } = context.conditions as {
+          reduceMotion: boolean;
+          isMobile: boolean;
+          isDesktop: boolean;
+        };
+
+        const cards = gsap.utils.toArray<HTMLElement>(".academic-card", container);
 
         if (reduceMotion) {
           gsap.set(line, { scaleY: 1 });
+          gsap.set(cards, { x: 0 });
           return;
         }
 
+        // 1. Progress line vertical fill
         gsap.fromTo(
           line,
           { scaleY: 0 },
@@ -61,6 +70,28 @@ export function AcademicJourneySection() {
             },
           }
         );
+
+        // 2. Individual academic card horizontal scroll-linked parallax (LEFT -> RIGHT on scroll down)
+        const startX = isMobile ? -20 : -65;
+
+        cards.forEach((card) => {
+          const triggerWrapper = card.parentElement || card;
+          gsap.fromTo(
+            card,
+            { x: startX },
+            {
+              x: 0,
+              ease: "none",
+              scrollTrigger: {
+                trigger: triggerWrapper,
+                start: "top 92%",
+                end: "top 45%",
+                scrub: 0.5,
+                invalidateOnRefresh: true,
+              },
+            }
+          );
+        });
       }
     );
 
@@ -111,7 +142,7 @@ export function AcademicJourneySection() {
                 key={edu.id}
                 className="group relative ps-11 sm:ps-16"
               >
-                {/* Milestone Node on Track */}
+                {/* Milestone Node on Track (fixed position) */}
                 <div
                   className={`absolute start-1.5 sm:start-3.5 top-1.5 flex size-6 items-center justify-center rounded-full border-2 border-white shadow-xs transition-transform duration-200 group-hover:scale-110 dark:border-[#08090e] ${
                     edu.current
@@ -127,8 +158,8 @@ export function AcademicJourneySection() {
                   )}
                 </div>
 
-                {/* Card Container */}
-                <div className="overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-7 shadow-2xs transition-all duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]">
+                {/* Animated Card Container: moves LEFT -> RIGHT when scrolling down */}
+                <div className="academic-card will-change-transform overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-7 shadow-2xs transition-[border-color,box-shadow] duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]">
                   {/* Card Header: Institution & Period */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line/60 pb-4 dark:border-line/40">
                     <div>

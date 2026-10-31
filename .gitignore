@@ -43,3 +43,6 @@ agent/
 session-chat-cline/
 .taste-skill/
 taste-skill-2.1.4/
+
+.vercel
+.env*

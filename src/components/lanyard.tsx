@@ -1128,13 +1128,15 @@ const Lanyard = ({
       const anchorRatio = (ANCHORS[s.anchor] ?? 0.5) - 0.5;
       const maxAnchorX = Math.max(0, viewWidth / 2 - layout.width * 0.9);
       const anchorX = clamp(anchorRatio * viewWidth, -maxAnchorX, maxAnchorX);
-      const anchorY = viewHeight / 2 + 0.35;
+      // Anchor diposisikan tepat di batas atas camera frustum (dalam frustum, bebas clipping WebGL)
+      // Bagian atas canvas terselip di belakang sticky header sehingga tali tampak keluar dari balik header
+      const anchorY = viewHeight / 2 - 0.02;
 
-      // Posisi kartu diturunkan proporsional ke tengah stage sehingga strap menggantung anggun dari batas atas
+      // Posisi kartu menggantung lebih rendah secara natural dengan tali panjang elegan
       const isNarrow = aspect < 1.15;
       const targetCenterY = isNarrow
-        ? clamp(0.12, -0.2, 0.25)
-        : clamp((viewHeight / 2 - headroom - layout.height / 2) * 0.45, -0.3, 0.35);
+        ? clamp(-0.04 - (s.strapLength - 0.3) * 0.4, -0.18, 0.06)
+        : clamp(-0.25 - (s.strapLength - 0.3) * 0.6, -0.45, -0.08);
 
       const cardTop = targetCenterY + layout.height / 2;
       const hangTop = cardTop + (layout.hangY - layout.height / 2);
@@ -1220,6 +1222,26 @@ const Lanyard = ({
       canvas.style.touchAction = s.interactive ? 'pan-y' : 'auto';
 
       applied = { layoutKey, framingKey, imageKey, faceKey, strapColor: s.strapColor, strapScale };
+      if (typeof window !== "undefined") {
+        (canvas as any).__lanyardMetrics = () => {
+          const rect = canvas.getBoundingClientRect();
+          const vHeight = frustum.height || 6;
+          const anchorScreenY = rect.top + (0.5 - sim.anchor.y / vHeight) * rect.height;
+          const cardCenterScreenY = rect.top + (0.5 - sim.body.position.y / vHeight) * rect.height;
+          const cardTopScreenY = rect.top + (0.5 - (sim.body.position.y + layout.height / 2) / vHeight) * rect.height;
+          const cardBottomScreenY = rect.top + (0.5 - (sim.body.position.y - layout.height / 2) / vHeight) * rect.height;
+          return {
+            canvasTop: rect.top,
+            canvasBottom: rect.bottom,
+            canvasHeight: rect.height,
+            canvasWidth: rect.width,
+            anchorScreenY,
+            cardTopScreenY,
+            cardBottomScreenY,
+            cardCenterScreenY,
+          };
+        };
+      }
       start();
     };
 

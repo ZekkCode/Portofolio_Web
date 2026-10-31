@@ -131,9 +131,9 @@ function Hero() {
           </div>
         </div>
 
-        {/* Right Column: Interactive 3D Lanyard ID Card */}
-        <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2">
-          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[360px] sm:h-[440px] lg:h-[600px] -mt-4 sm:mt-0">
+        {/* Right Column: Interactive 3D Lanyard ID Card - Extends upward behind header */}
+        <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2 z-20">
+          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-5 sm:-mt-[62px] lg:-mt-[62px]">
             <LanyardStage className="h-full w-full" />
           </div>
         </div>

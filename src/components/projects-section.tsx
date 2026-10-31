@@ -175,6 +175,17 @@ export function ProjectsSection() {
   const { t } = useTranslation();
   const { projects } = useSiteConfig();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "it" | "design">("all");
+  const filteredProjects = projects.filter((project) => {
+    if (categoryFilter === "all") return true;
+    return project.category === categoryFilter || project.category === "both" ||
+      (!project.category && categoryFilter === "it");
+  });
+  const categoryOptions: Array<{ key: "all" | "it" | "design"; label: string }> = [
+    { key: "all", label: t("projectCategories.all") },
+    { key: "it", label: t("projectCategories.it") },
+    { key: "design", label: t("projectCategories.design") },
+  ];
 
   return (
     <section id="proyek" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
@@ -186,6 +197,27 @@ export function ProjectsSection() {
           desc={t("projects.desc")}
         />
       </ScrollReveal>
+
+      {projects.length > 0 && (
+        <div className="mb-7 flex flex-wrap justify-center gap-2" role="group" aria-label={t("projects.title")}>
+          {categoryOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              aria-pressed={categoryFilter === option.key}
+              onClick={() => setCategoryFilter(option.key)}
+              className={
+                "min-h-11 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand " +
+                (categoryFilter === option.key
+                  ? "border-brand bg-brand text-white"
+                  : "border-line/80 bg-white text-body hover:border-brand/50 hover:text-brand dark:border-line/60 dark:bg-[#111422] dark:hover:text-blue-400")
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <Parallax speed={0.015}>
@@ -228,9 +260,13 @@ export function ProjectsSection() {
             </div>
           </div>
         </Parallax>
+      ) : filteredProjects.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-line/80 bg-surface/50 p-10 text-center text-sm text-body dark:border-line/50">
+          {t("projectCategories.noMatch")}
+        </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project, idx) => {
+          {filteredProjects.map((project, idx) => {
             const indexNum = String(idx + 1).padStart(2, "0");
 
             return (

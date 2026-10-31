@@ -85,6 +85,8 @@ export const translations = {
       filterDesign: "Desain & UX",
       filterFrontend: "Frontend & Web",
       filterSystems: "Sistem & Jaringan",
+      selectedCount: "{{count}} sertifikasi pilihan dari koleksi yang sedang dikurasi.",
+      evidencePending: "Tautan bukti belum tersedia",
     },
     workflow: {
       title: "Cara Kerja",
@@ -270,6 +272,8 @@ export const translations = {
       filterDesign: "Design & UX",
       filterFrontend: "Frontend & Web",
       filterSystems: "Systems & Network",
+      selectedCount: "{{count}} selected credentials from an ongoing collection.",
+      evidencePending: "Evidence link not yet available",
     },
     workflow: {
       title: "Process",

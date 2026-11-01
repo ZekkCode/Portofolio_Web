@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { profile } from "@/lib/profile";
+import { useSiteConfig } from "@/lib/site-store";
 import { Briefcase, MapPin, Calendar } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,7 +12,9 @@ if (typeof window !== "undefined") {
 }
 
 export function ExperienceTimeline() {
-  const items = profile.experience;
+  const { experience } = useSiteConfig();
+  const items = experience && experience.length > 0 ? experience : profile.experience;
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -33,7 +36,7 @@ export function ExperienceTimeline() {
   useEffect(() => {
     const timeline = timelineRef.current;
     const container = containerRef.current;
-    if (!timeline || !container) return;
+    if (!timeline || !container || items.length === 0) return;
 
     if (prefersReducedMotion) {
       setScrollProgress(1);
@@ -71,14 +74,14 @@ export function ExperienceTimeline() {
         const initialOffsetX = (idx + 1) * -45;
         gsap.fromTo(
           card,
-          { x: initialOffsetX, opacity: 0.65 },
+          { x: initialOffsetX, opacity: 0.75 },
           {
             x: 0,
             opacity: 1,
             ease: "power1.out",
             scrollTrigger: {
               trigger: timeline,
-              start: "top 85%",
+              start: "top 88%",
               end: "bottom 35%",
               scrub: 0.8,
               invalidateOnRefresh: true,
@@ -118,6 +121,14 @@ export function ExperienceTimeline() {
     },
     [activeIndex, items.length, scrollToIndex]
   );
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-line/70 bg-white/60 p-8 text-center dark:border-line/40 dark:bg-[#111422]/60">
+        <p className="text-sm font-medium text-muted">Belum ada riwayat pengalaman yang ditampilkan.</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -177,7 +188,7 @@ export function ExperienceTimeline() {
 
             return (
               <button
-                key={item.org}
+                key={("id" in item && item.id) ? item.id : `${item.org}-${idx}`}
                 type="button"
                 onClick={() => scrollToIndex(idx)}
                 aria-label={`Milestone ${item.org} — ${item.role}`}
@@ -225,7 +236,7 @@ export function ExperienceTimeline() {
 
           return (
             <div
-              key={item.org}
+              key={("id" in item && item.id) ? item.id : `${item.org}-${idx}`}
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}

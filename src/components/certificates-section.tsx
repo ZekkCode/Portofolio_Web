@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { profile } from "@/lib/profile";
+import { useSiteConfig } from "@/lib/site-store";
 
 type CategoryFilter = "all" | "design" | "frontend" | "systems";
 
@@ -13,7 +14,10 @@ export function CertificatesSection() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<CategoryFilter>("all");
 
-  const certificates = profile.certificates || [];
+  const { certificates: siteCerts } = useSiteConfig();
+  const certificates =
+    siteCerts && siteCerts.length > 0 ? siteCerts : (profile.certificates || []);
+
   const filtered =
     filter === "all" ? certificates : certificates.filter((c) => c.category === filter);
 
@@ -81,7 +85,7 @@ export function CertificatesSection() {
           <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {filtered.map((cert) => (
               <div
-                key={cert.title}
+                key={("id" in cert && cert.id) ? cert.id : cert.title}
                 className="group relative flex flex-col justify-between rounded-xl border border-line/80 bg-white p-5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422]"
               >
                 <div>

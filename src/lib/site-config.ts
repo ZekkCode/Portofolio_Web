@@ -100,6 +100,24 @@ export type EducationItem = {
   website?: string;
 };
 
+export type ExperienceItem = {
+  id: string;
+  role: string;
+  org: string;
+  place: string;
+  period: string;
+  desc: string;
+};
+
+export type CertificateItem = {
+  id: string;
+  title: string;
+  issuer: string;
+  date: string;
+  credentialUrl?: string;
+  category: "design" | "frontend" | "systems" | "all";
+};
+
 export type SiteConfig = {
   headerLogoUrl: string;
   lanyard: LanyardConfig;
@@ -107,6 +125,8 @@ export type SiteConfig = {
   projects: Project[];
   cvDocs: CvDocConfig[];
   education: EducationItem[];
+  experience: ExperienceItem[];
+  certificates: CertificateItem[];
 };
 
 export const defaultLanyard: LanyardConfig = {
@@ -184,8 +204,8 @@ export const defaultCvDocs: CvDocConfig[] = [
     id: "cv-frontend",
     roleKey: "frontend",
     title: "Frontend Developer",
-    subtitle: "Next.js, React & 3D Interactive",
-    color: "#1b45c4",
+    subtitle: "Next.js & TypeScript Systems",
+    color: "#0284c7",
     pdfUrl: "/cv-ats-zakariamp-2025.pdf",
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
@@ -193,9 +213,9 @@ export const defaultCvDocs: CvDocConfig[] = [
   {
     id: "cv-itsupport",
     roleKey: "itsupport",
-    title: "IT Support & Systems",
-    subtitle: "Troubleshooting & Infrastructure",
-    color: "#d97706",
+    title: "IT Support Specialist",
+    subtitle: "Hardware, Network & Linux Systems",
+    color: "#0284c7",
     pdfUrl: "/cv-ats-zakariamp-2025.pdf",
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
@@ -270,6 +290,24 @@ export const defaultEducation: EducationItem[] = [
   },
 ];
 
+export const defaultExperience: ExperienceItem[] = profile.experience.map((e, idx) => ({
+  id: `exp-${idx + 1}`,
+  role: e.role,
+  org: e.org,
+  place: e.place,
+  period: e.period,
+  desc: e.desc,
+}));
+
+export const defaultCertificates: CertificateItem[] = (profile.certificates || []).map((c, idx) => ({
+  id: `cert-${idx + 1}`,
+  title: c.title,
+  issuer: c.issuer,
+  date: c.date,
+  credentialUrl: c.credentialUrl || "",
+  category: (c.category || "design") as "design" | "frontend" | "systems" | "all",
+}));
+
 export const defaultSiteConfig: SiteConfig = {
   headerLogoUrl: "",
   lanyard: defaultLanyard,
@@ -277,6 +315,8 @@ export const defaultSiteConfig: SiteConfig = {
   projects: defaultProjects,
   cvDocs: defaultCvDocs,
   education: defaultEducation,
+  experience: defaultExperience,
+  certificates: defaultCertificates,
 };
 
 export const normalizeConfig = (input: unknown): SiteConfig => {
@@ -355,6 +395,32 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       website: typeof e.website === "string" ? e.website : undefined,
     }));
 
+  const rawExperience = Array.isArray(raw.experience) ? raw.experience : defaultExperience;
+  const normalizedExperience: ExperienceItem[] = rawExperience
+    .filter((e): e is ExperienceItem => Boolean(e && typeof e === "object" && typeof e.id === "string"))
+    .map((e) => ({
+      id: e.id,
+      role: typeof e.role === "string" ? e.role : "Peran",
+      org: typeof e.org === "string" ? e.org : "Organisasi",
+      place: typeof e.place === "string" ? e.place : "Lokasi",
+      period: typeof e.period === "string" ? e.period : "",
+      desc: typeof e.desc === "string" ? e.desc : "",
+    }));
+
+  const rawCertificates = Array.isArray(raw.certificates) ? raw.certificates : defaultCertificates;
+  const normalizedCertificates: CertificateItem[] = rawCertificates
+    .filter((c): c is CertificateItem => Boolean(c && typeof c === "object" && typeof c.id === "string"))
+    .map((c) => ({
+      id: c.id,
+      title: typeof c.title === "string" ? c.title : "Sertifikat",
+      issuer: typeof c.issuer === "string" ? c.issuer : "",
+      date: typeof c.date === "string" ? c.date : "",
+      credentialUrl: typeof c.credentialUrl === "string" ? c.credentialUrl : "",
+      category: (["design", "frontend", "systems", "all"].includes(c.category)
+        ? c.category
+        : "design") as "design" | "frontend" | "systems" | "all",
+    }));
+
   return {
     headerLogoUrl,
     lanyard: normalizedLanyard,
@@ -362,6 +428,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     projects: normalizedProjects,
     cvDocs: normalizedCvDocs,
     education: normalizedEducation,
+    experience: normalizedExperience,
+    certificates: normalizedCertificates,
   };
 };
-

@@ -8,6 +8,8 @@ import {
   defaultProjects,
   defaultCvDocs,
   defaultEducation,
+  defaultExperience,
+  defaultCertificates,
   normalizeConfig,
   type LanyardConfig,
   type ProfileCardConfig,
@@ -15,6 +17,8 @@ import {
   type CvDocConfig,
   type EducationItem,
   type AcademicProject,
+  type ExperienceItem,
+  type CertificateItem,
   type SiteConfig,
 } from "@/lib/site-config";
 
@@ -25,9 +29,21 @@ export {
   defaultProjects,
   defaultCvDocs,
   defaultEducation,
+  defaultExperience,
+  defaultCertificates,
   normalizeConfig,
 };
-export type { LanyardConfig, ProfileCardConfig, Project, CvDocConfig, EducationItem, AcademicProject, SiteConfig };
+export type {
+  LanyardConfig,
+  ProfileCardConfig,
+  Project,
+  CvDocConfig,
+  EducationItem,
+  AcademicProject,
+  ExperienceItem,
+  CertificateItem,
+  SiteConfig,
+};
 
 const STORAGE_KEY = "zekk:site:v1";
 

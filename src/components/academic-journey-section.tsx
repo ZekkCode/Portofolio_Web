@@ -28,9 +28,10 @@ export function AcademicJourneySection() {
   const currentLang = i18n.language || "id";
   const { education } = useSiteConfig();
 
-  // Use configured education or fallback to authentic default records
+  // Use configured education or fallback to authentic default records (sorted chronologically ascending for left-to-right flow)
   const items: EducationItem[] = useMemo(() => {
-    return education && education.length > 0 ? education : defaultEducation;
+    const list = education && education.length > 0 ? [...education] : [...defaultEducation];
+    return list.sort((a, b) => (a.startYear || 0) - (b.startYear || 0));
   }, [education]);
 
   // Dynamic years range based on education start/end years and current year
@@ -220,8 +221,14 @@ export function AcademicJourneySection() {
         </div>
       </ScrollReveal>
 
-      {/* HORIZONTAL YEAR-BASED TIMELINE TRACK */}
-      <div className="relative mt-8 sm:mt-10 mb-6 sm:mb-8 select-none">
+      {items.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-line/70 bg-white/60 p-8 text-center dark:border-line/40 dark:bg-[#111422]/60">
+          <p className="text-sm font-medium text-muted">Belum ada riwayat pendidikan yang ditampilkan.</p>
+        </div>
+      ) : (
+        <>
+          {/* HORIZONTAL YEAR-BASED TIMELINE TRACK */}
+          <div className="relative mt-8 sm:mt-10 mb-6 sm:mb-8 select-none">
         {/* Track Progress Line */}
         <div className="relative w-full py-4">
           {/* Background Track Line */}
@@ -558,6 +565,8 @@ export function AcademicJourneySection() {
           );
         })}
       </div>
+      </>
+      )}
     </section>
   );
 }

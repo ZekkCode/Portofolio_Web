@@ -81,23 +81,19 @@ export function useBuddyRoaming({
     const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
 
     if (mode === "mobile") {
-      // Mobile (<768px): Micro-walk safe zone near bottom-left (16px - 64px)
+      // Mobile (<768px): Micro-walk safe zone near bottom-left corner (16px - 48px)
       // Keeps buddy fully clear of content reading areas and interactions
-      return { minX: 16, maxX: 64 };
+      return { minX: 16, maxX: 48 };
     }
 
     if (mode === "tablet") {
-      // Tablet (768px - 1023px): Lower-left safe corridor away from centered nav
-      const maxX = Math.min(260, Math.floor(windowWidth * 0.35));
-      return { minX: 20, maxX: Math.max(70, maxX) };
+      // Tablet (768px - 1023px): Lower-left safe corner (16px - 64px)
+      return { minX: 16, maxX: 64 };
     }
 
     // Desktop (>=1024px):
-    // Left-side roaming corridor that stops before the floating pill nav (which sits at center: 50% - ~280px)
-    // Ensures buddy NEVER walks behind or over the centered navigation
-    const centerNavLeft = Math.floor(windowWidth * 0.5 - 280);
-    const maxX = Math.min(520, Math.max(120, centerNavLeft));
-    return { minX: 24, maxX };
+    // Stay safely within the left gutter (20px - 72px) so companion NEVER collides with hero CTA buttons or main content
+    return { minX: 20, maxX: 72 };
   }, []);
 
   // Schedule next behavior (walk or idle)

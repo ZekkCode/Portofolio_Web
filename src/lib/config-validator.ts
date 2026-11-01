@@ -1,4 +1,11 @@
-import type { SiteConfig, Project, CvDocConfig, EducationItem } from "@/lib/site-config";
+import type {
+  SiteConfig,
+  Project,
+  CvDocConfig,
+  EducationItem,
+  ExperienceItem,
+  CertificateItem,
+} from "@/lib/site-config";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -116,6 +123,52 @@ export function validateSiteConfigPayload(raw: unknown): ValidationResult {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  // Validasi experience
+  if (obj.experience !== undefined) {
+    if (!Array.isArray(obj.experience)) {
+      errors.push("Field 'experience' harus berupa array");
+    } else if (obj.experience.length > 25) {
+      errors.push("Jumlah pengalaman melebihi batas maksimal 25 item");
+    } else {
+      for (let i = 0; i < obj.experience.length; i++) {
+        const exp = obj.experience[i] as Partial<ExperienceItem>;
+        if (!exp || typeof exp !== "object") {
+          errors.push(`Pengalaman ke-${i + 1} tidak valid`);
+          continue;
+        }
+        if (typeof exp.role === "string" && exp.role.length > 120) {
+          errors.push(`Peran '${exp.role.slice(0, 20)}...' terlalu panjang (maks 120 karakter)`);
+        }
+        if (typeof exp.org === "string" && exp.org.length > 120) {
+          errors.push(`Organisasi '${exp.org.slice(0, 20)}...' terlalu panjang (maks 120 karakter)`);
+        }
+      }
+    }
+  }
+
+  // Validasi certificates
+  if (obj.certificates !== undefined) {
+    if (!Array.isArray(obj.certificates)) {
+      errors.push("Field 'certificates' harus berupa array");
+    } else if (obj.certificates.length > 40) {
+      errors.push("Jumlah sertifikat melebihi batas maksimal 40 item");
+    } else {
+      for (let i = 0; i < obj.certificates.length; i++) {
+        const cert = obj.certificates[i] as Partial<CertificateItem>;
+        if (!cert || typeof cert !== "object") {
+          errors.push(`Sertifikat ke-${i + 1} tidak valid`);
+          continue;
+        }
+        if (typeof cert.title === "string" && cert.title.length > 150) {
+          errors.push(`Judul sertifikat '${cert.title.slice(0, 20)}...' terlalu panjang (maks 150 karakter)`);
+        }
+        if (cert.credentialUrl && !isSafeUrl(cert.credentialUrl)) {
+          errors.push(`URL kredensial sertifikat '${cert.title || i}' tidak valid`);
         }
       }
     }

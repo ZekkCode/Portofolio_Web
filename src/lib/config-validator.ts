@@ -1,4 +1,4 @@
-import type { SiteConfig, Project, CvDocConfig } from "@/lib/site-config";
+import type { SiteConfig, Project, CvDocConfig, EducationItem } from "@/lib/site-config";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -78,6 +78,44 @@ export function validateSiteConfigPayload(raw: unknown): ValidationResult {
       for (const d of obj.cvDocs as Partial<CvDocConfig>[]) {
         if (d.pdfUrl && !isSafeUrl(d.pdfUrl)) {
           errors.push(`URL PDF dokumen CV tidak valid`);
+        }
+      }
+    }
+  }
+
+  // Validasi education
+  if (obj.education !== undefined) {
+    if (!Array.isArray(obj.education)) {
+      errors.push("Field 'education' harus berupa array");
+    } else if (obj.education.length > 20) {
+      errors.push("Jumlah jejak akademik melebihi batas maksimal 20 item");
+    } else {
+      for (let i = 0; i < obj.education.length; i++) {
+        const edu = obj.education[i] as Partial<EducationItem>;
+        if (!edu || typeof edu !== "object") {
+          errors.push(`Jejak akademik ke-${i + 1} tidak valid`);
+          continue;
+        }
+        if (typeof edu.institution === "string" && edu.institution.length > 150) {
+          errors.push(`Nama institusi '${edu.institution.slice(0, 20)}...' terlalu panjang (maks 150 karakter)`);
+        }
+        if (edu.logo && !isSafeUrl(edu.logo)) {
+          errors.push(`URL logo institusi '${edu.institution || i}' tidak valid`);
+        }
+        if (edu.website && !isSafeUrl(edu.website)) {
+          errors.push(`URL website institusi '${edu.institution || i}' tidak valid`);
+        }
+        if (Array.isArray(edu.projects)) {
+          for (const proj of edu.projects) {
+            if (proj && typeof proj === "object") {
+              if (proj.repo && !isSafeUrl(proj.repo)) {
+                errors.push(`Tautan repositori proyek akademik '${proj.title || ""}' tidak valid`);
+              }
+              if (proj.url && !isSafeUrl(proj.url)) {
+                errors.push(`Tautan web proyek akademik '${proj.title || ""}' tidak valid`);
+              }
+            }
+          }
         }
       }
     }

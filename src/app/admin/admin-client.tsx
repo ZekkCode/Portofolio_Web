@@ -15,10 +15,12 @@ import {
   type ProfileCardConfig,
   type Project,
   type CvDocConfig,
+  type EducationItem,
+  type AcademicProject,
   type SiteConfig,
 } from "@/lib/site-store";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
-import { ArrowLeft, FileText, LogOut } from "lucide-react";
+import { ArrowLeft, FileText, LogOut, GraduationCap, School, Upload, Trash2, ChevronUp, ChevronDown, Plus, ExternalLink } from "lucide-react";
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
 
@@ -142,7 +144,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const storedConfig = useSiteConfig();
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [status, setStatus] = useState<string>("");
-  const [tab, setTab] = useState<"lanyard" | "profileCard" | "proyek" | "cv">("lanyard");
+  const [tab, setTab] = useState<"lanyard" | "profileCard" | "proyek" | "cv" | "education">("lanyard");
   const [cloudStatus, setCloudStatus] = useState<{ r2: boolean; supabase: boolean } | null>(null);
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
@@ -254,6 +256,86 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
       projects: config.projects.filter((p) => p.id !== id),
     });
     setStatus("Proyek dihapus dari draft");
+  };
+
+  
+  const addEducation = () => {
+    const curYear = new Date().getFullYear();
+    const newEdu: EducationItem = {
+      id: "edu-" + Date.now(),
+      institution: "Nama Institusi",
+      location: "Kota, Negara",
+      program: "Program / Jurusan",
+      degree: "S1 / SMK",
+      period: `${curYear} — Sekarang`,
+      startYear: curYear,
+      endYear: null,
+      status: "Mahasiswa Aktif",
+      current: true,
+      desc: "Deskripsi pengalaman akademik, fokus kajian, dan pencapaian...",
+      focus: ["Fokus Utama"],
+      projects: [],
+      website: "",
+      logo: "",
+    };
+    setDraft({ ...config, education: [...(config.education || []), newEdu] });
+    setStatus("Institusi pendidikan baru ditambahkan ke draft");
+  };
+
+  const updateEducation = (id: string, updates: Partial<EducationItem>) => {
+    setDraft({
+      ...config,
+      education: (config.education || []).map((edu) => (edu.id === id ? { ...edu, ...updates } : edu)),
+    });
+    setStatus("Data jejak akademik diperbarui");
+  };
+
+  const deleteEducation = (id: string) => {
+    if (typeof window !== "undefined" && !window.confirm("Hapus data institusi pendidikan ini?")) return;
+    setDraft({
+      ...config,
+      education: (config.education || []).filter((edu) => edu.id !== id),
+    });
+    setStatus("Institusi pendidikan dihapus dari draft");
+  };
+
+  const moveEducation = (id: string, direction: "up" | "down") => {
+    const list = [...(config.education || [])];
+    const index = list.findIndex((e) => e.id === id);
+    if (index < 0) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const [moved] = list.splice(index, 1);
+    list.splice(targetIndex, 0, moved);
+    setDraft({ ...config, education: list });
+    setStatus("Urutan jejak akademik diubah");
+  };
+
+  const addAcademicProject = (eduId: string) => {
+    const newProj: AcademicProject = {
+      title: "Proyek Akademik Baru",
+      desc: "Penjelasan proyek atau riset...",
+      repo: "",
+      url: "",
+    };
+    const edu = (config.education || []).find((e) => e.id === eduId);
+    if (!edu) return;
+    updateEducation(eduId, { projects: [...(edu.projects || []), newProj] });
+  };
+
+  const updateAcademicProject = (eduId: string, pIdx: number, updates: Partial<AcademicProject>) => {
+    const edu = (config.education || []).find((e) => e.id === eduId);
+    if (!edu) return;
+    const projs = [...(edu.projects || [])];
+    projs[pIdx] = { ...projs[pIdx], ...updates };
+    updateEducation(eduId, { projects: projs });
+  };
+
+  const deleteAcademicProject = (eduId: string, pIdx: number) => {
+    const edu = (config.education || []).find((e) => e.id === eduId);
+    if (!edu) return;
+    const projs = [...(edu.projects || [])].filter((_, i) => i !== pIdx);
+    updateEducation(eduId, { projects: projs });
   };
 
   const updateCvDoc = (roleKey: Exclude<RoleKey, "all">, updates: Partial<CvDocConfig>) => {
@@ -457,7 +539,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
         <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {(["lanyard", "profileCard", "proyek", "cv"] as const).map((item) => (
+          {(["lanyard", "profileCard", "proyek", "cv", "education"] as const).map((item) => (
             <button
               key={item}
               type="button"
@@ -474,7 +556,9 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                 ? "Header & Profile Card"
                 : item === "proyek"
                 ? "Proyek"
-                : "Berkas CV / PDF"}
+                : item === "cv"
+                ? "Berkas CV / PDF"
+                : "Jejak Akademik"}
             </button>
           ))}
           {status && <span className="ml-2 text-xs font-medium text-brand">{status}</span>}
@@ -733,7 +817,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
               ))}
             </div>
           </div>
-        ) : (
+        ) : tab === "cv" ? (
           <div className="space-y-6">
             <h2 className="font-display text-base font-bold text-ink">Berkas CV & Dokumen PDF</h2>
             <p className="text-xs text-body">Kelola lembar ATS PDF dan render halaman resolusi tinggi</p>
@@ -766,6 +850,293 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-base font-bold text-ink">Jejak Akademik & Logo Pendidikan</h2>
+                <p className="text-xs text-body">Kelola riwayat pendidikan, logo institusi, dan proyek akademik di timeline portofolio</p>
+              </div>
+              <button
+                type="button"
+                onClick={addEducation}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white shadow hover:bg-brand-ink transition"
+              >
+                <Plus className="size-3.5" />
+                <span>Tambah Institusi</span>
+              </button>
+            </div>
+
+            <div className="grid gap-5">
+              {(config.education || []).map((edu, idx) => (
+                <div key={edu.id} className="rounded-2xl border border-line bg-white p-5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
+                  {/* Top Bar: Order, Name, Reorder & Delete */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/60 pb-3 dark:border-line/40">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-brand">#{idx + 1}</span>
+                      <span className="font-display text-sm font-bold text-ink">{edu.institution}</span>
+                      {edu.current && (
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          Aktif
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => moveEducation(edu.id, "up")}
+                        disabled={idx === 0}
+                        title="Geser ke Atas"
+                        className="inline-flex size-7 items-center justify-center rounded-lg border border-line text-body hover:bg-surface disabled:opacity-30 disabled:pointer-events-none dark:border-line/40"
+                      >
+                        <ChevronUp className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveEducation(edu.id, "down")}
+                        disabled={idx === (config.education?.length || 1) - 1}
+                        title="Geser ke Bawah"
+                        className="inline-flex size-7 items-center justify-center rounded-lg border border-line text-body hover:bg-surface disabled:opacity-30 disabled:pointer-events-none dark:border-line/40"
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteEducation(edu.id)}
+                        className="inline-flex min-h-[28px] items-center gap-1 px-2.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg dark:hover:bg-red-950/30 transition"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span>Hapus</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Main Education Fields */}
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <label className="text-xs font-medium text-body">Nama Institusi</label>
+                      <input
+                        type="text"
+                        value={edu.institution}
+                        onChange={(e) => updateEducation(edu.id, { institution: e.target.value })}
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Program / Jurusan</label>
+                      <input
+                        type="text"
+                        value={edu.program}
+                        onChange={(e) => updateEducation(edu.id, { program: e.target.value })}
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Jenjang / Gelar</label>
+                      <input
+                        type="text"
+                        value={edu.degree}
+                        onChange={(e) => updateEducation(edu.id, { degree: e.target.value })}
+                        className={`mt-1 ${inputClass}`}
+                        placeholder="S1 Teknik Informatika / SMK Multimedia"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Lokasi</label>
+                      <input
+                        type="text"
+                        value={edu.location}
+                        onChange={(e) => updateEducation(edu.id, { location: e.target.value })}
+                        className={`mt-1 ${inputClass}`}
+                        placeholder="Bangkalan, Madura"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Tahun Mulai</label>
+                      <input
+                        type="number"
+                        value={edu.startYear}
+                        onChange={(e) => updateEducation(edu.id, { startYear: parseInt(e.target.value, 10) || 2024 })}
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Tahun Selesai</label>
+                      <input
+                        type="number"
+                        value={edu.endYear ?? ""}
+                        placeholder="Kosongkan jika masih studi"
+                        onChange={(e) =>
+                          updateEducation(edu.id, {
+                            endYear: e.target.value ? parseInt(e.target.value, 10) : null,
+                            current: !e.target.value,
+                          })
+                        }
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id={`current-${edu.id}`}
+                        checked={Boolean(edu.current)}
+                        onChange={(e) =>
+                          updateEducation(edu.id, {
+                            current: e.target.checked,
+                            endYear: e.target.checked ? null : edu.endYear,
+                          })
+                        }
+                        className="size-4 rounded border-line text-brand focus:ring-brand"
+                      />
+                      <label htmlFor={`current-${edu.id}`} className="text-xs font-medium text-body cursor-pointer select-none">
+                        Masih aktif studi saat ini (status Sekarang / Present)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Logo Management */}
+                  <div className="mt-4 rounded-xl border border-line/60 bg-surface/50 p-3.5 dark:border-line/30 dark:bg-slate-900/40">
+                    <span className="text-xs font-semibold text-ink">Logo Institusi Resmi</span>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-4">
+                      <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-line bg-white shadow-2xs dark:border-line/40 dark:bg-[#0c0e17]">
+                        {edu.logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={edu.logo} alt={edu.institution} className="size-11 object-contain" />
+                        ) : (
+                          <School className="size-6 text-muted" />
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex min-h-[34px] items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs hover:bg-surface cursor-pointer dark:border-line/40 dark:bg-[#151928] transition">
+                          <Upload className="size-3.5 text-brand" />
+                          <span>{uploadingImage === `edu-logo-${edu.id}` ? "Memproses..." : "Unggah Logo (PNG/JPG/WebP)"}</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                void uploadAndSet(
+                                  f,
+                                  "education",
+                                  (url) => updateEducation(edu.id, { logo: url }),
+                                  `edu-logo-${edu.id}`
+                                );
+                              }
+                            }}
+                          />
+                        </label>
+                        {edu.logo && (
+                          <button
+                            type="button"
+                            onClick={() => updateEducation(edu.id, { logo: "" })}
+                            className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-body hover:text-red-600 hover:bg-red-50 dark:border-line/40 dark:hover:bg-red-950/20 transition"
+                          >
+                            Hapus Logo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description, Focus, and Website */}
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-medium text-body">Deskripsi Perjalanan & Ringkasan Studi</label>
+                      <textarea
+                        value={edu.desc}
+                        onChange={(e) => updateEducation(edu.id, { desc: e.target.value })}
+                        rows={2}
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Fokus Studi & Kompetensi (pisahkan dengan koma)</label>
+                      <input
+                        type="text"
+                        value={(edu.focus || []).join(", ")}
+                        onChange={(e) =>
+                          updateEducation(edu.id, {
+                            focus: e.target.value
+                              .split(",")
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        placeholder="Rekayasa Perangkat Lunak, UI/UX, dsb."
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-body">Situs Web Institusi (URL)</label>
+                      <input
+                        type="url"
+                        value={edu.website || ""}
+                        onChange={(e) => updateEducation(edu.id, { website: e.target.value })}
+                        placeholder="https://www.trunojoyo.ac.id"
+                        className={`mt-1 ${inputClass}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sub-Editor: Academic Projects */}
+                  <div className="mt-4 border-t border-line/60 pt-3 dark:border-line/40">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-ink">Proyek Akademik Terkait ({edu.projects?.length || 0})</span>
+                      <button
+                        type="button"
+                        onClick={() => addAcademicProject(edu.id)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline"
+                      >
+                        <Plus className="size-3" />
+                        <span>Tambah Proyek Akademik</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(edu.projects || []).map((proj, pIdx) => (
+                        <div key={pIdx} className="rounded-xl border border-line/70 bg-surface/30 p-3 text-xs dark:border-line/30 dark:bg-slate-900/30">
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <input
+                              type="text"
+                              value={proj.title}
+                              onChange={(e) => updateAcademicProject(edu.id, pIdx, { title: e.target.value })}
+                              placeholder="Judul Proyek Akademik"
+                              className={inputClass}
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="url"
+                                value={proj.repo || ""}
+                                onChange={(e) => updateAcademicProject(edu.id, pIdx, { repo: e.target.value })}
+                                placeholder="URL GitHub Repo (opsional)"
+                                className={inputClass}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => deleteAcademicProject(edu.id, pIdx)}
+                                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={proj.desc}
+                            onChange={(e) => updateAcademicProject(edu.id, pIdx, { desc: e.target.value })}
+                            placeholder="Deskripsi singkat proyek..."
+                            className={`mt-2 ${inputClass}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

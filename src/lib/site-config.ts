@@ -73,12 +73,40 @@ export type CvDocConfig = {
   pages?: string[];
 };
 
+export type AcademicProject = {
+  title: string;
+  desc?: string;
+  repo?: string;
+  url?: string;
+};
+
+export type EducationItem = {
+  id: string;
+  institution: string;
+  location: string;
+  program: string;
+  degree: string;
+  period: string;
+  startYear: number;
+  endYear?: number | null;
+  status: string;
+  statusEn?: string;
+  current: boolean;
+  focus?: string[];
+  focusEn?: string[];
+  projects?: AcademicProject[];
+  desc?: string;
+  logo?: string;
+  website?: string;
+};
+
 export type SiteConfig = {
   headerLogoUrl: string;
   lanyard: LanyardConfig;
   profileCard: ProfileCardConfig;
   projects: Project[];
   cvDocs: CvDocConfig[];
+  education: EducationItem[];
 };
 
 export const defaultLanyard: LanyardConfig = {
@@ -174,12 +202,81 @@ export const defaultCvDocs: CvDocConfig[] = [
   },
 ];
 
+export const defaultEducation: EducationItem[] = [
+  {
+    id: "utm",
+    institution: "Universitas Trunojoyo Madura",
+    location: "Bangkalan, Jawa Timur",
+    program: "S1 Teknik Informatika",
+    degree: "Sarjana Komputer (S.Kom)",
+    period: "2024 – Sekarang",
+    startYear: 2024,
+    endYear: null,
+    status: "Mahasiswa Aktif",
+    statusEn: "Active Student",
+    current: true,
+    desc: "Menempuh pendidikan sarjana Teknik Informatika dengan fokus utama rekayasa antarmuka web, arsitektur sistem, dan eksplorasi interaksi 3D fisik.",
+    focus: [
+      "Algoritma & Pemrograman",
+      "Dasar Pemrograman Web",
+      "Sistem Basis Data",
+      "Jaringan Komputer",
+    ],
+    focusEn: [
+      "Algorithms & Programming",
+      "Web Development Fundamentals",
+      "Database Systems",
+      "Computer Networks",
+    ],
+    projects: [
+      {
+        title: "TOEL — Simulator Ujian TOEFL",
+        desc: "Aplikasi web latihan simulasi TOEFL dengan batasan waktu terisolasi, pemutar audio terproteksi, dan kalkulasi skor otomatis.",
+        repo: "https://github.com/ZekkCode/OnlineTest-TOEFL_DPW",
+      },
+    ],
+    website: "https://www.trunojoyo.ac.id",
+  },
+  {
+    id: "smkn1jetis",
+    institution: "SMK Negeri 1 Jetis",
+    location: "Mojokerto, Jawa Timur",
+    program: "Kejurusan Multimedia",
+    degree: "Pendidikan Menengah Kejuruan",
+    period: "2021 – 2024",
+    startYear: 2021,
+    endYear: 2024,
+    status: "Lulus",
+    statusEn: "Graduated",
+    current: false,
+    desc: "Mempelajari dasar multimedia, desain grafis komputer, tipografi, fotografi, pemodelan 2D/3D interaktif, serta produksi dan pengeditan audio-visual.",
+    focus: [
+      "Desain Grafis (Photoshop & CorelDRAW)",
+      "Produksi & Editing Video (Premiere Pro & Filmora)",
+      "Desain Antarmuka UI/UX Dasar",
+    ],
+    focusEn: [
+      "Graphic Design (Photoshop & CorelDRAW)",
+      "Video Production & Editing (Premiere Pro & Filmora)",
+      "Fundamental UI/UX Design",
+    ],
+    projects: [
+      {
+        title: "Prototipe UI/UX Game Edukasi 'Tebak ASEAN'",
+        desc: "Perancangan user flow dan prototipe interaktif high-fidelity dari awal hingga akhir menggunakan Figma.",
+      },
+    ],
+    website: "https://smkn1jetis.sch.id",
+  },
+];
+
 export const defaultSiteConfig: SiteConfig = {
   headerLogoUrl: "",
   lanyard: defaultLanyard,
   profileCard: defaultProfileCard,
   projects: defaultProjects,
   cvDocs: defaultCvDocs,
+  education: defaultEducation,
 };
 
 export const normalizeConfig = (input: unknown): SiteConfig => {
@@ -233,12 +330,38 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     };
   });
 
+  const rawEducation = Array.isArray(raw.education) ? raw.education : defaultEducation;
+  const normalizedEducation: EducationItem[] = rawEducation
+    .filter((e): e is EducationItem => Boolean(e && typeof e === "object" && typeof e.id === "string"))
+    .map((e) => ({
+      id: e.id,
+      institution: typeof e.institution === "string" ? e.institution : "Institusi Pendidikan",
+      location: typeof e.location === "string" ? e.location : "",
+      program: typeof e.program === "string" ? e.program : "",
+      degree: typeof e.degree === "string" ? e.degree : "",
+      period: typeof e.period === "string" ? e.period : "",
+      startYear: typeof e.startYear === "number" ? e.startYear : 2024,
+      endYear: typeof e.endYear === "number" ? e.endYear : (e.endYear === null ? null : undefined),
+      status: typeof e.status === "string" ? e.status : "Mahasiswa Aktif",
+      statusEn: typeof e.statusEn === "string" ? e.statusEn : undefined,
+      current: Boolean(e.current),
+      focus: Array.isArray(e.focus) ? e.focus.filter((f) => typeof f === "string") : [],
+      focusEn: Array.isArray(e.focusEn) ? e.focusEn.filter((f) => typeof f === "string") : undefined,
+      projects: Array.isArray(e.projects)
+        ? e.projects.filter((p) => p && typeof p === "object" && typeof p.title === "string")
+        : [],
+      desc: typeof e.desc === "string" ? e.desc : "",
+      logo: typeof e.logo === "string" ? e.logo : undefined,
+      website: typeof e.website === "string" ? e.website : undefined,
+    }));
+
   return {
     headerLogoUrl,
     lanyard: normalizedLanyard,
     profileCard: normalizedProfileCard,
     projects: normalizedProjects,
     cvDocs: normalizedCvDocs,
+    education: normalizedEducation,
   };
 };
 

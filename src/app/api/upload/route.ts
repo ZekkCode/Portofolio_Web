@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_FOLDERS = new Set(["uploads", "projects", "certificates", "cv", "avatar", "lanyard"]);
+const ALLOWED_FOLDERS = new Set(["uploads", "projects", "certificates", "cv", "avatar", "lanyard", "education", "logos"]);
 
 /**
  * Validasi Magic Number / File Signature biner.

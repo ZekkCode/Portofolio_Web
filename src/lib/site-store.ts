@@ -7,11 +7,14 @@ import {
   defaultProfileCard,
   defaultProjects,
   defaultCvDocs,
+  defaultEducation,
   normalizeConfig,
   type LanyardConfig,
   type ProfileCardConfig,
   type Project,
   type CvDocConfig,
+  type EducationItem,
+  type AcademicProject,
   type SiteConfig,
 } from "@/lib/site-config";
 
@@ -21,9 +24,10 @@ export {
   defaultProfileCard,
   defaultProjects,
   defaultCvDocs,
+  defaultEducation,
   normalizeConfig,
 };
-export type { LanyardConfig, ProfileCardConfig, Project, CvDocConfig, SiteConfig };
+export type { LanyardConfig, ProfileCardConfig, Project, CvDocConfig, EducationItem, AcademicProject, SiteConfig };
 
 const STORAGE_KEY = "zekk:site:v1";
 

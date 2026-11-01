@@ -135,7 +135,7 @@ function Hero() {
 
         {/* Right Column: Interactive 3D Lanyard ID Card - Extends upward behind header */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2 z-20">
-          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-5 sm:-mt-[62px] lg:-mt-[62px]">
+          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-6 sm:-mt-[70px] lg:-mt-[72px]">
             <LanyardStage className="h-full w-full" />
           </div>
         </div>
@@ -158,46 +158,40 @@ function About() {
         />
       </ScrollReveal>
 
-      <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-        <div>
-          <div className="space-y-6">
-            <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
-              {profile.bio.map((par) => (
-                <p key={par.slice(0, 24)}>{par}</p>
-              ))}
-            </div>
+      <div className="space-y-10">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 items-start">
+          <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
+            {profile.bio.map((par) => (
+              <p key={par.slice(0, 24)}>{par}</p>
+            ))}
           </div>
 
           {/* Grounded Metric Cards */}
           <Parallax speed={0.06}>
-            <div className="mt-8">
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {profile.stats.map((stat, idx) => {
-                  const statKey = idx === 0 ? "projects" : idx === 1 ? "certificates" : idx === 2 ? "years" : "organizations";
-                  return (
-                    <div
-                      key={stat.label}
-                      className="group relative overflow-hidden rounded-xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
-                    >
-                      <dt className="sr-only">{stat.label}</dt>
-                      <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
-                        {stat.value}
-                      </dd>
-                      <dd className="mt-2 text-xs font-medium text-body">
-                        {t(`about.stats.${statKey}`)}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </div>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+              {profile.stats.map((stat, idx) => {
+                const statKey = idx === 0 ? "projects" : idx === 1 ? "certificates" : idx === 2 ? "years" : "organizations";
+                return (
+                  <div
+                    key={stat.label}
+                    className="group relative overflow-hidden rounded-xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
+                  >
+                    <dt className="sr-only">{stat.label}</dt>
+                    <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
+                      {stat.value}
+                    </dd>
+                    <dd className="mt-2 text-xs font-medium text-body">
+                      {t(`about.stats.${statKey}`)}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
           </Parallax>
         </div>
 
-        <div>
-          <h3 className="mb-4 text-sm font-bold text-brand dark:text-blue-400">
-            {t("about.expTitle")}
-          </h3>
+        {/* Full-width Horizontal Career Experience Timeline */}
+        <div className="pt-8 border-t border-line/60 dark:border-line/40">
           <ExperienceTimeline />
         </div>
       </div>

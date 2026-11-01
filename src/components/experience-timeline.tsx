@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { profile } from "@/lib/profile";
-import {
-  Briefcase,
-  MapPin,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Briefcase, MapPin, Calendar } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export function ExperienceTimeline() {
   const items = profile.experience;
@@ -16,6 +16,7 @@ export function ExperienceTimeline() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
+  const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -28,51 +29,69 @@ export function ExperienceTimeline() {
     return () => media.removeEventListener("change", listener);
   }, []);
 
-  const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    const maxScroll = Math.max(1, scrollWidth - clientWidth);
-    const progress = Math.min(1, Math.max(0, scrollLeft / maxScroll));
-    setScrollProgress(progress);
-
-    const containerCenter = scrollLeft + clientWidth / 2;
-    let closestIndex = 0;
-    let minDistance = Infinity;
-
-    cardRefs.current.forEach((card, index) => {
-      if (!card) return;
-      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-      const dist = Math.abs(containerCenter - cardCenter);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestIndex = index;
-      }
-    });
-
-    setActiveIndex(closestIndex);
-  }, []);
-
+  // Parallax scroll: scrub horizontal timeline based on vertical page scroll
   useEffect(() => {
+    const timeline = timelineRef.current;
     const container = containerRef.current;
-    if (!container) return;
+    if (!timeline || !container) return;
 
-    let rafId: number | null = null;
-    const onScroll = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(handleScroll);
-    };
+    if (prefersReducedMotion) {
+      setScrollProgress(1);
+      return;
+    }
 
-    container.addEventListener("scroll", onScroll, { passive: true });
-    handleScroll();
+    const ctx = gsap.context(() => {
+      // 1. Scrub progress and smooth horizontal gliding on page scroll
+      ScrollTrigger.create({
+        trigger: timeline,
+        start: "top 85%",
+        end: "bottom 25%",
+        scrub: 0.8,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const p = self.progress;
+          setScrollProgress(p);
 
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      container.removeEventListener("scroll", onScroll);
-    };
-  }, [handleScroll]);
+          const activeIdx = Math.min(
+            items.length - 1,
+            Math.max(0, Math.floor(p * items.length + 0.15))
+          );
+          setActiveIndex(activeIdx);
 
+          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+          if (maxScroll > 0) {
+            container.scrollLeft = maxScroll * p;
+          }
+        },
+      });
+
+      // 2. Individual card horizontal parallax: LEFT -> RIGHT
+      cardRefs.current.forEach((card, idx) => {
+        if (!card) return;
+        const initialOffsetX = (idx + 1) * -45;
+        gsap.fromTo(
+          card,
+          { x: initialOffsetX, opacity: 0.65 },
+          {
+            x: 0,
+            opacity: 1,
+            ease: "power1.out",
+            scrollTrigger: {
+              trigger: timeline,
+              start: "top 85%",
+              end: "bottom 35%",
+              scrub: 0.8,
+              invalidateOnRefresh: true,
+            },
+          }
+        );
+      });
+    }, timelineRef);
+
+    return () => ctx.revert();
+  }, [items.length, prefersReducedMotion]);
+
+  // Click on milestone node to jump
   const scrollToIndex = useCallback((index: number) => {
     const card = cardRefs.current[index];
     const container = containerRef.current;
@@ -87,30 +106,26 @@ export function ExperienceTimeline() {
     setActiveIndex(index);
   }, []);
 
-  const handlePrev = useCallback(() => {
-    if (activeIndex > 0) scrollToIndex(activeIndex - 1);
-  }, [activeIndex, scrollToIndex]);
-
-  const handleNext = useCallback(() => {
-    if (activeIndex < items.length - 1) scrollToIndex(activeIndex + 1);
-  }, [activeIndex, items.length, scrollToIndex]);
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        handlePrev();
+        if (activeIndex > 0) scrollToIndex(activeIndex - 1);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        handleNext();
+        if (activeIndex < items.length - 1) scrollToIndex(activeIndex + 1);
       }
     },
-    [handlePrev, handleNext]
+    [activeIndex, items.length, scrollToIndex]
   );
 
   return (
-    <div className="relative w-full overflow-hidden" aria-label="Riwayat Organisasi & Karir">
-      {/* Top Controls: Title / Indicators & Nav Buttons */}
+    <div
+      ref={timelineRef}
+      className="relative w-full overflow-hidden"
+      aria-label="Riwayat Organisasi & Karir"
+    >
+      {/* Top Header: Title & Step Indicators (No Buttons) */}
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <Briefcase className="size-4 text-brand dark:text-blue-400" />
@@ -119,28 +134,21 @@ export function ExperienceTimeline() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={activeIndex === 0}
-            aria-label="Pengalaman Sebelumnya"
-            className="group flex size-8 sm:size-9 items-center justify-center rounded-lg border border-line bg-white/80 text-ink shadow-2xs backdrop-blur-xs transition hover:border-brand/40 hover:bg-brand/5 hover:text-brand disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-[#111422]/80 dark:text-slate-200"
-          >
-            <ChevronLeft className="size-3.5 sm:size-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transform-none" />
-          </button>
-          <span className="font-mono text-xs font-bold text-muted px-1">
-            0{activeIndex + 1} / 0{items.length}
-          </span>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={activeIndex === items.length - 1}
-            aria-label="Pengalaman Selanjutnya"
-            className="group flex size-8 sm:size-9 items-center justify-center rounded-lg border border-line bg-white/80 text-ink shadow-2xs backdrop-blur-xs transition hover:border-brand/40 hover:bg-brand/5 hover:text-brand disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-[#111422]/80 dark:text-slate-200"
-          >
-            <ChevronRight className="size-3.5 sm:size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
-          </button>
+        {/* Milestone Indicator Pills (Parallax Scroll Driven) */}
+        <div
+          className="flex items-center gap-1.5"
+          aria-label={`Milestone organisasi ${activeIndex + 1} dari ${items.length}`}
+        >
+          {items.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === activeIndex
+                  ? "w-6 bg-brand dark:bg-blue-400"
+                  : "w-1.5 bg-line dark:bg-line/60"
+              }`}
+            />
+          ))}
         </div>
       </div>
 
@@ -221,7 +229,7 @@ export function ExperienceTimeline() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`snap-center shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 dark:bg-[#111422] ${
+              className={`snap-center shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-md ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"

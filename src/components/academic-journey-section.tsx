@@ -13,11 +13,15 @@ import {
   BookOpen,
   FolderGit2,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ExternalLink,
 } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export function AcademicJourneySection() {
   const { t, i18n } = useTranslation();
@@ -60,9 +64,9 @@ export function AcademicJourneySection() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
+  const sectionRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const isInteractingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -73,120 +77,104 @@ export function AcademicJourneySection() {
     return () => media.removeEventListener("change", listener);
   }, []);
 
-  // Update active index and scroll progress on horizontal scroll
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    const maxScroll = Math.max(1, scrollWidth - clientWidth);
-    const progress = Math.min(1, Math.max(0, scrollLeft / maxScroll));
-    setScrollProgress(progress);
-
-    // Determine active card based on center proximity
-    const containerCenter = scrollLeft + clientWidth / 2;
-    let closestIndex = 0;
-    let minDistance = Infinity;
-
-    cardRefs.current.forEach((card, index) => {
-      if (!card) return;
-      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-      const dist = Math.abs(containerCenter - cardCenter);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestIndex = index;
-      }
-    });
-
-    setActiveIndex(closestIndex);
-  }, []);
-
+  // Parallax scroll: scrub horizontal timeline based on vertical page scroll
   useEffect(() => {
+    const section = sectionRef.current;
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!section || !container) return;
 
-    let rafId: number | null = null;
-    const onScroll = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(handleScroll);
-    };
-
-    container.addEventListener("scroll", onScroll, { passive: true });
-    handleScroll();
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      container.removeEventListener("scroll", onScroll);
-    };
-  }, [handleScroll]);
-
-  // Navigation handlers
-  const scrollToIndex = useCallback((index: number) => {
-    const card = cardRefs.current[index];
-    const container = scrollContainerRef.current;
-    if (!card || !container) return;
-
-    const targetLeft =
-      card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
-    container.scrollTo({
-      left: Math.max(0, targetLeft),
-      behavior: "smooth",
-    });
-    setActiveIndex(index);
-  }, []);
-
-  const handlePrev = useCallback(() => {
-    if (activeIndex > 0) {
-      scrollToIndex(activeIndex - 1);
+    if (prefersReducedMotion) {
+      setScrollProgress(1);
+      return;
     }
-  }, [activeIndex, scrollToIndex]);
 
-  const handleNext = useCallback(() => {
-    if (activeIndex < items.length - 1) {
-      scrollToIndex(activeIndex + 1);
-    }
-  }, [activeIndex, items.length, scrollToIndex]);
+    const ctx = gsap.context(() => {
+      // 1. Scrub progress and smooth horizontal gliding on page scroll
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 80%",
+        end: "bottom 30%",
+        scrub: 0.8,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          const p = self.progress;
+          setScrollProgress(p);
+
+          const activeIdx = Math.min(
+            items.length - 1,
+            Math.max(0, Math.floor(p * items.length + 0.15))
+          );
+          setActiveIndex(activeIdx);
+
+          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+          if (maxScroll > 0) {
+            container.scrollLeft = maxScroll * p;
+          }
+        },
+      });
+
+      // 2. Individual card horizontal parallax: LEFT -> RIGHT
+      cardRefs.current.forEach((card, idx) => {
+        if (!card) return;
+        const initialOffsetX = (idx + 1) * -50;
+        gsap.fromTo(
+          card,
+          { x: initialOffsetX, opacity: 0.7 },
+          {
+            x: 0,
+            opacity: 1,
+            ease: "power1.out",
+            scrollTrigger: {
+              trigger: section,
+              start: "top 85%",
+              end: "bottom 40%",
+              scrub: 0.8,
+              invalidateOnRefresh: true,
+            },
+          }
+        );
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, [items.length, prefersReducedMotion]);
 
   // Click on year jump
   const handleYearClick = useCallback(
     (year: number) => {
-      // Find matching education item index or closest item
       const itemIndex = items.findIndex((e) => e.startYear === year);
+      const container = scrollContainerRef.current;
       if (itemIndex !== -1) {
-        scrollToIndex(itemIndex);
-      } else {
-        // If intermediate year, find nearest past milestone
-        let nearestIndex = 0;
-        let bestDiff = Infinity;
-        items.forEach((e, idx) => {
-          const diff = Math.abs((e.startYear || year) - year);
-          if (diff < bestDiff) {
-            bestDiff = diff;
-            nearestIndex = idx;
-          }
-        });
-        scrollToIndex(nearestIndex);
+        setActiveIndex(itemIndex);
+        const card = cardRefs.current[itemIndex];
+        if (card && container) {
+          container.scrollTo({
+            left: Math.max(0, card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2),
+            behavior: "smooth",
+          });
+        }
       }
     },
-    [items, scrollToIndex]
+    [items]
   );
 
   const toggleExpand = useCallback((id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  // Keyboard navigation for carousel
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        handlePrev();
+        container.scrollBy({ left: -300, behavior: "smooth" });
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        handleNext();
+        container.scrollBy({ left: 300, behavior: "smooth" });
       }
     },
-    [handlePrev, handleNext]
+    []
   );
 
   const activeEdu = items[activeIndex] || items[0];
@@ -194,6 +182,7 @@ export function AcademicJourneySection() {
 
   return (
     <section
+      ref={sectionRef}
       id="akademik"
       className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20 overflow-hidden"
       aria-label={t("academic.title", "Jejak Akademik")}
@@ -212,32 +201,21 @@ export function AcademicJourneySection() {
             )}
           />
 
-          {/* Navigation Arrows for Timeline */}
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 mb-4 sm:mb-0">
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={activeIndex === 0}
-              aria-label="Pendidikan Sebelumnya"
-              className="group flex size-10 items-center justify-center rounded-xl border border-line bg-white/80 text-ink shadow-2xs backdrop-blur-xs transition-all duration-200 hover:border-brand/40 hover:bg-brand/5 hover:text-brand disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-line disabled:hover:bg-white/80 disabled:hover:text-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-[#111422]/80 dark:text-slate-200 dark:hover:bg-blue-950/30"
-            >
-              <ChevronLeft className="size-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transform-none" />
-            </button>
-            <div className="font-mono text-xs font-bold text-muted px-2 select-none">
-              <span className="text-brand dark:text-blue-400">
-                0{activeIndex + 1}
-              </span>{" "}
-              / 0{items.length}
-            </div>
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={activeIndex === items.length - 1}
-              aria-label="Pendidikan Selanjutnya"
-              className="group flex size-10 items-center justify-center rounded-xl border border-line bg-white/80 text-ink shadow-2xs backdrop-blur-xs transition-all duration-200 hover:border-brand/40 hover:bg-brand/5 hover:text-brand disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-line disabled:hover:bg-white/80 disabled:hover:text-ink active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/40 dark:bg-[#111422]/80 dark:text-slate-200 dark:hover:bg-blue-950/30"
-            >
-              <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
-            </button>
+          {/* Subtle Milestone Step Indicators (Parallax Scroll Driven - No Buttons) */}
+          <div
+            className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 mb-4 sm:mb-0"
+            aria-label={`Milestone akademik ${activeIndex + 1} dari ${items.length}`}
+          >
+            {items.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === activeIndex
+                    ? "w-6 bg-brand dark:bg-blue-400"
+                    : "w-1.5 bg-line dark:bg-line/60"
+                }`}
+              />
+            ))}
           </div>
         </div>
       </ScrollReveal>
@@ -329,7 +307,7 @@ export function AcademicJourneySection() {
         </div>
       </div>
 
-      {/* HORIZONTAL CARDS CAROUSEL */}
+      {/* HORIZONTAL CARDS CAROUSEL (PARALLAX DRIVEN) */}
       <div
         ref={scrollContainerRef}
         onKeyDown={handleKeyDown}
@@ -353,7 +331,6 @@ export function AcademicJourneySection() {
           const statusLabel =
             currentLang === "en" && edu.statusEn ? edu.statusEn : edu.status;
 
-          // Logo scale: active grows (1.12x), inactive (0.92x)
           const logoScale = prefersReducedMotion
             ? 1
             : isActive
@@ -366,7 +343,7 @@ export function AcademicJourneySection() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`snap-center shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 dark:bg-[#111422] ${
+              className={`snap-center shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-lg ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"
@@ -403,158 +380,180 @@ export function AcademicJourneySection() {
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] font-bold text-brand dark:text-blue-400">
-                      #0{idx + 1} · {edu.startYear}
+                    <span className="font-mono text-xs font-bold text-brand">
+                      #0{idx + 1} • {edu.startYear}
                     </span>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold tracking-wide ${
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                         edu.current
-                          ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30"
-                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-surface text-body border border-line/60 dark:bg-slate-800"
                       }`}
                     >
                       {statusLabel}
                     </span>
                   </div>
 
-                  <h3 className="mt-1 font-display text-base sm:text-lg font-bold tracking-tight text-ink truncate" title={edu.institution}>
+                  <h3 className="mt-1 font-display text-base sm:text-lg font-bold text-ink tracking-tight truncate">
                     {edu.institution}
                   </h3>
 
-                  <p className="flex items-center gap-1 text-xs text-muted mt-0.5">
-                    <MapPin className="size-3 shrink-0 text-muted/70" />
+                  <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted">
+                    <MapPin className="size-3 shrink-0" />
                     <span className="truncate">{edu.location}</span>
-                  </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Major & Program Information */}
-              <div className="mt-4 pt-3.5 border-t border-line/60 dark:border-line/40">
-                <p className="font-display text-sm sm:text-base font-semibold text-ink">
+              {/* Major / Program & Period */}
+              <div className="mt-4 pt-4 border-t border-line/60 dark:border-line/40">
+                <h4 className="font-display text-sm sm:text-base font-bold text-ink">
                   {edu.program}
+                </h4>
+                <p className="mt-0.5 text-xs text-muted font-medium">
+                  {edu.degree}
                 </p>
-                <div className="flex items-center justify-between gap-2 mt-0.5 text-xs text-muted">
-                  <span>{edu.degree}</span>
-                  <span className="inline-flex items-center gap-1 font-mono text-[11px]">
-                    <Calendar className="size-3 text-muted/70" />
-                    <span>{edu.period}</span>
+
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted">
+                  <Calendar className="size-3.5 shrink-0" />
+                  <span className="font-mono text-[11px]">
+                    {edu.startYear} —{" "}
+                    {edu.current
+                      ? currentLang === "en"
+                        ? "Present"
+                        : "Sekarang"
+                      : edu.endYear}
                   </span>
                 </div>
               </div>
 
-              {/* Concise Description */}
+              {/* Brief Description */}
               {edu.desc && (
-                <p className="mt-3 text-xs leading-relaxed text-body line-clamp-2">
+                <p className="mt-3 text-xs leading-relaxed text-body line-clamp-3">
                   {edu.desc}
                 </p>
               )}
 
-              {/* Accessible Collapsible Details Toggle */}
-              <div className="mt-4 pt-3 border-t border-line/50 dark:border-line/30">
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(edu.id)}
-                  aria-expanded={isExpanded}
-                  className="flex items-center justify-between w-full text-xs font-semibold text-brand hover:text-brand-ink dark:text-blue-400 dark:hover:text-blue-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg p-1 -m-1"
+              {/* Collapsible Disclosure Button */}
+              <button
+                type="button"
+                onClick={() => toggleExpand(edu.id)}
+                aria-expanded={isExpanded}
+                aria-controls={`disclosure-${edu.id}`}
+                className="mt-4 flex w-full items-center justify-between py-1 text-xs font-semibold text-brand dark:text-blue-400 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand rounded"
+              >
+                <span>
+                  {isExpanded
+                    ? currentLang === "en"
+                      ? "Hide Details"
+                      : "Sembunyikan Rincian"
+                    : currentLang === "en"
+                    ? "View Details & Projects"
+                    : "Lihat Detail & Proyek"}
+                </span>
+                <ChevronDown
+                  className={`size-3.5 transition-transform duration-200 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Collapsible Details Content */}
+              {isExpanded && (
+                <div
+                  id={`disclosure-${edu.id}`}
+                  className="mt-3 pt-3 border-t border-line/50 space-y-3.5 text-xs"
                 >
-                  <span>
-                    {isExpanded
-                      ? t("academic.hideDetails", "Sembunyikan Detail")
-                      : t("academic.seeDetails", "Lihat Detail & Proyek")}
-                  </span>
-                  <ChevronDown
-                    className={`size-3.5 transition-transform duration-200 ${
-                      isExpanded ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Collapsible Content */}
-                {isExpanded && (
-                  <div className="mt-3 space-y-4 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                    {/* Study Focus Tags */}
-                    {focusList.length > 0 && (
-                      <div>
-                        <h4 className="flex items-center gap-1.5 text-[11px] font-semibold text-ink mb-2">
-                          <BookOpen className="size-3 text-brand dark:text-blue-400" />
-                          <span>
-                            {t("academic.focusTitle", "Fokus Studi & Kompetensi:")}
-                          </span>
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {focusList.map((item) => (
-                            <span
-                              key={item}
-                              className="rounded-md border border-line/60 bg-slate-50/80 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-line/40 dark:bg-[#181d30]/70 dark:text-slate-300"
-                            >
-                              {item}
-                            </span>
-                          ))}
-                        </div>
+                  {/* Study Focus */}
+                  {focusList.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 font-semibold text-ink mb-1.5">
+                        <BookOpen className="size-3.5 text-brand" />
+                        <span>
+                          {currentLang === "en"
+                            ? "Core Study Focus"
+                            : "Fokus Studi & Keilmuan"}
+                        </span>
                       </div>
-                    )}
-
-                    {/* Relevant Academic Projects */}
-                    {edu.projects && edu.projects.length > 0 && (
-                      <div className="border-t border-line/40 pt-3 dark:border-line/30">
-                        <h4 className="flex items-center gap-1.5 text-[11px] font-semibold text-ink mb-2">
-                          <FolderGit2 className="size-3 text-brand dark:text-blue-400" />
-                          <span>
-                            {t("academic.projectsTitle", "Proyek Akademik Relevan:")}
+                      <div className="flex flex-wrap gap-1.5">
+                        {focusList.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-md border border-line/70 bg-surface/80 px-2 py-0.5 text-[11px] font-medium text-body dark:border-line/40 dark:bg-slate-800/80"
+                          >
+                            {tag}
                           </span>
-                        </h4>
-                        <div className="space-y-2">
-                          {edu.projects.map((proj) => (
-                            <div
-                              key={proj.title}
-                              className="rounded-lg border border-line/60 bg-slate-50/60 p-2.5 text-xs dark:border-line/30 dark:bg-[#181d30]/50"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-ink text-[11px]">
-                                  {proj.title}
-                                </span>
-                                {proj.repo && (
-                                  <a
-                                    href={proj.repo}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-brand hover:underline dark:text-blue-400 shrink-0"
-                                  >
-                                    <span>Repo</span>
-                                    <ArrowUpRight className="size-2.5" />
-                                  </a>
-                                )}
-                              </div>
-                              {proj.desc && (
-                                <p className="mt-1 text-[11px] leading-relaxed text-body">
-                                  {proj.desc}
-                                </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Academic Projects */}
+                  {edu.projects && edu.projects.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 font-semibold text-ink mb-2">
+                        <FolderGit2 className="size-3.5 text-brand" />
+                        <span>
+                          {currentLang === "en"
+                            ? "Academic Projects"
+                            : "Proyek & Riset Terkait"}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {edu.projects.map((proj) => (
+                          <div
+                            key={proj.title}
+                            className="rounded-lg border border-line/60 bg-surface/50 p-2.5 dark:border-line/30 dark:bg-slate-900/40"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-ink truncate">
+                                {proj.title}
+                              </span>
+                              {proj.repo && (
+                                <a
+                                  href={proj.repo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline shrink-0"
+                                >
+                                  <span>Repo</span>
+                                  <ArrowUpRight className="size-3" />
+                                </a>
                               )}
                             </div>
-                          ))}
-                        </div>
+                            {proj.desc && (
+                              <p className="mt-1 text-[11px] text-body leading-relaxed">
+                                {proj.desc}
+                              </p>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Institution Website */}
-                    {edu.website && (
-                      <div className="pt-2 border-t border-line/30">
-                        <a
-                          href={edu.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-brand dark:hover:text-blue-400 transition-colors"
-                        >
-                          <ExternalLink className="size-3" />
-                          <span>Kunjungi Website Resmi Institusi</span>
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {/* Official Website */}
+                  {edu.website && (
+                    <div className="pt-1">
+                      <a
+                        href={edu.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                      >
+                        <ExternalLink className="size-3.5" />
+                        <span>
+                          {currentLang === "en"
+                            ? "Visit Institution Website"
+                            : "Kunjungi Situs Resmi"}
+                        </span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

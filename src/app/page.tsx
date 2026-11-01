@@ -114,7 +114,7 @@ function Hero() {
             </p>
 
             {/* Action Buttons: Direct Contact & Verified Credentials */}
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-1">
+            <div className="relative z-30 flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-1">
               <a
                 href={`mailto:${profile.contact.email}`}
                 className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
@@ -135,7 +135,7 @@ function Hero() {
 
         {/* Right Column: Interactive 3D Lanyard ID Card - Extends upward behind header */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2 z-20">
-          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-6 sm:-mt-[70px] lg:-mt-[72px]">
+          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-8 sm:-mt-[76px] lg:-mt-[84px]">
             <LanyardStage className="h-full w-full" />
           </div>
         </div>

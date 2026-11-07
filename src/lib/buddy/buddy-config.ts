@@ -2,7 +2,7 @@ import { BuddyConfig } from "./buddy-types";
 
 export const BUDDY_CONFIG: BuddyConfig = {
   spritesheetUrl: "/pets/miss-minute-blue.webp",
-  fallbackSpritesheetUrl: "/pets/miss-minute-original.webp",
+  fallbackSpritesheetUrl: "/pets/miss-minute-blue.webp",
   cols: 8,
   rows: 9,
   // 192x208 frame aspect ratio = 1:1.0833

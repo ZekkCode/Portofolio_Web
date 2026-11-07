@@ -1,16 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
+import { useLowSpecDevice } from "@/lib/device-performance";
 import Folder, { type FolderEntry } from "@/components/folder";
-import { CvPreviewModal, type RoleKey } from "@/components/cv-preview-modal";
+import type { RoleKey } from "@/components/cv-preview-modal";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { ArrowUpRight, FileText } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+const CvPreviewModal = dynamic(
+  () => import("@/components/cv-preview-modal").then((m) => m.CvPreviewModal),
+  { ssr: false }
+);
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -73,13 +80,14 @@ export function CvFolderSection() {
     return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   });
   const [isMobile, setIsMobile] = useState(false);
+  const { isMobileOrLow } = useLowSpecDevice();
 
   const isDark = mounted && resolvedTheme === "dark";
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
     checkMobile();
-    window.addEventListener("resize", checkMobile);
+    window.addEventListener("resize", checkMobile, { passive: true });
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -143,7 +151,7 @@ export function CvFolderSection() {
           label="CV / Zekk"
           color={isDark ? "#2563eb" : "#1b45c4"}
           mode="flap"
-          variant="glass"
+          variant={isMobileOrLow ? "solid" : "glass"}
           open={isFolderOpen}
           onOpenChange={setIsFolderOpen}
           size={isMobile ? 0.95 : 1.25}
@@ -183,12 +191,14 @@ export function CvFolderSection() {
         </div>
       </div>
 
-      {/* CV Preview Modal */}
-      <CvPreviewModal
-        isOpen={modalOpen}
-        initialRole={selectedRole}
-        onClose={() => setModalOpen(false)}
-      />
+      {/* CV Preview Modal (lazy-loaded on demand) */}
+      {modalOpen && (
+        <CvPreviewModal
+          isOpen={modalOpen}
+          initialRole={selectedRole}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </section>
   );
 }

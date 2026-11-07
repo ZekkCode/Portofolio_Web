@@ -34,15 +34,42 @@ const TRACKED_SECTIONS = [
   "kontak",
 ];
 
-function useActiveSection() {
+function useNavScrollState() {
   const [active, setActive] = useState<string>("");
+  const [scrolled, setScrolled] = useState(false);
+  const [atBottom, setAtBottom] = useState(false);
   const activeRef = useRef<string>("");
+  const scrolledRef = useRef<boolean>(false);
+  const atBottomRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const updateActiveSection = () => {
+    let rafId = 0;
+
+    const evaluate = () => {
+      rafId = 0;
       const scrollY = window.scrollY;
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
+
+      const nextScrolled = scrollY > 80;
+      if (scrolledRef.current !== nextScrolled) {
+        scrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+
+      let nextAtBottom = false;
+      if (scrollY > 250) {
+        const footer = document.querySelector("footer");
+        if (footer) {
+          nextAtBottom = footer.getBoundingClientRect().top <= windowHeight - 40;
+        } else {
+          nextAtBottom = docHeight - (scrollY + windowHeight) < 140;
+        }
+      }
+      if (atBottomRef.current !== nextAtBottom) {
+        atBottomRef.current = nextAtBottom;
+        setAtBottom(nextAtBottom);
+      }
 
       // 1. When near bottom of page, activate the last nav section (#kontak)
       if (scrollY + windowHeight >= docHeight - 70) {
@@ -55,126 +82,73 @@ function useActiveSection() {
       }
 
       // 2. Reading focal point:
-      // Eye focus line is in the upper reading zone below the sticky header.
       const header = document.querySelector("header");
       const headerHeight = header ? header.getBoundingClientRect().height : 64;
       const focalPoint = headerHeight + Math.min(windowHeight * 0.28, 200);
 
-      // If hero / top of page: check if the first tracked section (#tentang) is still below focalPoint
-      const firstSection = document.getElementById("tentang");
-      if (firstSection) {
-        const firstRect = firstSection.getBoundingClientRect();
-        if (firstRect.top > focalPoint + 40) {
+      // Single pass over tracked sections (read getBoundingClientRect once per section)
+      let nextActive = "";
+      let fallbackActive = "";
+      for (let i = 0; i < TRACKED_SECTIONS.length; i++) {
+        const id = TRACKED_SECTIONS[i];
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (i === 0 && rect.top > focalPoint + 40) {
           if (activeRef.current !== "") {
             activeRef.current = "";
             setActive("");
           }
           return;
         }
-      }
-
-      // 3. Primary check: which tracked section's boundary contains the focalPoint?
-      let nextActive = "";
-      for (let i = 0; i < TRACKED_SECTIONS.length; i++) {
-        const id = TRACKED_SECTIONS[i];
-        const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= focalPoint && rect.bottom > focalPoint) {
-            nextActive = SECTION_NAV_MAP[id] || `#${id}`;
-            break;
-          }
+        if (!nextActive && rect.top <= focalPoint && rect.bottom > focalPoint) {
+          nextActive = SECTION_NAV_MAP[id] || `#${id}`;
+        }
+        if (rect.top <= focalPoint + 80) {
+          fallbackActive = SECTION_NAV_MAP[id] || `#${id}`;
         }
       }
 
-      // 4. Fallback check (for transitions or padding gaps): closest section above or at focalPoint
-      if (!nextActive) {
-        for (let i = TRACKED_SECTIONS.length - 1; i >= 0; i--) {
-          const id = TRACKED_SECTIONS[i];
-          const el = document.getElementById(id);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.top <= focalPoint + 80) {
-              nextActive = SECTION_NAV_MAP[id] || `#${id}`;
-              break;
-            }
-          }
-        }
-      }
-
-      // Prevent continuous state updates if active section hasn't changed
-      if (activeRef.current !== nextActive) {
-        activeRef.current = nextActive;
-        setActive(nextActive);
+      const resolved = nextActive || fallbackActive;
+      if (activeRef.current !== resolved) {
+        activeRef.current = resolved;
+        setActive(resolved);
       }
     };
 
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection, { passive: true });
-    document.fonts?.ready?.then(updateActiveSection).catch(() => {});
+    const onScrollOrResize = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(evaluate);
+    };
 
-    // ResizeObserver to track layout shifts (images loaded, dynamic data)
-    const resizeObserver = new ResizeObserver(() => {
-      updateActiveSection();
-    });
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+    document.fonts?.ready?.then(onScrollOrResize).catch(() => {});
+
+    const resizeObserver = new ResizeObserver(onScrollOrResize);
     if (document.body) {
       resizeObserver.observe(document.body);
     }
 
-    updateActiveSection();
+    evaluate();
 
     return () => {
-      window.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
       resizeObserver.disconnect();
     };
   }, []);
 
-  return active;
+  return { activeSection: active, scrolled, atBottom };
 }
 
 export function PortfolioPillNav() {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
-  const activeSection = useActiveSection();
+  const { activeSection, scrolled, atBottom } = useNavScrollState();
   const scrollTo = useSmoothScrollTo();
-  const [scrolled, setScrolled] = useState(false);
-  const [atBottom, setAtBottom] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const docHeight = document.documentElement.scrollHeight;
-
-      // Muncul setelah scroll melewati hero (80px)
-      setScrolled(scrollY > 80);
-
-      // Otomatis menghilang saat mencapai area footer di paling bawah halaman
-      if (scrollY <= 250) {
-        setAtBottom(false);
-        return;
-      }
-
-      const footer = document.querySelector("footer");
-      if (footer) {
-        const rect = footer.getBoundingClientRect();
-        setAtBottom(rect.top <= windowHeight - 40);
-      } else {
-        const remainingDistance = docHeight - (scrollY + windowHeight);
-        setAtBottom(remainingDistance < 140);
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    onScroll();
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
 
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
 

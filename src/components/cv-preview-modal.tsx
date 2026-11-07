@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
 import { useLenis } from "lenis/react";
 import { useSiteConfig } from "@/lib/site-store";
-import PaperCrumple from "@/components/paper-crumple";
+import type { PaperCrumpleProps } from "@/components/paper-crumple";
+
+const PaperCrumple = dynamic<PaperCrumpleProps>(
+  () => import("@/components/paper-crumple"),
+  { ssr: false }
+);
 
 export type RoleKey = "all" | "graphic" | "uiux" | "frontend" | "itsupport";
 

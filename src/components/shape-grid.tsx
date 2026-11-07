@@ -547,7 +547,6 @@ export default function ShapeGrid({
       const s = settingsRef.current;
       const dt = state.last ? Math.min(0.05, (now - state.last) / 1000) : 1 / 60;
       state.last = now;
-      resize();
       if (!state.started) {
         state.started = true;
         state.startedAt = state.time;
@@ -578,7 +577,7 @@ export default function ShapeGrid({
             state.cascades.length === 0 &&
             s.twinkle === 0 &&
             state.spotPower < 0.005 &&
-            state.time - state.startedAt > 3
+            (!s.intro || state.time - state.startedAt > 3)
           : false);
       if (!settled && state.visible) state.raf = requestAnimationFrame(frame);
       else state.last = 0;
@@ -597,6 +596,7 @@ export default function ShapeGrid({
     };
 
     const onMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
       const point = pointFrom(event);
       if (point && !state.inside && state.spotPower < 0.02) {
         state.spotX = point[0];

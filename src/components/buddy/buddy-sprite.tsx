@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useCallback, forwardRef } from "react";
+import { useEffect, useRef, useMemo, forwardRef } from "react";
 import { BUDDY_CONFIG, BUDDY_ROW_MAP, BuddyRowKey } from "@/lib/buddy/buddy-config";
 import { BuddyState, DeviceMode } from "@/lib/buddy/buddy-types";
 
@@ -14,10 +14,7 @@ interface BuddySpriteProps {
 export const BuddySprite = forwardRef<HTMLButtonElement, BuddySpriteProps>(
   function BuddySprite({ state, deviceMode, onClick, onHover }, ref) {
     const spriteRef = useRef<HTMLDivElement>(null);
-    const rafRef = useRef(0);
-    const lastTimeRef = useRef(0);
     const frameRef = useRef(0);
-    const accRef = useRef(0);
 
     const { width, height } =
       deviceMode === "mobile"
@@ -36,58 +33,38 @@ export const BuddySprite = forwardRef<HTMLButtonElement, BuddySpriteProps>(
     const totalBgWidth = width * BUDDY_CONFIG.cols;
     const totalBgHeight = height * BUDDY_CONFIG.rows;
 
-    // RAF-based frame ticker — synced with browser paint cycle
-    const tick = useCallback(
-      (now: number) => {
-        const el = spriteRef.current;
-        if (!el) {
-          rafRef.current = requestAnimationFrame(tick);
-          return;
-        }
-
-        if (lastTimeRef.current === 0) lastTimeRef.current = now;
-        const dt = now - lastTimeRef.current;
-        lastTimeRef.current = now;
-
-        const interval = 1000 / rowDef.fps;
-        accRef.current += dt;
-
-        if (accRef.current >= interval) {
-          accRef.current -= interval;
-
-          let nextFrame = frameRef.current + 1;
-          if (nextFrame >= rowDef.frames) {
-            nextFrame = rowDef.loop ? 0 : rowDef.frames - 1;
-          }
-          frameRef.current = nextFrame;
-
-          // Direct DOM update — no React re-render
-          const bgPosX = -(nextFrame * width);
-          const bgPosY = -(rowDef.index * height);
-          el.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
-        }
-
-        rafRef.current = requestAnimationFrame(tick);
-      },
-      [rowDef, width, height]
-    );
-
-    // Start/restart RAF on state change
+    // Low-overhead frame ticker at exact sprite FPS (6-8 Hz instead of 60Hz RAF)
     useEffect(() => {
       frameRef.current = 0;
-      accRef.current = 0;
-      lastTimeRef.current = 0;
-
-      // Set initial position immediately
       const el = spriteRef.current;
       if (el) {
         const bgPosY = -(rowDef.index * height);
         el.style.backgroundPosition = `0px ${bgPosY}px`;
       }
 
-      rafRef.current = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(rafRef.current);
-    }, [tick, rowDef, height]);
+      const intervalMs = Math.round(1000 / rowDef.fps);
+      const timer = setInterval(() => {
+        if (document.hidden) return;
+        const target = spriteRef.current;
+        if (!target) return;
+
+        let nextFrame = frameRef.current + 1;
+        if (nextFrame >= rowDef.frames) {
+          if (!rowDef.loop) {
+            clearInterval(timer);
+            return;
+          }
+          nextFrame = 0;
+        }
+        frameRef.current = nextFrame;
+
+        const bgPosX = -(nextFrame * width);
+        const bgPosY = -(rowDef.index * height);
+        target.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+      }, intervalMs);
+
+      return () => clearInterval(timer);
+    }, [rowDef, width, height]);
 
     return (
       <button

@@ -36,6 +36,7 @@ export function useBuddyRoaming({
   const deviceModeRef = useRef<DeviceMode>("desktop");
   const prefersReducedMotionRef = useRef<boolean>(false);
   const scheduleNextBehaviorRef = useRef<() => void>(() => {});
+  const wakePhysicsRef = useRef<() => void>(() => {});
 
   const characterSize =
     deviceMode === "mobile"
@@ -49,6 +50,9 @@ export function useBuddyRoaming({
       stateRef.current = newState;
       setState(newState);
       onStateChange?.(newState);
+      if (newState === "walking-left" || newState === "walking-right") {
+        wakePhysicsRef.current();
+      }
     },
     [onStateChange]
   );
@@ -204,88 +208,105 @@ export function useBuddyRoaming({
     updateDeviceMode();
     window.addEventListener("resize", updateDeviceMode, { passive: true });
 
-    // Footer Docking Detection: dock to bottom when footer comes into view
-    const checkFooterDock = () => {
-      const footer = document.querySelector("footer");
-      if (!footer) return;
+    // Footer Docking Detection via IntersectionObserver (zero scroll layout thrashing)
+    const footer = document.querySelector("footer");
+    let footerObserver: IntersectionObserver | null = null;
+    if (footer && typeof IntersectionObserver !== "undefined") {
+      footerObserver = new IntersectionObserver(
+        ([entry]) => {
+          const docked = entry.isIntersecting;
+          if (docked !== isDockedRef.current) {
+            isDockedRef.current = docked;
+            setIsDocked(docked);
 
-      const rect = footer.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      const docked = rect.top <= windowHeight - 40;
+            if (docked && stateRef.current.startsWith("walking")) {
+              updateState("idle");
+            }
+          }
+        },
+        { rootMargin: "0px 0px -40px 0px", threshold: 0 }
+      );
+      footerObserver.observe(footer);
+    }
 
-      if (docked !== isDockedRef.current) {
-        isDockedRef.current = docked;
-        setIsDocked(docked);
-
-        if (docked && stateRef.current.startsWith("walking")) {
-          updateState("idle");
-        }
-      }
-    };
-
-    window.addEventListener("scroll", checkFooterDock, { passive: true });
-    checkFooterDock();
-
-    // 60FPS Physics Tick
+    // On-demand 60FPS Physics Tick (runs ONLY while walking)
     const tick = (now: number) => {
-      if (lastTimeRef.current === 0) lastTimeRef.current = now;
-      const dt = Math.min(0.1, (now - lastTimeRef.current) / 1000); // clamp dt to avoid teleports
-      lastTimeRef.current = now;
-
-      // Move when in walking state
+      rafId.current = null;
       const current = stateRef.current;
-      if (
+      const isWalking =
         (current === "walking-left" || current === "walking-right") &&
         !isPausedRef.current &&
         !isHiddenRef.current &&
         !isDockedRef.current &&
-        !prefersReducedMotionRef.current
-      ) {
-        const speed = BUDDY_CONFIG.speed; // px per second
-        const delta = speed * directionRef.current * dt;
-        let newX = xRef.current + delta;
+        !prefersReducedMotionRef.current &&
+        !document.hidden;
 
-        const { minX, maxX } = getSafeBounds();
-
-        // Bounce when reaching boundaries
-        if (newX >= maxX) {
-          newX = maxX;
-          directionRef.current = -1;
-          setDirection(-1);
-          updateState("walking-left");
-        } else if (newX <= minX) {
-          newX = minX;
-          directionRef.current = 1;
-          setDirection(1);
-          updateState("walking-right");
-        }
-
-        xRef.current = newX;
-        applyTransform(newX);
+      if (!isWalking) {
+        lastTimeRef.current = 0;
+        return;
       }
+
+      if (lastTimeRef.current === 0) lastTimeRef.current = now;
+      const dt = Math.min(0.1, (now - lastTimeRef.current) / 1000);
+      lastTimeRef.current = now;
+
+      const speed = BUDDY_CONFIG.speed;
+      const delta = speed * directionRef.current * dt;
+      let newX = xRef.current + delta;
+
+      const { minX, maxX } = getSafeBounds();
+
+      if (newX >= maxX) {
+        newX = maxX;
+        directionRef.current = -1;
+        setDirection(-1);
+        updateState("walking-left");
+      } else if (newX <= minX) {
+        newX = minX;
+        directionRef.current = 1;
+        setDirection(1);
+        updateState("walking-right");
+      }
+
+      xRef.current = newX;
+      applyTransform(newX);
 
       rafId.current = requestAnimationFrame(tick);
     };
 
-    rafId.current = requestAnimationFrame(tick);
+    const wakePhysics = () => {
+      if (rafId.current !== null || document.hidden) return;
+      lastTimeRef.current = performance.now();
+      rafId.current = requestAnimationFrame(tick);
+    };
+    wakePhysicsRef.current = wakePhysics;
+
+    if (stateRef.current === "walking-left" || stateRef.current === "walking-right") {
+      wakePhysics();
+    }
 
     // Pause physics tick when tab is in background to save CPU and battery
     const onVisibilityChange = () => {
       if (document.hidden) {
-        if (rafId.current) cancelAnimationFrame(rafId.current);
+        if (rafId.current !== null) {
+          cancelAnimationFrame(rafId.current);
+          rafId.current = null;
+        }
         lastTimeRef.current = 0;
-      } else {
-        lastTimeRef.current = performance.now();
-        rafId.current = requestAnimationFrame(tick);
+      } else if (
+        stateRef.current === "walking-left" ||
+        stateRef.current === "walking-right"
+      ) {
+        wakePhysics();
       }
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
       if (timerRef.current) clearTimeout(timerRef.current);
-      window.removeEventListener("scroll", checkFooterDock);
+      footerObserver?.disconnect();
       window.removeEventListener("resize", updateDeviceMode);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       motionQuery.removeEventListener("change", onMotionChange);

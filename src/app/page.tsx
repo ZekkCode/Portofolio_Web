@@ -24,6 +24,7 @@ import { AnimatedEye } from "@/components/animated-eye";
 import { usePageViews } from "@/lib/use-page-views";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
+import { useLowSpecDevice } from "@/lib/device-performance";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
 import { ArrowRight, FileText, Mail } from "lucide-react";
@@ -202,14 +203,14 @@ function About() {
 function Stack() {
   const { t } = useTranslation();
 
-  // 6 pengulangan stack agar pita marquee tidak pernah putus di layar resolusi tinggi (4K/ultrawide)
-  const stackRow1 = Array.from({ length: 6 }, () => profile.stack).flat();
+  // 4 pengulangan (genap untuk -50% loop seamless) hemat 33% DOM node dibanding 6x
+  const stackRow1 = Array.from({ length: 4 }, () => profile.stack).flat();
   // Baris kedua di-offset 6 item agar urutan logo bervariasi antar baris
   const offsetTools = [
     ...profile.stack.slice(6),
     ...profile.stack.slice(0, 6),
   ];
-  const stackRow2 = Array.from({ length: 6 }, () => offsetTools).flat();
+  const stackRow2 = Array.from({ length: 4 }, () => offsetTools).flat();
 
   const disciplines = [
     {
@@ -298,7 +299,7 @@ function Stack() {
             <div
               key={`row1-${tool.name}-${idx}`}
               aria-hidden={idx >= profile.stack.length ? "true" : undefined}
-              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/80 p-2.5 shadow-2xs backdrop-blur-xs transition-all duration-300 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md hover:shadow-brand/5 dark:border-line/40 dark:bg-slate-900/60 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
+              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/95 p-2.5 shadow-2xs transition-colors duration-200 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md dark:border-line/40 dark:bg-slate-900/90 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
               title={tool.name}
               aria-label={tool.name}
             >
@@ -330,7 +331,7 @@ function Stack() {
           {stackRow2.map((tool, idx) => (
             <div
               key={`row2-${tool.name}-${idx}`}
-              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/80 p-2.5 shadow-2xs backdrop-blur-xs transition-all duration-300 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md hover:shadow-brand/5 dark:border-line/40 dark:bg-slate-900/60 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
+              className="group/tool relative flex size-12 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-line/70 bg-white/95 p-2.5 shadow-2xs transition-colors duration-200 hover:z-30 hover:border-brand/40 hover:bg-white hover:shadow-md dark:border-line/40 dark:bg-slate-900/90 dark:hover:border-blue-500/40 dark:hover:bg-slate-900 cursor-default"
               title={tool.name}
               aria-label={tool.name}
             >
@@ -611,6 +612,7 @@ function Footer() {
 export default function Home() {
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
+  const { isMobileOrLow } = useLowSpecDevice();
   const isDark = mounted && resolvedTheme === "dark";
 
   return (
@@ -623,15 +625,16 @@ export default function Home() {
           hoverColor={isDark ? "#2563eb" : "#1b45c4"}
           hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
           fillOpacity={isDark ? 0.12 : 0.08}
-          cellSize={44}
-          speed={0.2}
+          cellSize={isMobileOrLow ? 52 : 44}
+          speed={isMobileOrLow ? 0 : 0.14}
           lineWidth={1}
-          radius={2.0}
-          trail={0.6}
-          glow={isDark ? 0.16 : 0.10}
+          radius={isMobileOrLow ? 0 : 1.8}
+          trail={0.45}
+          glow={0}
+          dpr={1}
           fade={1}
-          clickCascade
-          intro
+          clickCascade={!isMobileOrLow}
+          intro={false}
         />
         {/* Lapisan peredam ambient untuk kenyamanan membaca teks */}
         <div className="absolute inset-0 bg-white/70 dark:bg-[#08090e]/75 pointer-events-none transition-colors duration-300" />

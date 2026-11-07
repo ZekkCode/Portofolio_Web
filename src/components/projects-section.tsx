@@ -1,12 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type Project } from "@/lib/site-store";
-import { RepoPreviewModal } from "@/components/repo-preview-modal";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+
+const RepoPreviewModal = dynamic(
+  () => import("@/components/repo-preview-modal").then((m) => m.RepoPreviewModal),
+  { ssr: false }
+);
 
 interface ProjectCardProps {
   project: Project;
@@ -245,12 +250,14 @@ export function ProjectsSection() {
         </div>
       )}
 
-      {/* Repository Full Preview Modal */}
-      <RepoPreviewModal
-        project={selectedProject}
-        isOpen={Boolean(selectedProject)}
-        onClose={() => setSelectedProject(null)}
-      />
+      {/* Repository Full Preview Modal (lazy-loaded on demand) */}
+      {selectedProject && (
+        <RepoPreviewModal
+          project={selectedProject}
+          isOpen={Boolean(selectedProject)}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
     </section>
   );
 }

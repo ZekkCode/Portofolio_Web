@@ -944,9 +944,20 @@ const Lanyard = ({
     const container = containerRef.current;
     if (!container) return undefined;
 
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const lowSpec =
+      window.innerWidth < 768 ||
+      (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 4) ||
+      (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4);
+    const faceWidth = lowSpec ? 512 : FACE_WIDTH;
+
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({
+        antialias: !lowSpec,
+        alpha: true,
+        powerPreference: lowSpec ? 'default' : 'high-performance'
+      });
     } catch {
       return undefined;
     }
@@ -959,7 +970,7 @@ const Lanyard = ({
     canvas.setAttribute('aria-hidden', 'true');
     container.appendChild(canvas);
 
-    const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    const anisotropy = lowSpec ? 1 : Math.min(4, renderer.capabilities.getMaxAnisotropy());
     const scene = new THREE.Scene();
     const environment = buildEnvironment(renderer);
     scene.environment = environment.texture;
@@ -972,12 +983,12 @@ const Lanyard = ({
 
     const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
     const images: Images = { front: null, back: null, strap: null };
-    const initialHeight = Math.round((FACE_WIDTH * 2.25) / 1.6);
+    const initialHeight = Math.round((faceWidth * 2.25) / 1.6);
     const frontCanvas = document.createElement('canvas');
-    frontCanvas.width = FACE_WIDTH;
+    frontCanvas.width = faceWidth;
     frontCanvas.height = initialHeight;
     const backCanvas = document.createElement('canvas');
-    backCanvas.width = FACE_WIDTH;
+    backCanvas.width = faceWidth;
     backCanvas.height = initialHeight;
     const strapCanvas = document.createElement('canvas');
     strapCanvas.width = 192;
@@ -1066,6 +1077,7 @@ const Lanyard = ({
     let raf = 0;
     let last = performance.now();
     let time = 0;
+    let activeTime = 0;
     let visible = true;
     let alive = true;
     let placed = false;
@@ -1077,8 +1089,8 @@ const Lanyard = ({
     const paintFaces = () => {
       const s = settingsRef.current!;
       const color = parseColor(s.cardColor, [1, 1, 1]);
-      const width = FACE_WIDTH;
-      const height = Math.round((FACE_WIDTH * layout.height) / layout.width);
+      const width = faceWidth;
+      const height = Math.round((faceWidth * layout.height) / layout.width);
       if (frontCanvas.width !== width || frontCanvas.height !== height) {
         frontCanvas.width = width;
         frontCanvas.height = height;
@@ -1341,6 +1353,8 @@ const Lanyard = ({
       const weight = Math.max(gravity, 20);
       const springy = clamp(s.elasticity, 0, 1);
       const settle = clamp(s.damping, 0, 1);
+      const maxActiveSeconds = lowSpec ? 3.5 : 7.0;
+      const breezeScale = sim.grab ? 1 : activeTime > maxActiveSeconds ? 0 : 1 - activeTime / maxActiveSeconds;
       return {
         gravity,
         hold: weight * mix(2.2, 5.5, springy),
@@ -1358,16 +1372,18 @@ const Lanyard = ({
         twistDamping: 3,
         grip: 40,
         gripDamping: 6,
-        breeze: reducedMotion ? 0 : clamp(s.breeze, 0, 1)
+        breeze: reducedMotion ? 0 : clamp(s.breeze, 0, 1) * breezeScale
       };
     };
 
     const tick = (now: number) => {
       raf = 0;
-      if (!alive) return;
+      if (!alive || !visible) return;
       const dt = Math.min(1 / 30, Math.max(1 / 240, (now - last) / 1000));
       last = now;
       time += dt;
+      if (sim.grab) activeTime = 0;
+      else activeTime += dt;
       const current = physics();
       stepSimulation(sim, dt, current, time);
       const body = sim.body;
@@ -1381,6 +1397,7 @@ const Lanyard = ({
     };
 
     const start = () => {
+      activeTime = 0;
       if (raf || !visible || !alive) return;
       sim.calm = 0;
       last = performance.now();
@@ -1486,7 +1503,7 @@ const Lanyard = ({
     const resize = () => {
       view.width = Math.max(1, container.clientWidth);
       view.height = Math.max(1, container.clientHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowSpec ? 1 : 1.5));
       renderer.setSize(view.width, view.height, false);
       apply();
       render();
@@ -1496,11 +1513,23 @@ const Lanyard = ({
     resizeObserver.observe(container);
     const intersectionObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      if (visible) start();
+      if (visible) {
+        start();
+      } else if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
     });
     intersectionObserver.observe(container);
     const onVisibility = () => {
-      if (!document.hidden) start();
+      if (document.hidden) {
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      } else if (visible) {
+        start();
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
 

@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { useSmoothScrollTo } from "@/components/parallax";
 
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false);
+  const visibleRef = useRef(false);
   const scrollTo = useSmoothScrollTo();
 
   useEffect(() => {
     const onScroll = () => {
-      setVisible(window.scrollY > 320);
+      const next = window.scrollY > 320;
+      if (visibleRef.current !== next) {
+        visibleRef.current = next;
+        setVisible(next);
+      }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();

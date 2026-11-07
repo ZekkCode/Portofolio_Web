@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { usePathname } from "next/navigation";
+import "@/lib/i18n";
 import { BUDDY_CONFIG } from "@/lib/buddy/buddy-config";
 import { BuddyAPI } from "@/lib/buddy/buddy-types";
 import { useBuddyRoaming } from "@/hooks/use-buddy-roaming";
@@ -10,6 +12,7 @@ import { useMounted } from "@/lib/use-mounted";
 import "@/components/buddy/buddy.css";
 
 export function BuddyClient() {
+  const pathname = usePathname();
   const mounted = useMounted();
   const [isHidden, setIsHidden] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -155,7 +158,7 @@ export function BuddyClient() {
     };
   }, [handleHide, handleShow, isHidden, playAction, setState, state]);
 
-  if (!mounted) return null;
+  if (!mounted || pathname?.startsWith("/admin")) return null;
 
   // Minimized dock button when user chooses to hide Miss Minute
   if (isHidden) {

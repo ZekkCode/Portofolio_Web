@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Plus_Jakarta_Sans, Space_Grotesk, Pixelify_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { profile } from "@/lib/profile";
+import { translations } from "@/lib/translations";
 import "./globals.css";
 
 const fontDisplay = Space_Grotesk({
@@ -44,6 +44,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(profile.site),
   alternates: {
     canonical: "/",
+    languages: {
+      "id-ID": "/",
+      "en-US": "/",
+      "x-default": "/",
+    },
   },
   title: {
     default: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
@@ -131,10 +136,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/card-front.svg", type: "image/svg+xml" },
+      { url: "/icon", type: "image/png", sizes: "32x32" },
     ],
     apple: [
-      { url: "/card-front.svg" },
+      { url: "/apple-icon", type: "image/png", sizes: "180x180" },
     ],
   },
   other: {
@@ -218,6 +223,18 @@ const jsonLd = {
       },
       primaryImageOfPage: `${profile.site}/opengraph-image`,
     },
+    {
+      "@type": "FAQPage",
+      "@id": `${profile.site}/#faq`,
+      mainEntity: ([1, 2, 3, 4, 5] as const).map((i) => ({
+        "@type": "Question",
+        name: translations.id.faq[`q${i}`],
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: translations.id.faq[`a${i}`],
+        },
+      })),
+    },
   ],
 };
 
@@ -226,14 +243,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
-      <head>
-        <link rel="preload" as="image" type="image/webp" href="/pets/miss-minute-blue.webp" />
-      </head>
       <body className="antialiased">
-        <Script
+        <script
           id="structured-data"
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>

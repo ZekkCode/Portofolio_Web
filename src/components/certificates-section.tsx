@@ -78,11 +78,14 @@ export function CertificatesSection() {
       {/* Grid of Credentials - Stable without parallax drift */}
       <ScrollReveal y={16}>
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-line/60 bg-white/60 p-12 text-center text-xs text-body dark:border-line/40 dark:bg-[#111422]/60">
+          <div
+            role="tabpanel"
+            className="rounded-xl border border-line/60 bg-white/60 p-12 text-center text-xs text-body dark:border-line/40 dark:bg-[#111422]/60"
+          >
             {t("certificates.empty", "Belum ada kredensial dalam kategori ini.")}
           </div>
         ) : (
-          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div role="tabpanel" className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {filtered.map((cert) => (
               <div
                 key={("id" in cert && cert.id) ? cert.id : cert.title}
@@ -94,9 +97,9 @@ export function CertificatesSection() {
                     <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
                   </div>
 
-                  <h4 className="mt-2.5 font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
+                  <h3 className="mt-2.5 font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
                     {cert.title}
-                  </h4>
+                  </h3>
 
                   <div className="mt-2">
                     <span className="inline-block text-[11px] font-medium text-muted">

@@ -25,6 +25,7 @@ export function FaqSection() {
             return (
               <div key={i}>
                 <button
+                  id={`faq-question-${i}`}
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
                   aria-expanded={isOpen}

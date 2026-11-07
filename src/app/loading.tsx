@@ -10,7 +10,7 @@ export default function Loading() {
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-brand border-t-transparent" />
       </div>
       <p className="font-mono text-xs font-medium text-body tracking-wider animate-pulse">
-        MEMUAT ZEKTECH...
+        MEMUAT ZEKKTECH...
       </p>
     </div>
   );

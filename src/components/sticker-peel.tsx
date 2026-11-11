@@ -720,8 +720,9 @@ export const StickerPeel = ({
         canvas.width = Math.round(size * view.ratio);
         canvas.height = Math.round(size * view.ratio);
       }
-      hit.style.width = `${s.width + 12}px`;
-      hit.style.height = `${h + 12}px`;
+      hit.style.width = `${Math.ceil(s.width * 1.3)}px`;
+      hit.style.height = `${Math.ceil(h * 1.3)}px`;
+      hit.style.transform = `translate(-50%, -50%) rotate(${s.rotate}rad)`;
       if (!state.placed) {
         const start = s.initialPosition;
         const offset = start && typeof start === "object" ? start : { x: 0, y: 0 };
@@ -927,8 +928,8 @@ export const StickerPeel = ({
       const h = height();
       // Natural boundary around the sticker so hover triggers immediately without dead spots
       const inBounds =
-        Math.abs(state.local.x) <= s.width * 0.6 &&
-        Math.abs(state.local.y) <= h * 0.6;
+        Math.abs(state.local.x) <= s.width * 0.75 &&
+        Math.abs(state.local.y) <= h * 0.75;
       if (inBounds !== state.hover) state.hover = inBounds;
       hit.style.cursor = inBounds ? (state.press ? "grabbing" : "pointer") : "";
     };
@@ -1084,7 +1085,7 @@ export const StickerPeel = ({
           <canvas ref={canvasRef} className="pointer-events-none block h-full w-full" aria-hidden="true" />
           <div
             ref={hitRef}
-            className="pointer-events-auto absolute left-1/2 top-1/2 touch-pan-y select-none cursor-pointer [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]"
+            className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none cursor-pointer [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]"
             aria-hidden="true"
           />
         </>

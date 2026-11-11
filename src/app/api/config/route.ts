@@ -128,7 +128,7 @@ export async function POST(request: Request) {
 
   try {
     const normalized = normalizeConfig(rawBody as Partial<SiteConfig>);
-    const supabase = getSupabaseClient();
+    const supabase = getServiceRoleClient() || getSupabaseClient();
 
     if (!supabase) {
       return NextResponse.json(

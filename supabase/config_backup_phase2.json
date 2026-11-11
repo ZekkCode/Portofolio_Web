@@ -1,0 +1,328 @@
+{
+  "configured": true,
+  "provider": "supabase",
+  "config": {
+    "headerLogoUrl": "",
+    "lanyard": {
+      "frontImage": "/card-front.webp",
+      "backImage": "",
+      "strapImage": "",
+      "imageFit": "cover",
+      "cardColor": "#0b2a8a",
+      "orientation": "portrait",
+      "finish": "glossy",
+      "cornerRadius": 0.85,
+      "size": 0.36,
+      "anchor": "center",
+      "strapLength": 0.32,
+      "strapColor": "#123a9e",
+      "strapWidth": 0.65,
+      "metal": "silver",
+      "gravity": 1,
+      "damping": 0.5,
+      "elasticity": 0.5,
+      "breeze": 0.18,
+      "interactive": true,
+      "intro": true
+    },
+    "profileCard": {
+      "avatarUrl": "",
+      "iconUrl": "",
+      "miniAvatarUrl": "",
+      "imageFit": "contain",
+      "name": "Zakaria Mujur Prasetyo",
+      "title": "UI/UX & Frontend Developer",
+      "handle": "zekksparow",
+      "status": "Online",
+      "statusColor": "#22c55e",
+      "contactText": "Contact",
+      "showUserInfo": true,
+      "theme": "dark",
+      "backdropColor": "",
+      "radius": 16,
+      "holo": 0.8,
+      "glare": 0.5,
+      "enableTilt": true,
+      "tiltStrength": 12,
+      "parallax": 8,
+      "enableMobileTilt": false,
+      "mobileTiltSensitivity": 5,
+      "intro": true
+    },
+    "projects": [
+      {
+        "id": "project-1794418525197",
+        "title": "Proyek Baru",
+        "desc": "Deskripsi ringkas mengenai tujuan, fitur, dan arsitektur proyek...",
+        "tags": [
+          "Next.js",
+          "TypeScript",
+          "Tailwind CSS"
+        ],
+        "repo": "",
+        "role": "Frontend Developer",
+        "problem": "",
+        "highlight": "",
+        "outcome": "",
+        "image": "",
+        "previewUrl": ""
+      },
+      {
+        "id": "project-1794418071749",
+        "title": "Proyek Baru",
+        "desc": "Deskripsi ringkas mengenai tujuan, fitur, dan arsitektur proyek...",
+        "tags": [
+          "Next.js",
+          "TypeScript",
+          "Tailwind CSS"
+        ],
+        "repo": "",
+        "role": "Frontend Developer",
+        "problem": "",
+        "highlight": "",
+        "outcome": "",
+        "image": "",
+        "previewUrl": ""
+      },
+      {
+        "id": "project-1794416656684",
+        "title": "Proyek Cek Otomatis",
+        "desc": "Deskripsi ringkas mengenai tujuan, fitur, dan arsitektur proyek...",
+        "tags": [
+          "Next.js",
+          "TypeScript",
+          "Tailwind CSS"
+        ],
+        "repo": "",
+        "role": "Frontend Developer",
+        "problem": "",
+        "highlight": "",
+        "outcome": "",
+        "image": "",
+        "previewUrl": ""
+      }
+    ],
+    "cvDocs": [
+      {
+        "id": "cv-graphic",
+        "roleKey": "graphic",
+        "title": "Desainer Grafis",
+        "subtitle": "Multimedia & Visual Identity",
+        "color": "#0284c7",
+        "pdfUrl": "/cv-ats-zakariamp-2025.pdf",
+        "pageCount": 4,
+        "pages": [
+          "/cv-page-1.png",
+          "/cv-page-2.png",
+          "/cv-page-3.png",
+          "/cv-page-4.png"
+        ]
+      },
+      {
+        "id": "cv-uiux",
+        "roleKey": "uiux",
+        "title": "UI/UX Designer",
+        "subtitle": "Product Design & Prototyping",
+        "color": "#0284c7",
+        "pdfUrl": "/cv-ats-zakariamp-2025.pdf",
+        "pageCount": 4,
+        "pages": [
+          "/cv-page-1.png",
+          "/cv-page-2.png",
+          "/cv-page-3.png",
+          "/cv-page-4.png"
+        ]
+      },
+      {
+        "id": "cv-frontend",
+        "roleKey": "frontend",
+        "title": "Frontend Developer",
+        "subtitle": "Next.js & TypeScript Systems",
+        "color": "#0284c7",
+        "pdfUrl": "/cv-ats-zakariamp-2025.pdf",
+        "pageCount": 4,
+        "pages": [
+          "/cv-page-1.png",
+          "/cv-page-2.png",
+          "/cv-page-3.png",
+          "/cv-page-4.png"
+        ]
+      },
+      {
+        "id": "cv-itsupport",
+        "roleKey": "itsupport",
+        "title": "IT Support Specialist",
+        "subtitle": "Hardware, Network & Linux Systems",
+        "color": "#0284c7",
+        "pdfUrl": "/cv-ats-zakariamp-2025.pdf",
+        "pageCount": 4,
+        "pages": [
+          "/cv-page-1.png",
+          "/cv-page-2.png",
+          "/cv-page-3.png",
+          "/cv-page-4.png"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "id": "utm",
+        "institution": "Universitas Trunojoyo Madura",
+        "location": "Bangkalan, Jawa Timur",
+        "program": "S1 Teknik Informatika",
+        "degree": "Sarjana Komputer (S.Kom)",
+        "period": "2024 – Sekarang",
+        "startYear": 2024,
+        "endYear": null,
+        "status": "Mahasiswa Aktif",
+        "statusEn": "Active Student",
+        "current": true,
+        "focus": [
+          "Algoritma & Pemrograman",
+          "Dasar Pemrograman Web",
+          "Sistem Basis Data",
+          "Jaringan Komputer"
+        ],
+        "focusEn": [
+          "Algorithms & Programming",
+          "Web Development Fundamentals",
+          "Database Systems",
+          "Computer Networks"
+        ],
+        "projects": [
+          {
+            "desc": "Aplikasi web latihan simulasi TOEFL dengan batasan waktu terisolasi, pemutar audio terproteksi, dan kalkulasi skor otomatis.",
+            "repo": "https://github.com/ZekkCode/OnlineTest-TOEFL_DPW",
+            "title": "TOEL — Simulator Ujian TOEFL"
+          }
+        ],
+        "desc": "Menempuh pendidikan sarjana Teknik Informatika dengan fokus utama rekayasa antarmuka web, arsitektur sistem, dan eksplorasi interaksi 3D fisik.",
+        "website": "https://www.trunojoyo.ac.id"
+      },
+      {
+        "id": "smkn1jetis",
+        "institution": "SMK Negeri 1 Jetis",
+        "location": "Mojokerto, Jawa Timur",
+        "program": "Kejurusan Multimedia",
+        "degree": "Pendidikan Menengah Kejuruan",
+        "period": "2021 – 2024",
+        "startYear": 2021,
+        "endYear": 2024,
+        "status": "Lulus",
+        "statusEn": "Graduated",
+        "current": false,
+        "focus": [
+          "Desain Grafis (Photoshop & CorelDRAW)",
+          "Produksi & Editing Video (Premiere Pro & Filmora)",
+          "Desain Antarmuka UI/UX Dasar"
+        ],
+        "focusEn": [
+          "Graphic Design (Photoshop & CorelDRAW)",
+          "Video Production & Editing (Premiere Pro & Filmora)",
+          "Fundamental UI/UX Design"
+        ],
+        "projects": [
+          {
+            "desc": "Perancangan user flow dan prototipe interaktif high-fidelity dari awal hingga akhir menggunakan Figma.",
+            "title": "Prototipe UI/UX Game Edukasi 'Tebak ASEAN'"
+          }
+        ],
+        "desc": "Mempelajari dasar multimedia, desain grafis komputer, tipografi, fotografi, pemodelan 2D/3D interaktif, serta produksi dan pengeditan audio-visual.",
+        "website": "https://smkn1jetis.sch.id"
+      }
+    ],
+    "experience": [
+      {
+        "id": "exp-1",
+        "role": "Kepala Divisi Media Creative",
+        "org": "HIMATIF UTM",
+        "place": "Bangkalan",
+        "period": "2024-09 - Sekarang",
+        "desc": "Memimpin perancangan identitas visual, publikasi kegiatan, dokumentasi, dan pengelolaan media sosial organisasi."
+      },
+      {
+        "id": "exp-2",
+        "role": "Kepala Divisi Media Creative",
+        "org": "Komunitas Linux dan Cyber Security (KOALISI)",
+        "place": "Bangkalan",
+        "period": "2024-10 - Sekarang",
+        "desc": "Merancang aset digital dan infografis seputar ekosistem open source, distribusi Linux, dan kesadaran keamanan siber."
+      },
+      {
+        "id": "exp-3",
+        "role": "Core Team Media Creative",
+        "org": "Google Developer Groups on Campus UTM",
+        "place": "Bangkalan",
+        "period": "2024-10 - Sekarang",
+        "desc": "Mendesain materi visual workshop teknologi, mengelola branding visual media sosial, dan memproduksi konten kreatif program Google."
+      }
+    ],
+    "certificates": [
+      {
+        "id": "cert-1",
+        "title": "Google UX Design Specialization",
+        "issuer": "Google / Coursera",
+        "date": "2023",
+        "credentialUrl": "",
+        "category": "design"
+      },
+      {
+        "id": "cert-2",
+        "title": "Belajar Dasar Pemrograman Web",
+        "issuer": "Dicoding Indonesia",
+        "date": "2023",
+        "credentialUrl": "",
+        "category": "frontend"
+      },
+      {
+        "id": "cert-3",
+        "title": "Belajar Membuat Front-End Web untuk Pemula",
+        "issuer": "Dicoding Indonesia",
+        "date": "2023",
+        "credentialUrl": "",
+        "category": "frontend"
+      },
+      {
+        "id": "cert-4",
+        "title": "Belajar Dasar AI",
+        "issuer": "Dicoding Indonesia",
+        "date": "2024",
+        "credentialUrl": "",
+        "category": "systems"
+      },
+      {
+        "id": "cert-5",
+        "title": "CCNA: Introduction to Networks",
+        "issuer": "Cisco Networking Academy",
+        "date": "2024",
+        "credentialUrl": "",
+        "category": "systems"
+      },
+      {
+        "id": "cert-6",
+        "title": "Junior Graphic Designer",
+        "issuer": "Badan Nasional Sertifikasi Profesi (BNSP)",
+        "date": "2023",
+        "credentialUrl": "",
+        "category": "design"
+      },
+      {
+        "id": "cert-7",
+        "title": "Pelatihan Desain Grafis & Multimedia",
+        "issuer": "Kominfo Digital Talent Scholarship",
+        "date": "2022",
+        "credentialUrl": "",
+        "category": "design"
+      },
+      {
+        "id": "cert-8",
+        "title": "Google IT Support Professional",
+        "issuer": "Google / Coursera",
+        "date": "2024",
+        "credentialUrl": "",
+        "category": "systems"
+      }
+    ]
+  },
+  "updatedAt": "2026-11-11T17:35:25.734+00:00"
+}

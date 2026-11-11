@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ExternalLink } from "lucide-react";
 import type { Project } from "@/lib/site-store";
 
 interface RepoPreviewModalProps {
@@ -12,8 +12,12 @@ interface RepoPreviewModalProps {
 }
 
 export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || "id";
+  const isEn = currentLang === "en";
+
   const [copied, setCopied] = useState(false);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -32,9 +36,18 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (project?.image) {
+      setActiveImage(project.image);
+    } else {
+      setActiveImage(null);
+    }
+  }, [project]);
+
   const handleCopyLink = () => {
-    if (!project?.repo) return;
-    navigator.clipboard.writeText(project.repo).then(() => {
+    const link = project?.previewUrl || project?.repo;
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -47,11 +60,22 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
     ? project.repo.replace(/^https?:\/\/(www\.)?github\.com\//i, "")
     : `ZekkCode/${project.title.toLowerCase().replace(/\s+/g, "-")}`;
 
+  const title = isEn && project.titleEn ? project.titleEn : project.title;
+  const desc = isEn && project.descEn ? project.descEn : project.desc;
+  const problem = isEn && project.problemEn ? project.problemEn : project.problem;
+  const approach = isEn && project.approachEn ? project.approachEn : (project.approach || project.highlight);
+  const outcome = isEn && project.outcomeEn ? project.outcomeEn : project.outcome;
+
+  const allImages = [
+    ...(project.image ? [project.image] : []),
+    ...(Array.isArray(project.galleryImages) ? project.galleryImages : []),
+  ];
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${t("repoModal.dialogLabel")} ${project.title}`}
+      aria-label={`${t("repoModal.dialogLabel", "Pratinjau Proyek")} ${title}`}
       className="fixed inset-0 z-[90] flex items-center justify-center p-4 sm:p-6"
     >
       {/* Backdrop */}
@@ -78,7 +102,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
             type="button"
             onClick={onClose}
             className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-muted transition-all duration-150 hover:bg-brand/5 hover:text-brand active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/10"
-            aria-label={t("repoModal.closeAria")}
+            aria-label={t("repoModal.closeAria", "Tutup modal")}
           >
             <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -90,56 +114,84 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
           {/* Title & Metadata */}
           <div>
-            {project.role && (
-              <span className="inline-block text-xs font-semibold text-brand dark:text-blue-400 mb-1">
-                {project.role}
-              </span>
-            )}
+            <div className="flex items-center gap-2 mb-1">
+              {project.category && (
+                <span className="rounded bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/10 dark:text-blue-300">
+                  {project.category === "both" ? "IT & Design" : project.category.toUpperCase()}
+                </span>
+              )}
+              {project.role && (
+                <span className="text-xs font-semibold text-brand dark:text-blue-400">
+                  {project.role}
+                </span>
+              )}
+            </div>
             <h2 className="font-display text-xl sm:text-2xl font-bold text-ink">
-              {project.title}
+              {title}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-body">
-              {project.desc}
+              {desc}
             </p>
           </div>
 
-          {/* Screenshot (Only if real image is provided) */}
-          {project.image && (
+          {/* Active Image */}
+          {activeImage && (
             <div className="overflow-hidden rounded-xl border border-line/70 dark:border-line/40">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={project.image}
-                alt={project.title}
-                className="w-full object-cover max-h-[300px]"
+                src={activeImage}
+                alt={title}
+                className="w-full object-cover max-h-[340px]"
               />
             </div>
           )}
 
+          {/* Gallery Thumbnails */}
+          {allImages.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {allImages.map((img, idx) => (
+                <button
+                  key={`${img}-${idx}`}
+                  type="button"
+                  onClick={() => setActiveImage(img)}
+                  className={`size-14 shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                    activeImage === img ? "border-brand" : "border-line/60 opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img} alt={`${title} ${idx + 1}`} className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Structured Case Study Highlights */}
-          <div className="space-y-3 rounded-xl border border-line/60 bg-surface/60 p-4 text-xs dark:border-line/40 dark:bg-slate-900/40">
-            {project.problem && (
-              <div>
-                <strong className="block text-ink font-semibold mb-0.5">{t("repoModal.challenge")}</strong>
-                <p className="text-body leading-relaxed">{project.problem}</p>
-              </div>
-            )}
+          {(problem || approach || outcome) && (
+            <div className="space-y-3 rounded-xl border border-line/60 bg-surface/60 p-4 text-xs dark:border-line/40 dark:bg-slate-900/40">
+              {problem && (
+                <div>
+                  <strong className="block text-ink font-semibold mb-0.5">{t("repoModal.challenge", "Tantangan:")}</strong>
+                  <p className="text-body leading-relaxed">{problem}</p>
+                </div>
+              )}
 
-            {project.highlight && (
-              <div className={project.problem ? "border-t border-line/40 pt-2.5" : ""}>
-                <strong className="block text-ink font-semibold mb-0.5">{t("repoModal.solution")}</strong>
-                <p className="text-body leading-relaxed">{project.highlight}</p>
-              </div>
-            )}
+              {approach && (
+                <div className={problem ? "border-t border-line/40 pt-2.5" : ""}>
+                  <strong className="block text-ink font-semibold mb-0.5">{t("repoModal.solution", "Pendekatan & Solusi:")}</strong>
+                  <p className="text-body leading-relaxed">{approach}</p>
+                </div>
+              )}
 
-            {project.outcome && (
-              <div className="border-t border-line/40 pt-2.5">
-                <strong className="block text-emerald-600 dark:text-emerald-400 font-semibold mb-0.5">
-                  {t("repoModal.outcome")}
-                </strong>
-                <p className="text-body leading-relaxed">{project.outcome}</p>
-              </div>
-            )}
-          </div>
+              {outcome && (
+                <div className="border-t border-line/40 pt-2.5">
+                  <strong className="block text-emerald-600 dark:text-emerald-400 font-semibold mb-0.5">
+                    {t("repoModal.outcome", "Hasil & Dampak:")}
+                  </strong>
+                  <p className="text-body leading-relaxed">{outcome}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tags */}
           {project.tags.length > 0 && (
@@ -161,13 +213,13 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
           <button
             type="button"
             onClick={handleCopyLink}
-            disabled={!project.repo}
+            disabled={!project.repo && !project.previewUrl}
             className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-muted hover:text-brand hover:bg-brand/5 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/10"
           >
             {copied ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t("repoModal.copied")}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t("repoModal.copied", "Tautan disalin!")}</span>
             ) : (
-              <span>{t("repoModal.copyUrl")}</span>
+              <span>{t("repoModal.copyUrl", "Salin Tautan")}</span>
             )}
           </button>
 
@@ -177,10 +229,10 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 href={project.previewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-[44px] h-11 items-center gap-1.5 rounded-xl border border-line/80 bg-transparent px-4 py-2.5 text-xs sm:text-sm font-semibold text-ink transition-all duration-150 hover:border-brand/40 hover:bg-brand/5 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-brand bg-brand px-4 py-2 text-xs font-semibold text-white transition-all duration-150 hover:bg-brand-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
-                <span>{t("repoModal.liveDemo")}</span>
-                <ArrowUpRight className="size-3.5" />
+                <span>Live Demo</span>
+                <ExternalLink className="size-3.5" />
               </a>
             )}
 
@@ -189,13 +241,13 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 href={project.repo}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-[44px] h-11 items-center gap-1.5 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line/80 bg-white px-4 py-2 text-xs font-semibold text-ink transition-all duration-150 hover:border-brand/40 hover:text-brand hover:bg-brand/5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-brand/10"
               >
-                <span>{t("repoModal.openGithub")}</span>
+                <span>{t("projects.viewRepo", "Buka Repositori")}</span>
                 <ArrowRight className="size-3.5" />
               </a>
             ) : (
-              <span className="text-xs text-muted">{t("repoModal.internal")}</span>
+              <span className="text-xs text-muted">{t("repoModal.internal", "Repositori internal / privat")}</span>
             )}
           </div>
         </div>

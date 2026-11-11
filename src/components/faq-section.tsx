@@ -4,12 +4,20 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
-
-const keys = [1, 2, 3, 4, 5] as const;
+import { useSiteConfig, defaultFaq, type FaqItemConfig } from "@/lib/site-store";
 
 export function FaqSection() {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState<number | null>(null);
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || "id";
+  const isEn = currentLang === "en";
+
+  const { faq: cfgFaq } = useSiteConfig();
+  const rawList = cfgFaq && cfgFaq.length > 0 ? cfgFaq : defaultFaq;
+  const items = rawList
+    .filter((f) => f.visible !== false)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section id="faq" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
@@ -20,20 +28,23 @@ export function FaqSection() {
 
       <Parallax speed={0.06}>
         <div className="mx-auto max-w-3xl rounded-2xl border border-line/80 bg-white shadow-2xs dark:border-line/60 dark:bg-[#111422] divide-y divide-line/60 dark:divide-line/40">
-          {keys.map((i) => {
-            const isOpen = open === i;
+          {items.map((item, idx) => {
+            const isOpen = openId === item.id;
+            const question = isEn ? item.questionEn || item.questionId : item.questionId;
+            const answer = isEn ? item.answerEn || item.answerId : item.answerId;
+
             return (
-              <div key={i}>
+              <div key={item.id || idx}>
                 <button
-                  id={`faq-question-${i}`}
+                  id={`faq-question-${item.id}`}
                   type="button"
-                  onClick={() => setOpen(isOpen ? null : i)}
+                  onClick={() => setOpenId(isOpen ? null : item.id)}
                   aria-expanded={isOpen}
-                  aria-controls={`faq-answer-${i}`}
+                  aria-controls={`faq-answer-${item.id}`}
                   className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <span className="text-sm font-bold text-ink sm:text-base">
-                    {t(`faq.q${i}`)}
+                    {question}
                   </span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -50,14 +61,14 @@ export function FaqSection() {
                   </svg>
                 </button>
                 <div
-                  id={`faq-answer-${i}`}
+                  id={`faq-answer-${item.id}`}
                   role="region"
-                  aria-labelledby={`faq-question-${i}`}
+                  aria-labelledby={`faq-question-${item.id}`}
                   className={`grid transition-all duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                 >
                   <div className="overflow-hidden">
                     <p className="px-5 pb-5 text-sm leading-relaxed text-body sm:px-6 sm:pb-6">
-                      {t(`faq.a${i}`)}
+                      {answer}
                     </p>
                   </div>
                 </div>
@@ -69,3 +80,5 @@ export function FaqSection() {
     </section>
   );
 }
+
+export default FaqSection;

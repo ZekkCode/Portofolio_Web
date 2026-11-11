@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
@@ -17,15 +17,15 @@ interface ProjectCardProps {
   project: Project;
   indexNum: string;
   onPreview: (project: Project) => void;
+  isEn: boolean;
 }
 
-function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
+function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Only apply subtle tilt on precise pointing devices (mouse), never touch/mobile
     if (e.pointerType !== "mouse") return;
     const card = cardRef.current;
     if (!card) return;
@@ -34,11 +34,9 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Normalized coordinates from center: -0.5 to 0.5
     const nx = x / rect.width - 0.5;
     const ny = y / rect.height - 0.5;
 
-    // 3 to 4 degrees maximum tilt
     const maxTilt = 4;
     const rotateX = -ny * maxTilt;
     const rotateY = nx * maxTilt;
@@ -46,7 +44,6 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
     card.style.transform = `perspective(800px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
     card.style.transition = "transform 100ms ease-out";
 
-    // Screenshot thumbnail has slightly distinct depth
     if (mediaRef.current) {
       mediaRef.current.style.transform = "translateZ(8px)";
       mediaRef.current.style.transition = "transform 100ms ease-out";
@@ -57,7 +54,6 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
     const card = cardRef.current;
     if (!card) return;
 
-    // Gentle spring return to neutral
     card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg)";
     card.style.transition = "transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1)";
 
@@ -66,6 +62,10 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
       mediaRef.current.style.transition = "transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1)";
     }
   };
+
+  const title = isEn && project.titleEn ? project.titleEn : project.title;
+  const desc = isEn && project.descEn ? project.descEn : project.desc;
+  const focusText = isEn && project.problemEn ? project.problemEn : (project.highlight || project.problem);
 
   return (
     <div
@@ -81,27 +81,34 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
           <span className="font-mono text-xs font-bold text-brand dark:text-blue-400">
             #{indexNum}
           </span>
-          {project.role && (
-            <span className="text-[11px] font-medium text-muted">
-              {project.role}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {project.category && (
+              <span className="rounded bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/10 dark:text-blue-300">
+                {project.category === "both" ? "IT & Design" : project.category.toUpperCase()}
+              </span>
+            )}
+            {project.role && (
+              <span className="text-[11px] font-medium text-muted">
+                {project.role}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Screenshot Thumbnail (Slight depth, distinct target) */}
+        {/* Screenshot Thumbnail */}
         {project.image && (
           <div ref={mediaRef} className="mt-3.5 will-change-transform">
             <button
               type="button"
               onClick={() => onPreview(project)}
               className="group/preview relative block w-full overflow-hidden rounded-xl border border-line/70 text-start transition hover:border-brand/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label={`${t("projects.previewBtn")}: ${project.title}`}
+              aria-label={`${t("projects.previewBtn")}: ${title}`}
             >
               <div className="relative h-36 w-full overflow-hidden bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={project.image}
-                  alt={project.title}
+                  alt={title}
                   className="size-full object-cover transition-transform duration-300 group-hover/preview:scale-105"
                 />
               </div>
@@ -116,19 +123,19 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
             onClick={() => onPreview(project)}
             className="text-left font-display text-lg font-bold tracking-tight text-ink hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
           >
-            {project.title}
+            {title}
           </button>
           <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body line-clamp-3">
-            {project.desc}
+            {desc}
           </p>
         </div>
 
         {/* Problem & Highlight Insight */}
-        {(project.problem || project.highlight) && (
+        {focusText && (
           <div className="mt-3.5 rounded-xl border border-line/50 bg-slate-50/70 p-3 text-[11px] dark:border-line/30 dark:bg-[#181d30]/50">
             <p className="text-body line-clamp-2">
-              <strong className="text-ink">{t("projects.focus")} </strong>
-              {project.highlight || project.problem}
+              <strong className="text-ink">{t("projects.focus", "Fokus Solusi:")} </strong>
+              {focusText}
             </p>
           </div>
         )}
@@ -177,14 +184,33 @@ function ProjectTiltedCard({ project, indexNum, onPreview }: ProjectCardProps) {
 }
 
 export function ProjectsSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || "id";
+  const isEn = currentLang === "en";
+
   const { projects } = useSiteConfig();
+  const [filter, setFilter] = useState<"all" | "it" | "design">("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const publishedProjects = useMemo(() => {
+    return (projects || [])
+      .filter((p) => p.published !== false)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    if (filter === "all") return publishedProjects;
+    return publishedProjects.filter((p) => {
+      const cat = p.category || "both";
+      return cat === "both" || cat === filter;
+    });
+  }, [publishedProjects, filter]);
 
   return (
     <section id="proyek" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="projects" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div id="portofolio" className="absolute top-0 -mt-24" aria-hidden="true" />
+
       <ScrollReveal y={24}>
         <SectionTitle
           title={t("projects.title")}
@@ -192,7 +218,39 @@ export function ProjectsSection() {
         />
       </ScrollReveal>
 
-      {projects.length === 0 ? (
+      {/* Category Filter Tabs */}
+      {publishedProjects.length > 0 && (
+        <div
+          role="tablist"
+          aria-label={t("projects.title", "Proyek")}
+          className="mb-8 flex flex-wrap items-center justify-center gap-2"
+        >
+          {(
+            [
+              { key: "all", labelId: "Semua Kategori", labelEn: "All Works" },
+              { key: "it", labelId: "Rekayasa IT & Web", labelEn: "IT & Web Engineering" },
+              { key: "design", labelId: "Desain UI/UX & Grafis", labelEn: "UI/UX & Design" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={filter === tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none ${
+                filter === tab.key
+                  ? "bg-brand text-white border border-brand/30 shadow-xs"
+                  : "border border-line/80 bg-transparent text-body hover:bg-brand/5 hover:border-brand/40 hover:text-brand dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
+              }`}
+            >
+              {isEn ? tab.labelEn : tab.labelId}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filteredProjects.length === 0 ? (
         <Parallax speed={0.015}>
           <div
             id="proyek-empty"
@@ -215,10 +273,13 @@ export function ProjectsSection() {
               </svg>
             </div>
             <h3 className="mt-4 font-display text-lg font-bold text-ink">
-              {t("projects.emptyTitle")}
+              {t("projects.emptyTitle", "Belum Ada Proyek yang Ditampilkan")}
             </h3>
             <p className="mt-2 max-w-md text-xs sm:text-sm leading-relaxed text-body">
-              {t("projects.emptyDesc")}
+              {t(
+                "projects.emptyDesc",
+                "Koleksi proyek sedang dikurasi atau belum dipublikasikan ke tampilan publik."
+              )}
             </p>
             <div className="mt-6 flex items-center gap-3">
               <a
@@ -235,7 +296,7 @@ export function ProjectsSection() {
         </Parallax>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project, idx) => {
+          {filteredProjects.map((project, idx) => {
             const indexNum = String(idx + 1).padStart(2, "0");
 
             return (
@@ -244,6 +305,7 @@ export function ProjectsSection() {
                 project={project}
                 indexNum={indexNum}
                 onPreview={setSelectedProject}
+                isEn={isEn}
               />
             );
           })}

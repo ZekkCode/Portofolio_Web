@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { profile } from "@/lib/profile";
-import { useSiteConfig } from "@/lib/site-store";
+import { useSiteConfig, type ExperienceItem } from "@/lib/site-store";
 import { Briefcase, MapPin, Calendar } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -12,8 +13,17 @@ if (typeof window !== "undefined") {
 }
 
 export function ExperienceTimeline() {
+  const { t, i18n } = useTranslation();
+  const isEn = (i18n.language || "id") === "en";
   const { experience } = useSiteConfig();
-  const items = experience && experience.length > 0 ? experience : profile.experience;
+
+  const items = useMemo(() => {
+    const raw =
+      experience && experience.length > 0
+        ? experience
+        : (profile.experience as unknown as ExperienceItem[]);
+    return raw.filter((item) => item.published !== false);
+  }, [experience]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -101,7 +111,7 @@ export function ExperienceTimeline() {
     if (!card || !container) return;
 
     const targetLeft =
-      card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
+      card.offsetLeft - container.clientWidth / 2 + card.clientWidth / 2;
     container.scrollTo({
       left: Math.max(0, targetLeft),
       behavior: "smooth",
@@ -125,7 +135,9 @@ export function ExperienceTimeline() {
   if (!items || items.length === 0) {
     return (
       <div className="rounded-2xl border border-line/70 bg-white/60 p-8 text-center dark:border-line/40 dark:bg-[#111422]/60">
-        <p className="text-sm font-medium text-muted">Belum ada riwayat pengalaman yang ditampilkan.</p>
+        <p className="text-sm font-medium text-muted">
+          {t("about.experienceEmpty", "Belum ada riwayat pengalaman yang ditampilkan.")}
+        </p>
       </div>
     );
   }
@@ -136,16 +148,16 @@ export function ExperienceTimeline() {
       className="relative w-full overflow-hidden"
       aria-label="Riwayat Organisasi & Karir"
     >
-      {/* Top Header: Title & Step Indicators (No Buttons) */}
+      {/* Top Header: Title & Step Indicators */}
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <Briefcase className="size-4 text-brand dark:text-blue-400" />
           <span className="font-display text-sm font-bold text-ink">
-            Aktivitas Organisasi Kampus
+            {t("about.experienceTitle", "Aktivitas Organisasi & Karir")}
           </span>
         </div>
 
-        {/* Milestone Indicator Pills (Parallax Scroll Driven) */}
+        {/* Milestone Indicator Pills */}
         <div
           className="flex items-center gap-1.5"
           aria-label={`Milestone organisasi ${activeIndex + 1} dari ${items.length}`}
@@ -170,7 +182,7 @@ export function ExperienceTimeline() {
           className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-line/80 dark:bg-line/40 rounded-full"
           aria-hidden="true"
         />
-        {/* Fill Progress Line (scaleX from Left to Right) */}
+        {/* Fill Progress Line */}
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-brand dark:bg-blue-500 rounded-full origin-left will-change-transform transition-transform duration-150"
           style={{
@@ -185,13 +197,14 @@ export function ExperienceTimeline() {
           {items.map((item, idx) => {
             const isActive = idx === activeIndex;
             const nodeScale = prefersReducedMotion ? 1 : isActive ? 1.25 : 0.95;
+            const roleText = isEn && item.roleEn ? item.roleEn : item.role;
 
             return (
               <button
-                key={("id" in item && item.id) ? item.id : `${item.org}-${idx}`}
+                key={item.id || `${item.org}-${idx}`}
                 type="button"
                 onClick={() => scrollToIndex(idx)}
-                aria-label={`Milestone ${item.org} — ${item.role}`}
+                aria-label={`Milestone ${item.org} — ${roleText}`}
                 aria-pressed={isActive}
                 className="group flex flex-col items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg p-1 -m-1 transition-transform duration-200"
                 style={{
@@ -233,10 +246,12 @@ export function ExperienceTimeline() {
       >
         {items.map((item, idx) => {
           const isActive = idx === activeIndex;
+          const roleText = isEn && item.roleEn ? item.roleEn : item.role;
+          const descText = isEn && item.descEn ? item.descEn : item.desc;
 
           return (
             <div
-              key={("id" in item && item.id) ? item.id : `${item.org}-${idx}`}
+              key={item.id || `${item.org}-${idx}`}
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
@@ -258,7 +273,7 @@ export function ExperienceTimeline() {
               </div>
 
               <h4 className="mt-2.5 font-display text-sm sm:text-base font-bold text-ink tracking-tight">
-                {item.role}
+                {roleText}
               </h4>
 
               <p className="mt-0.5 text-xs font-semibold text-brand dark:text-blue-400">
@@ -266,7 +281,7 @@ export function ExperienceTimeline() {
               </p>
 
               <p className="mt-2 text-xs leading-relaxed text-body line-clamp-3">
-                {item.desc}
+                {descText}
               </p>
             </div>
           );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
+import { useSiteConfig } from "@/lib/site-store";
 import {
   VERIFIED_BLOG_POSTS,
   BLOG_HOME_URL,
@@ -12,7 +13,11 @@ import {
 import { ArrowRight, ArrowUpRight, Calendar, Newspaper } from "lucide-react";
 
 export function BlogPreviewSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || "id";
+  const isEn = currentLang === "en";
+
+  const { blog } = useSiteConfig();
   const [posts, setPosts] = useState<BlogPost[]>(VERIFIED_BLOG_POSTS);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
@@ -24,7 +29,8 @@ export function BlogPreviewSection() {
         if (res.ok) {
           const data = await res.json();
           if (active && Array.isArray(data) && data.length > 0) {
-            setPosts(data.slice(0, 3));
+            const count = blog?.displayCount || 3;
+            setPosts(data.slice(0, count));
           }
         }
       } catch {
@@ -35,11 +41,25 @@ export function BlogPreviewSection() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [blog?.displayCount]);
+
+  if (blog?.visible === false) {
+    return null;
+  }
 
   const handleImageError = (id: string) => {
     setImageErrors((prev) => ({ ...prev, [id]: true }));
   };
+
+  const sectionTitle = isEn
+    ? blog?.titleEn || t("blog.title", "Latest from ZekkTech Blog")
+    : blog?.titleId || t("blog.title", "Latest from ZekkTech Blog");
+
+  const sectionDesc = isEn
+    ? blog?.descEn || t("blog.desc", "Notes, thoughts, and technical articles on design and web engineering.")
+    : blog?.descId || t("blog.desc", "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.");
+
+  const blogUrl = blog?.feedUrl || BLOG_HOME_URL;
 
   return (
     <section
@@ -53,15 +73,12 @@ export function BlogPreviewSection() {
       <ScrollReveal y={24} className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <SectionTitle
-            title={t("blog.title", "Latest from ZekkTech Blog")}
-            desc={t(
-              "blog.desc",
-              "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital."
-            )}
+            title={sectionTitle}
+            desc={sectionDesc}
           />
 
           <a
-            href={BLOG_HOME_URL}
+            href={blogUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-brand dark:text-blue-400 hover:text-brand-ink dark:hover:text-blue-300 transition-colors group shrink-0 self-start sm:self-auto pb-1"

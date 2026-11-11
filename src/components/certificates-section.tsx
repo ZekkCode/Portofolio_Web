@@ -6,7 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { profile } from "@/lib/profile";
-import { useSiteConfig } from "@/lib/site-store";
+import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
 
 type CategoryFilter = "all" | "design" | "frontend" | "systems";
 
@@ -15,11 +15,20 @@ export function CertificatesSection() {
   const [filter, setFilter] = useState<CategoryFilter>("all");
 
   const { certificates: siteCerts } = useSiteConfig();
-  const certificates =
-    siteCerts && siteCerts.length > 0 ? siteCerts : (profile.certificates || []);
+  const rawCertificates: CertificateItem[] =
+    siteCerts && siteCerts.length > 0
+      ? siteCerts
+      : (profile.certificates as unknown as CertificateItem[]);
+
+  // Filter published only
+  const publishedCertificates = rawCertificates.filter(
+    (c) => c.published !== false
+  );
 
   const filtered =
-    filter === "all" ? certificates : certificates.filter((c) => c.category === filter);
+    filter === "all"
+      ? publishedCertificates
+      : publishedCertificates.filter((c) => c.category === filter);
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
@@ -75,7 +84,7 @@ export function CertificatesSection() {
         ))}
       </div>
 
-      {/* Grid of Credentials - Stable without parallax drift */}
+      {/* Grid of Credentials */}
       <ScrollReveal y={16}>
         {filtered.length === 0 ? (
           <div
@@ -86,43 +95,46 @@ export function CertificatesSection() {
           </div>
         ) : (
           <div role="tabpanel" className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-            {filtered.map((cert) => (
-              <div
-                key={("id" in cert && cert.id) ? cert.id : cert.title}
-                className="group relative flex flex-col justify-between rounded-xl border border-line/80 bg-white p-5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422]"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs text-muted">
-                    <span className="font-medium line-clamp-1">{cert.issuer}</span>
-                    <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
+            {filtered.map((cert) => {
+              const proofLink = cert.credentialUrl || cert.credentialPdf;
+              return (
+                <div
+                  key={cert.id || cert.title}
+                  className="group relative flex flex-col justify-between rounded-xl border border-line/80 bg-white p-5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422]"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-muted">
+                      <span className="font-medium line-clamp-1">{cert.issuer}</span>
+                      <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
+                    </div>
+
+                    <h3 className="mt-2.5 font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
+                      {cert.title}
+                    </h3>
+
+                    <div className="mt-2">
+                      <span className="inline-block text-[11px] font-medium text-muted">
+                        {getCategoryLabel(cert.category)}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="mt-2.5 font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
-                    {cert.title}
-                  </h3>
-
-                  <div className="mt-2">
-                    <span className="inline-block text-[11px] font-medium text-muted">
-                      {getCategoryLabel(cert.category)}
-                    </span>
-                  </div>
+                  {proofLink ? (
+                    <div className="mt-4 pt-2.5 border-t border-line/40">
+                      <a
+                        href={proofLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
+                        <ArrowUpRight className="size-3.5" />
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
-
-                {cert.credentialUrl ? (
-                  <div className="mt-4 pt-2.5 border-t border-line/40">
-                    <a
-                      href={cert.credentialUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
-                      <ArrowUpRight className="size-3.5" />
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </ScrollReveal>

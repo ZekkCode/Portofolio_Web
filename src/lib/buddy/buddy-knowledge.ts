@@ -61,7 +61,7 @@ export function queryBuddyKnowledge(rawMessage: string, langHint: "id" | "en" = 
   }
 
   // 4. Skills / Tech Stack
-  if (/skill|keahlian|stack|teknologi|tools|bahasa|figma|next|react|typescript|tailwind/i.test(query)) {
+  if (/skill|keahlian|stack|teknologi|tools|bahasa|figma|next|react|typescript|tailwind|flutter/i.test(query)) {
     const tools = profile.stack.slice(0, 7).map((s) => s.name).join(", ");
     return {
       reply: isEn

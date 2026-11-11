@@ -28,6 +28,7 @@ export const profile = {
     { name: "React", icon: "/icons/react.svg" },
     { name: "TypeScript", icon: "/icons/typescript.svg" },
     { name: "TailwindCSS", icon: "/icons/tailwindcss.svg" },
+    { name: "Flutter", icon: "/icons/flutter.svg" },
     { name: "MySQL", icon: "/icons/mysql.svg" },
     { name: "GitHub", icon: "/icons/github.svg" },
     { name: "CapCut", icon: "/icons/capcut.svg" },

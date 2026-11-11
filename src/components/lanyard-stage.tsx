@@ -1,53 +1,106 @@
 "use client";
 
-import { useState } from "react";
-import Lanyard from "@/components/lanyard";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useSiteConfig } from "@/lib/site-store";
+import { useAdaptivePerformance } from "@/lib/device-performance";
+
+interface StaticLanyardCardProps {
+  frontImage?: string;
+  strapColor?: string;
+}
+
+/**
+ * Lightweight static fallback preserving the exact blue lanyard ribbon,
+ * metallic clasp, and authentic 1:1.4 ID card proportions without Three.js or WebGL.
+ */
+export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardProps) {
+  const cardImage = frontImage || "/card-front.webp";
+
+  return (
+    <div
+      className="relative flex h-full w-full flex-col items-center justify-start select-none pt-2 sm:pt-4"
+      aria-label="Zakaria Mujur P. ID Card"
+    >
+      {/* 1. Hanging Lanyard Strap Ribbon (comes down from behind the header) */}
+      <div className="relative flex flex-col items-center z-10">
+        <div
+          className="w-5 sm:w-6 h-28 sm:h-36 rounded-b-sm shadow-md relative overflow-hidden"
+          style={{
+            backgroundColor: strapColor || "#1b45c4",
+            backgroundImage: "linear-gradient(180deg, #16369c 0%, #1b45c4 50%, #142e82 100%)",
+          }}
+        >
+          {/* Subtle woven fabric texture stripe */}
+          <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-white/20" />
+        </div>
+
+        {/* 2. Metallic Swivel Clip / Carabiner Ring */}
+        <div className="relative -mt-1 flex flex-col items-center">
+          <div className="size-4 rounded-full border-2 border-slate-300 bg-slate-400 shadow-sm" />
+          <div className="w-2.5 h-3.5 -mt-1 rounded-sm bg-gradient-to-b from-slate-200 to-slate-400 border border-slate-400 shadow-xs" />
+        </div>
+      </div>
+
+      {/* 3. Authentic ID Card Badge */}
+      <div className="relative z-20 -mt-1.5 transition-transform duration-300 hover:rotate-0 hover:scale-[1.01] will-change-transform">
+        <div className="relative w-[220px] sm:w-[260px] lg:w-[285px] aspect-[1/1.406] rounded-2xl overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-slate-900">
+          <Image
+            src={cardImage}
+            alt="Zakaria Mujur Prasetyo - ID Badge"
+            fill
+            sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 285px"
+            priority
+            className="object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Dynamically code-split Three.js so visitors in Lite mode do not download Three.js
+const DynamicLanyard = dynamic(() => import("@/components/lanyard"), {
+  ssr: false,
+  loading: () => <StaticLanyardCard />,
+});
 
 export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
-  const [hasWebGL] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const canvas = document.createElement("canvas");
-      return Boolean(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
-    } catch {
-      return false;
-    }
-  });
+  const { tier, hasWebGL } = useAdaptivePerformance();
+  const [contextLost, setContextLost] = useState(false);
+
+  // Fallback trigger if WebGL context is lost at runtime
+  useEffect(() => {
+    const handleContextLost = () => {
+      setContextLost(true);
+    };
+    window.addEventListener("webglcontextlost", handleContextLost, true);
+    return () => {
+      window.removeEventListener("webglcontextlost", handleContextLost, true);
+    };
+  }, []);
+
+  const shouldRenderStatic = tier === "lite" || !hasWebGL || contextLost;
 
   return (
     <div className={`relative w-full ${className || "h-[500px] sm:h-[580px] lg:h-[640px]"}`}>
-      {hasWebGL ? (
-        <Lanyard
+      {shouldRenderStatic ? (
+        <StaticLanyardCard
+          frontImage={lanyard.frontImage || undefined}
+          strapColor={lanyard.strapColor || undefined}
+        />
+      ) : (
+        <DynamicLanyard
           {...lanyard}
           frontImage={lanyard.frontImage || undefined}
           backImage={lanyard.backImage || undefined}
           strapImage={lanyard.strapImage || undefined}
         />
-      ) : (
-        /* Static Card Fallback when WebGL is unavailable */
-        <div className="flex h-full w-full items-center justify-center p-6">
-          <div className="relative aspect-[1/1.4] w-64 rounded-2xl border border-line bg-gradient-to-b from-blue-900 to-blue-950 p-6 shadow-2xl text-white">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-sky-300">ZEKKTECH ID</span>
-              <span className="size-3 rounded-full bg-emerald-400" />
-            </div>
-            <div className="mt-8 flex flex-col items-center text-center">
-              <div className="size-20 rounded-full border-2 border-white/30 bg-white/10 p-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={lanyard.frontImage || "/profile.webp"}
-                  alt="Zakaria Mujur P."
-                  className="size-full rounded-full object-cover"
-                />
-              </div>
-              <h3 className="mt-4 font-display text-base font-bold">Zakaria Mujur P.</h3>
-              <p className="mt-1 text-xs text-sky-200">UI/UX & Frontend Developer</p>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
 }
+
+export default LanyardStage;

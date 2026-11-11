@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
-import TechText from "@/components/tech-text";
 import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
@@ -19,12 +18,13 @@ import { FaqSection } from "@/components/faq-section";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
+import { BackgroundStickers } from "@/components/background-stickers";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
 import { AnimatedEye } from "@/components/animated-eye";
 import { usePageViews } from "@/lib/use-page-views";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
-import { useLowSpecDevice } from "@/lib/device-performance";
+import { useAdaptivePerformance } from "@/lib/device-performance";
 import { profile } from "@/lib/profile";
 import { useSiteConfig } from "@/lib/site-store";
 import { ArrowRight, FileText, Mail } from "lucide-react";
@@ -219,7 +219,7 @@ function Stack() {
     },
     {
       category: t("stack.frontendTitle", "Frontend Web Development"),
-      tools: ["Next.js", "React", "TypeScript", "TailwindCSS"],
+      tools: ["Next.js", "React", "TypeScript", "TailwindCSS", "Flutter"],
     },
     {
       category: t("stack.visualTitle", "Desain Grafis & Multimedia"),
@@ -612,37 +612,50 @@ function Footer() {
 export default function Home() {
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
-  const { isMobileOrLow } = useLowSpecDevice();
+  const { isLite, isBalanced, isFull } = useAdaptivePerformance();
   const isDark = mounted && resolvedTheme === "dark";
+  const gridLineColor = isDark ? "#171c2a" : "#e6e7f2";
 
   return (
     <>
       <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
-        <ShapeGrid
-          shape="square"
-          direction="diagonal"
-          lineColor={isDark ? "#171c2a" : "#e6e7f2"}
-          hoverColor={isDark ? "#2563eb" : "#1b45c4"}
-          hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
-          fillOpacity={isDark ? 0.12 : 0.08}
-          cellSize={isMobileOrLow ? 52 : 44}
-          speed={isMobileOrLow ? 0 : 0.14}
-          lineWidth={1}
-          radius={isMobileOrLow ? 0 : 1.8}
-          trail={0.45}
-          glow={0}
-          dpr={1}
-          fade={1}
-          clickCascade={!isMobileOrLow}
-          intro={false}
-        />
+        {isLite ? (
+          /* Pure CSS Square-Grid Background for Limited Devices (Zero Canvas, Zero rAF) */
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(to right, ${gridLineColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridLineColor} 1px, transparent 1px)`,
+              backgroundSize: "44px 44px",
+            }}
+          />
+        ) : (
+          <ShapeGrid
+            shape="square"
+            direction="diagonal"
+            lineColor={gridLineColor}
+            hoverColor={isDark ? "#2563eb" : "#1b45c4"}
+            hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
+            fillOpacity={isDark ? 0.12 : 0.08}
+            cellSize={isBalanced ? 48 : 44}
+            speed={isBalanced ? 0.06 : 0.14}
+            lineWidth={1}
+            radius={isBalanced ? 1.2 : 1.8}
+            trail={0.45}
+            glow={0}
+            dpr={1}
+            fade={1}
+            clickCascade={isFull}
+            intro={false}
+          />
+        )}
         {/* Lapisan peredam ambient untuk kenyamanan membaca teks */}
         <div className="absolute inset-0 bg-white/70 dark:bg-[#08090e]/75 pointer-events-none transition-colors duration-300" />
       </div>
       <Header />
       <PortfolioPillNav />
       <ScrollToTop />
-      <main className="pe-11 md:pe-0 transition-[padding] duration-200">
+      <main className="relative pe-11 md:pe-0 transition-[padding] duration-200">
+        <BackgroundStickers />
         <Hero />
         <About />
         <AcademicJourneySection />

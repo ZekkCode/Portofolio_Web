@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLenis } from "lenis/react";
+import { useAdaptivePerformance } from "@/lib/device-performance";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -35,11 +36,17 @@ export function Parallax({
 }: ParallaxProps) {
   const triggerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { isLite } = useAdaptivePerformance();
 
   useEffect(() => {
     const trigger = triggerRef.current;
     const content = contentRef.current;
     if (!trigger || !content) return;
+
+    if (isLite) {
+      gsap.set(content, { y: 0 });
+      return;
+    }
 
     const mm = gsap.matchMedia();
 
@@ -120,10 +127,16 @@ export function ScrollReveal({
   stagger = 0,
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const { isLite } = useAdaptivePerformance();
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    if (isLite) {
+      gsap.set(el, { opacity: 1, y: 0 });
+      return;
+    }
 
     const mm = gsap.matchMedia();
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk, Pixelify_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { profile } from "@/lib/profile";
 import { translations } from "@/lib/translations";
@@ -250,10 +251,12 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
-          <SmoothScroll>
-            {children}
-            <BuddyClient />
-          </SmoothScroll>
+          <AdaptivePerformanceProvider>
+            <SmoothScroll>
+              {children}
+              <BuddyClient />
+            </SmoothScroll>
+          </AdaptivePerformanceProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BUDDY_CONFIG } from "@/lib/buddy/buddy-config";
 import { BuddyDirection, BuddyState, DeviceMode } from "@/lib/buddy/buddy-types";
+import { useAdaptivePerformance } from "@/lib/device-performance";
 
 interface UseBuddyRoamingProps {
   isPaused: boolean;
@@ -15,6 +16,13 @@ export function useBuddyRoaming({
   isHidden,
   onStateChange,
 }: UseBuddyRoamingProps) {
+  const { isLite } = useAdaptivePerformance();
+  const isLiteRef = useRef(isLite);
+
+  useEffect(() => {
+    isLiteRef.current = isLite;
+  }, [isLite]);
+
   const [state, setState] = useState<BuddyState>("idle");
   const [direction, setDirection] = useState<BuddyDirection>(1);
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
@@ -104,12 +112,13 @@ export function useBuddyRoaming({
   const scheduleNextBehavior = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    // Stop autonomous roaming when paused, hidden, docked at footer, or user prefers reduced motion
+    // Stop autonomous roaming when paused, hidden, docked at footer, in Lite performance mode, or user prefers reduced motion
     if (
       isPausedRef.current ||
       isHiddenRef.current ||
       isDockedRef.current ||
-      prefersReducedMotionRef.current
+      prefersReducedMotionRef.current ||
+      isLiteRef.current
     ) {
       if (stateRef.current.startsWith("walking")) {
         updateState("idle");
@@ -239,6 +248,7 @@ export function useBuddyRoaming({
         !isHiddenRef.current &&
         !isDockedRef.current &&
         !prefersReducedMotionRef.current &&
+        !isLiteRef.current &&
         !document.hidden;
 
       if (!isWalking) {

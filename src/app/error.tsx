@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { AlertCircle, RotateCcw } from "lucide-react";
 
 export default function GlobalError({
@@ -39,12 +40,12 @@ export default function GlobalError({
           <span>Muat Ulang Komponen</span>
         </button>
 
-        <a
+        <Link
           href="/"
           className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           <span>Kembali ke Beranda</span>
-        </a>
+        </Link>
       </div>
     </div>
   );

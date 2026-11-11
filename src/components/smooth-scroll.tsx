@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
+import { useAdaptivePerformance } from "@/lib/device-performance";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -112,9 +113,14 @@ function ScrollTriggerBridge() {
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<LenisRef>(null);
+  const { tier, isLite, prefersReducedMotion } = useAdaptivePerformance();
+
+  const isNative = isLite || prefersReducedMotion;
 
   // Single RAF Loop: Lenis dikendalikan langsung oleh GSAP ticker tunggal
   useEffect(() => {
+    if (isNative) return;
+
     function update(time: number) {
       lenisRef.current?.lenis?.raf(time * 1000);
     }
@@ -125,7 +131,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     return () => {
       gsap.ticker.remove(update);
     };
-  }, []);
+  }, [isNative]);
 
   return (
     <ReactLenis
@@ -133,9 +139,9 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       root
       autoRaf={false}
       options={{
-        lerp: 0.08,
-        duration: 1.15,
-        smoothWheel: true,
+        lerp: tier === "full" ? 0.08 : 0.12,
+        duration: tier === "full" ? 1.15 : 0.8,
+        smoothWheel: !isNative,
       }}
     >
       <ScrollTriggerBridge />

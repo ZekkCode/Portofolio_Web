@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes } from "react";
+import { useEffect, useRef, useState, memo, type CSSProperties, type HTMLAttributes } from "react";
 
 export type StickerFinish = "gloss" | "matte" | "holo";
 
@@ -78,7 +78,27 @@ const MAX_TEXTURE = 1024;
 const MASK_SIZE = 96;
 const LIGHT_HEIGHT = 260;
 const FINISHES = { gloss: 0, matte: 1, holo: 2 };
-let stack = 1;
+
+// Module-level shared HTMLImageElement cache for StickerPeel across all 20+ instances
+const STICKER_IMAGE_CACHE = new Map<string, Promise<HTMLImageElement | null>>();
+
+function loadSharedStickerImage(src: string): Promise<HTMLImageElement | null> {
+  const cached = STICKER_IMAGE_CACHE.get(src);
+  if (cached) return cached;
+  const p = new Promise<HTMLImageElement | null>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.decoding = "async";
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      STICKER_IMAGE_CACHE.delete(src);
+      resolve(null);
+    };
+    img.src = src;
+  });
+  STICKER_IMAGE_CACHE.set(src, p);
+  return p;
+}
 
 const VERTEX = `#version 300 es
 in vec2 aGrid;
@@ -364,7 +384,7 @@ const convexHull = (points: [number, number][]) => {
   return lower.slice(0, -1).concat(upper.slice(0, -1));
 };
 
-export const StickerPeel = ({
+export const StickerPeel = memo(function StickerPeel({
   imageSrc,
   width = 44,
   rotate = 0,
@@ -389,7 +409,7 @@ export const StickerPeel = ({
   className = "",
   style,
   ...rest
-}: StickerPeelProps) => {
+}: StickerPeelProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hitRef = useRef<HTMLDivElement>(null);
@@ -439,7 +459,9 @@ export const StickerPeel = ({
     dpr,
   };
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
 
   useEffect(() => {
     if (!inView || fallback) return undefined;
@@ -557,7 +579,6 @@ export const StickerPeel = ({
       return rgb;
     };
 
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const sticker: {
       ready: boolean;
       aspect: number;
@@ -623,11 +644,9 @@ export const StickerPeel = ({
       loadedSrc = src;
       sticker.ready = false;
       if (!src) return;
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-      image.decoding = "async";
-      image.onload = () => {
-        if (!alive || loadedSrc !== src || !scratchContext) return;
+
+      loadSharedStickerImage(src).then((image) => {
+        if (!image || !alive || loadedSrc !== src || !scratchContext) return;
         const iw = image.naturalWidth || 1;
         const ih = image.naturalHeight || 1;
         const fit = Math.min(1, MAX_TEXTURE / (Math.max(iw, ih) * (1 + 2 * PAD)));
@@ -697,11 +716,9 @@ export const StickerPeel = ({
         sticker.ready = true;
         layout();
         wake();
-      };
-      image.onerror = () => {
+      }).catch(() => {
         setFallback(true);
-      };
-      image.src = src;
+      });
     };
 
     let resizePending = false;
@@ -752,15 +769,6 @@ export const StickerPeel = ({
         x: Math.cos(angle) * dx - Math.sin(angle) * dy,
         y: Math.sin(angle) * dx + Math.cos(angle) * dy,
       };
-    };
-
-    const solid = (local: Point) => {
-      if (!sticker.mask) return false;
-      const s = settingsRef.current;
-      const mx = Math.floor((local.x / s.width + 0.5) * sticker.maskW);
-      const my = Math.floor((local.y / height() + 0.5) * sticker.maskH);
-      if (mx < 0 || my < 0 || mx >= sticker.maskW || my >= sticker.maskH) return false;
-      return sticker.mask[my * sticker.maskW + mx] > 100;
     };
 
     const draw = () => {
@@ -942,10 +950,14 @@ export const StickerPeel = ({
 
     const onPointerMove = (event: PointerEvent) => {
       const point = toParent(event);
+      const isInside = point.x >= 0 && point.y >= 0 && point.x <= bounds.width && point.y <= bounds.height;
+      const insideChanged = isInside !== state.pointer.inside;
       state.pointer.x = point.x;
       state.pointer.y = point.y;
-      state.pointer.inside = point.x >= 0 && point.y >= 0 && point.x <= bounds.width && point.y <= bounds.height;
-      wake();
+      state.pointer.inside = isInside;
+      if (isInside || insideChanged || state.hover || state.press) {
+        wake();
+      }
     };
 
     const onHitMove = (event: PointerEvent) => {
@@ -989,13 +1001,22 @@ export const StickerPeel = ({
     };
 
     const onLeaveWindow = () => {
-      state.pointer.inside = false;
-      wake();
+      if (state.pointer.inside) {
+        state.pointer.inside = false;
+        wake();
+      }
     };
 
     const onVisibility = () => {
       last = 0;
-      wake();
+      if (document.hidden) {
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      } else {
+        wake();
+      }
     };
 
     const resizeObserver = new ResizeObserver(() => {
@@ -1070,7 +1091,7 @@ export const StickerPeel = ({
 
   useEffect(() => {
     wakeRef.current?.();
-  });
+  }, [imageSrc, width, rotate, peelDirection, curlRadius, dpr]);
 
   return (
     <div
@@ -1082,7 +1103,7 @@ export const StickerPeel = ({
     >
       {inView && !fallback ? (
         <>
-          <canvas ref={canvasRef} className="pointer-events-none block h-full w-full" aria-hidden="true" />
+          <canvas ref={canvasRef} data-sticker-canvas="true" className="pointer-events-none block h-full w-full" aria-hidden="true" />
           <div
             ref={hitRef}
             className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none cursor-pointer [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]"
@@ -1101,6 +1122,6 @@ export const StickerPeel = ({
       )}
     </div>
   );
-};
+});
 
 export default StickerPeel;

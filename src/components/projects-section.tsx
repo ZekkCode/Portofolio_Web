@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type Project } from "@/lib/site-store";
+import { usePrefetchOnIntent } from "@/hooks/use-prefetch-on-intent";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 
 const RepoPreviewModal = dynamic(
@@ -24,6 +25,10 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
   const cardRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+  const { prefetch: prefetchModal } = usePrefetchOnIntent(
+    () => import("@/components/repo-preview-modal"),
+    { key: "repo-preview-modal" }
+  );
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== "mouse") return;
@@ -72,6 +77,8 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
       ref={cardRef}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onMouseEnter={prefetchModal}
+      onFocus={prefetchModal}
       className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-shadow duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422] will-change-transform"
       style={{ transformStyle: "preserve-3d" }}
     >
@@ -109,6 +116,8 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
                 <img
                   src={project.image}
                   alt={title}
+                  loading="lazy"
+                  decoding="async"
                   className="size-full object-cover transition-transform duration-300 group-hover/preview:scale-105"
                 />
               </div>

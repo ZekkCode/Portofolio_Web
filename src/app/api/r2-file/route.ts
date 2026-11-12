@@ -107,19 +107,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 4. Dukungan conditional GET (HTTP 304 Not Modified)
-    const ifNoneMatch = request.headers.get("if-none-match");
-    if (ifNoneMatch && object.eTag && ifNoneMatch === object.eTag) {
-      return new NextResponse(null, { status: 304 });
-    }
-
     const filename = key.split("/").pop() || "download";
     const wantsDownload = searchParams.get("download") === "1";
 
-    // 5. Konfigurasi Caching sesuai klasifikasi hak akses
+    // 5. Konfigurasi Caching sesuai klasifikasi hak akses & immutabilitas objek
+    const isImmutableKey =
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(filename) ||
+      /^\d{13,}_/i.test(filename);
+
     const cacheControl = isAdmin && !isPublicAsset
       ? "private, no-cache, no-store, must-revalidate"
+      : isImmutableKey
+      ? "public, max-age=31536000, immutable"
       : "public, max-age=86400, stale-while-revalidate=604800";
+
+    // 4. Dukungan conditional GET (HTTP 304 Not Modified)
+    const ifNoneMatch = request.headers.get("if-none-match");
+    if (ifNoneMatch && object.eTag && (ifNoneMatch === object.eTag || ifNoneMatch === `W/${object.eTag}`)) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: object.eTag,
+          "Cache-Control": cacheControl,
+        },
+      });
+    }
 
     const headers: Record<string, string> = {
       "Content-Type": object.contentType,

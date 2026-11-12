@@ -68,7 +68,7 @@ const DynamicLanyard = dynamic(() => import("@/components/lanyard"), {
 
 export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
-  const { tier, hasWebGL } = useAdaptivePerformance();
+  const { hasWebGL } = useAdaptivePerformance();
   const [contextLost, setContextLost] = useState(false);
 
   // Fallback trigger if WebGL context is lost at runtime
@@ -82,7 +82,8 @@ export function LanyardStage({ className = "" }: { className?: string }) {
     };
   }, []);
 
-  const shouldRenderStatic = tier === "lite" || !hasWebGL || contextLost;
+  // 3D Lanyard stays Three.js everywhere WebGL is supported
+  const shouldRenderStatic = !hasWebGL || contextLost;
 
   return (
     <div className={`relative w-full ${className || "h-[500px] sm:h-[580px] lg:h-[640px]"}`}>

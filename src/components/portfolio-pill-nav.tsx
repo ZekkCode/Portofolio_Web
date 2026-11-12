@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
@@ -41,12 +41,33 @@ function useNavScrollState() {
   const activeRef = useRef<string>("");
   const scrolledRef = useRef<boolean>(false);
   const atBottomRef = useRef<boolean>(false);
+  const lockTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLockedRef = useRef<boolean>(false);
+
+  const lockToSection = useCallback((sectionHref: string, durationMs = 800) => {
+    isLockedRef.current = true;
+    activeRef.current = sectionHref;
+    setActive(sectionHref);
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    lockTimerRef.current = setTimeout(() => {
+      isLockedRef.current = false;
+    }, durationMs);
+  }, []);
 
   useEffect(() => {
     let rafId = 0;
 
+    const onManualUserScroll = () => {
+      if (isLockedRef.current) {
+        isLockedRef.current = false;
+        if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+      }
+    };
+
     const evaluate = () => {
       rafId = 0;
+      if (isLockedRef.current) return;
+
       const scrollY = window.scrollY;
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
@@ -123,6 +144,8 @@ function useNavScrollState() {
 
     window.addEventListener("scroll", onScrollOrResize, { passive: true });
     window.addEventListener("resize", onScrollOrResize, { passive: true });
+    window.addEventListener("wheel", onManualUserScroll, { passive: true });
+    window.addEventListener("touchmove", onManualUserScroll, { passive: true });
     document.fonts?.ready?.then(onScrollOrResize).catch(() => {});
 
     const resizeObserver = new ResizeObserver(onScrollOrResize);
@@ -136,18 +159,21 @@ function useNavScrollState() {
       if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
+      window.removeEventListener("wheel", onManualUserScroll);
+      window.removeEventListener("touchmove", onManualUserScroll);
       resizeObserver.disconnect();
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
     };
   }, []);
 
-  return { activeSection: active, scrolled, atBottom };
+  return { activeSection: active, scrolled, atBottom, lockToSection };
 }
 
 export function PortfolioPillNav() {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
-  const { activeSection, scrolled, atBottom } = useNavScrollState();
+  const { activeSection, scrolled, atBottom, lockToSection } = useNavScrollState();
   const scrollTo = useSmoothScrollTo();
 
   const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
@@ -184,6 +210,7 @@ export function PortfolioPillNav() {
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {
     if (item.href?.startsWith("#")) {
       e.preventDefault();
+      lockToSection(item.href);
       scrollTo(item.href);
     } else if (item.href?.startsWith("http")) {
       e.preventDefault();
@@ -248,13 +275,13 @@ export function PortfolioPillNav() {
     <>
       {/* DESKTOP: Floating at bottom center (reveals when scrolled, hides when reaching bottom footer) */}
       <div
-        className={`pointer-events-none fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 hidden -translate-x-1/2 md:flex transition-all duration-300 ${
+        className={`pointer-events-none fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 hidden -translate-x-1/2 md:flex max-w-[calc(100vw-2rem)] overflow-hidden rounded-full transition-all duration-300 ${
           scrolled && !atBottom
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-8 pointer-events-none"
         }`}
       >
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto overflow-hidden rounded-full">
           <PillNav
             logo={
               <span className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-black italic tracking-tighter text-white shadow-sm">

@@ -119,7 +119,7 @@ export function TabWorks({
           {/* Category Filter */}
           <select
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value as any)}
+            onChange={(e) => setFilterCategory(e.target.value as "all" | "it" | "design" | "both")}
             className="rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-body dark:border-line/40 dark:bg-slate-900"
           >
             <option value="all">Semua Kategori</option>
@@ -249,7 +249,7 @@ export function TabWorks({
                   <label className="block text-xs font-semibold text-ink">Kategori Domain</label>
                   <select
                     value={project.category || "both"}
-                    onChange={(e) => updateProject(project.id, { category: e.target.value as any })}
+                    onChange={(e) => updateProject(project.id, { category: e.target.value as "both" | "it" | "design" })}
                     className={`mt-1.5 ${inputClass}`}
                   >
                     <option value="both">Both (IT & UI/UX Design)</option>

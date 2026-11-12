@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLenis } from "lenis/react";
-import { useAdaptivePerformance } from "@/lib/device-performance";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -36,17 +35,11 @@ export function Parallax({
 }: ParallaxProps) {
   const triggerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const { isLite } = useAdaptivePerformance();
 
   useEffect(() => {
     const trigger = triggerRef.current;
     const content = contentRef.current;
     if (!trigger || !content) return;
-
-    if (isLite) {
-      gsap.set(content, { y: 0 });
-      return;
-    }
 
     const mm = gsap.matchMedia();
 
@@ -127,16 +120,10 @@ export function ScrollReveal({
   stagger = 0,
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const { isLite } = useAdaptivePerformance();
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
-    if (isLite) {
-      gsap.set(el, { opacity: 1, y: 0 });
-      return;
-    }
 
     const mm = gsap.matchMedia();
 
@@ -269,31 +256,56 @@ export function ScrollScrub({
 
 export function useSmoothScrollTo() {
   const lenis = useLenis();
+  const lastTargetRef = useRef<string | null>(null);
+  const lastTimeRef = useRef<number>(0);
+  const historyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollTo = (target: string | HTMLElement, explicitOffset?: number) => {
-    // Scroll directly to top when target is hero / atas
-    if (target === "#atas" || target === "#hero" || target === "") {
-      if (lenis) {
-        lenis.scrollTo(0, {
-          duration: 1.05,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        });
-      } else if (typeof window !== "undefined") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+    if (typeof window === "undefined") return;
 
-      if (typeof window !== "undefined") {
-        try {
-          window.history.pushState(null, "", "#atas");
-        } catch {
-          // Fallback jika iframe/sandbox membatasi pushState
-        }
+    const now = Date.now();
+    const isString = typeof target === "string";
+
+    // Deduplicate rapid duplicate clicks on the exact same target (< 220ms)
+    if (isString && target === lastTargetRef.current && now - lastTimeRef.current < 220) {
+      return;
+    }
+    lastTargetRef.current = isString ? target : null;
+    lastTimeRef.current = now;
+
+    // Support reduced motion: jump directly without animation
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      const el = isString ? document.querySelector(target) : target;
+      if (el) {
+        el.scrollIntoView({ behavior: "auto" });
       }
       return;
     }
 
+    // Scroll directly to top when target is hero / atas
+    if (target === "#atas" || target === "#hero" || target === "") {
+      if (lenis) {
+        lenis.scrollTo(0, {
+          duration: 0.85,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = setTimeout(() => {
+        try {
+          if (window.location.hash !== "#atas") {
+            window.history.replaceState(null, "", "#atas");
+          }
+        } catch {}
+      }, 200);
+      return;
+    }
+
     // Dynamic header measurement: standardizes offset across desktop and mobile
-    const header = typeof document !== "undefined" ? document.querySelector("header") : null;
+    const header = document.querySelector("header");
     const headerHeight = header ? header.getBoundingClientRect().height : 64;
     const defaultOffset = -(headerHeight + 16);
     const offset = typeof explicitOffset === "number" ? explicitOffset : defaultOffset;
@@ -301,23 +313,27 @@ export function useSmoothScrollTo() {
     if (lenis) {
       lenis.scrollTo(target, {
         offset,
-        duration: 1.05,
+        duration: 0.85,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       });
     } else {
-      const el = typeof target === "string" ? document.querySelector(target) : target;
+      const el = isString ? document.querySelector(target) : target;
       if (el) {
         const top = el.getBoundingClientRect().top + window.scrollY + offset;
         window.scrollTo({ top, behavior: "smooth" });
       }
     }
 
-    if (typeof target === "string" && target.startsWith("#") && typeof window !== "undefined") {
-      try {
-        window.history.pushState(null, "", target);
-      } catch {
-        // Fallback jika iframe/sandbox membatasi pushState
-      }
+    // Debounced URL hash replacement prevents history queue overflow / browser hang
+    if (isString && target.startsWith("#")) {
+      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = setTimeout(() => {
+        try {
+          if (window.location.hash !== target) {
+            window.history.replaceState(null, "", target);
+          }
+        } catch {}
+      }, 200);
     }
   };
 

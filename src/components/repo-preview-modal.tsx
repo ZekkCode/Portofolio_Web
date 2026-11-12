@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ArrowUpRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import type { Project } from "@/lib/site-store";
 
 interface RepoPreviewModalProps {
@@ -17,7 +17,15 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
   const isEn = currentLang === "en";
 
   const [copied, setCopied] = useState(false);
-  const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [prevProject, setPrevProject] = useState(project);
+
+  if (project !== prevProject) {
+    setPrevProject(project);
+    setSelectedImage(null);
+  }
+
+  const activeImage = selectedImage ?? project?.image ?? null;
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -35,14 +43,6 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
-
-  useEffect(() => {
-    if (project?.image) {
-      setActiveImage(project.image);
-    } else {
-      setActiveImage(null);
-    }
-  }, [project]);
 
   const handleCopyLink = () => {
     const link = project?.previewUrl || project?.repo;
@@ -153,7 +153,7 @@ export function RepoPreviewModal({ project, isOpen, onClose }: RepoPreviewModalP
                 <button
                   key={`${img}-${idx}`}
                   type="button"
-                  onClick={() => setActiveImage(img)}
+                  onClick={() => setSelectedImage(img)}
                   className={`size-14 shrink-0 overflow-hidden rounded-lg border-2 transition ${
                     activeImage === img ? "border-brand" : "border-line/60 opacity-60 hover:opacity-100"
                   }`}

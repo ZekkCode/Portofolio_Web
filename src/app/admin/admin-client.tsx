@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   normalizeConfig,
   resetConfig,
-  saveCloudConfig,
+  saveCloudDraft,
+  publishCloudConfig,
   useSiteConfig,
   writeConfig,
   type SiteConfig,
 } from "@/lib/site-store";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
+import { auditContentHealth } from "@/lib/content/content-health";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
 import {
   ArrowLeft,
@@ -30,8 +32,14 @@ import {
   HelpCircle,
   ImageIcon,
   Sparkles,
+  History,
+  ShieldCheck,
+  Eye,
+  FileText,
+  LayoutDashboard,
 } from "lucide-react";
 
+import { TabOverview } from "./components/tab-overview";
 import { TabGeneral } from "./components/tab-general";
 import { TabJourney } from "./components/tab-journey";
 import { TabWorks } from "./components/tab-works";
@@ -40,8 +48,12 @@ import { TabCredentials } from "./components/tab-credentials";
 import { TabContent } from "./components/tab-content";
 import { TabMedia } from "./components/tab-media";
 import { TabAppearance } from "./components/tab-appearance";
+import { TabMaintenance } from "./components/tab-maintenance";
+import { ModalRevisions } from "./components/modal-revisions";
+import { ModalHealth } from "./components/modal-health";
 
 export type AdminTabKey =
+  | "overview"
   | "general"
   | "journey"
   | "works"
@@ -49,7 +61,8 @@ export type AdminTabKey =
   | "credentials"
   | "content"
   | "media"
-  | "appearance";
+  | "appearance"
+  | "maintenance";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface/60 px-3.5 py-2 text-xs text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand dark:border-line/60 dark:bg-slate-900/60 dark:focus:bg-[#0c0e17] transition";
@@ -106,17 +119,35 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const router = useRouter();
   const storedConfig = useSiteConfig();
   const [draft, setDraft] = useState<SiteConfig | null>(null);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string | null>(null);
   const [tab, setTab] = useState<AdminTabKey>("appearance");
   const [cloudStatus, setCloudStatus] = useState<{ r2: boolean; supabase: boolean } | null>(null);
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [previewCvRole, setPreviewCvRole] = useState<RoleKey | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showRevisionsModal, setShowRevisionsModal] = useState(false);
+  const [showHealthModal, setShowHealthModal] = useState(false);
 
   const config = draft ?? storedConfig;
   const hasUnsavedChanges = draft !== null;
+
+  // Real-time Health Audit
+  const healthReport = useMemo(() => auditContentHealth(config), [config]);
+
+  // Prevent silent data loss: Warning on beforeunload when unsaved changes exist
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     fetch("/api/upload")
@@ -141,17 +172,18 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     fieldKey: string
   ) => {
     setUploadingImage(fieldKey);
-    setStatus("Memeriksa dan memproses berkas...");
+    setStatus(`Mengompresi dan mengunggah berkas ${file.name}...`);
+
     try {
       let fileToUpload = file;
-      const isPngOrJpg =
-        file.type === "image/png" || file.type === "image/jpeg" || /\.(png|jpe?g)$/i.test(file.name);
-      if (isPngOrJpg) {
-        setStatus("Mengonversi PNG/JPG ke WebP...");
-        fileToUpload = await convertImageToWebP(file);
+      if (file.type.startsWith("image/") && file.type !== "image/svg+xml" && file.type !== "image/gif") {
+        try {
+          fileToUpload = await convertImageToWebP(file);
+        } catch (convErr) {
+          console.warn("Konversi WebP client dilewati:", convErr);
+        }
       }
 
-      setStatus("Mengunggah berkas WebP...");
       const formData = new FormData();
       formData.append("file", fileToUpload);
       formData.append("folder", folder);
@@ -163,54 +195,83 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
       const data = await res.json();
       if (!res.ok) {
-        setStatus(`Unggah gagal: ${data.error || "Terjadi kesalahan"}`);
-        return;
+        throw new Error(data.error || "Gagal mengunggah berkas");
       }
 
       callback(data.url);
       setStatus(
-        data.provider === "r2"
-          ? "Berkas WebP berhasil disimpan ke Cloudflare R2"
-          : "Berkas disimpan sebagai data URI"
+        data.source === "r2"
+          ? "Berkas berhasil diunggah permanen ke Cloudflare R2"
+          : "Berkas disimpan lokal (Base64 data URI)"
       );
-    } catch (err) {
-      setStatus(`Unggah gagal: ${err instanceof Error ? err.message : "Koneksi terputus"}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kesalahan unggah";
+      setStatus(`Gagal unggah: ${msg}`);
+      alert(`Gagal mengunggah berkas: ${msg}`);
     } finally {
       setUploadingImage(null);
     }
   };
 
-  const handleSave = async () => {
-    // 1. Validate payload schema
+  // 1. Simpan Draf (Tidak mempengaruhi situs publik)
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    setStatus("Menyimpan draf ke server...");
+    try {
+      const res = await saveCloudDraft(config);
+      if (res.success) {
+        setStatus("Draf berhasil disimpan (belum dipublikasikan)");
+      } else {
+        setStatus(`Gagal simpan draf: ${res.message || "Kesalahan cloud"}`);
+      }
+    } catch {
+      setStatus("Gagal menghubungi server draf");
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  // 2. Publikasikan ke Seluruh Situs (Primary Action, juga digunakan oleh test script 'Simpan')
+  const handlePublish = async () => {
+    // Audit integritas data
+    if (!healthReport.canPublish) {
+      setShowHealthModal(true);
+      setValidationErrors(
+        healthReport.issues.filter((i) => i.severity === "error").map((i) => `[${i.section}] ${i.message}`)
+      );
+      setStatus("Publikasi dicegah: Perbaiki kesalahan integritas konten terlebih dahulu.");
+      return;
+    }
+
     const validation = validateSiteConfigPayload(config);
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
       setStatus(`Gagal validasi: ${validation.errors[0]}`);
       return;
     }
+
     setValidationErrors([]);
     setIsSaving(true);
-    setStatus("Menyimpan konfigurasi...");
+    setStatus("Mempublikasikan konten ke cloud...");
 
     try {
-      // 2. Local persistence
+      // Local fallback write
       writeConfig(config);
 
-      // 3. Supabase Cloud persistence
+      // Cloud publish with automatic revision snapshot
       if (cloudStatus?.supabase) {
-        const res = await saveCloudConfig(config);
+        const res = await publishCloudConfig(config);
         if (res.success) {
-          setStatus("Tersimpan permanen di Supabase Cloud & Lokal");
+          setStatus("Berhasil dipublikasikan ke seluruh situs publik!");
           setDraft(null);
         } else {
           setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron cloud"})`);
         }
       } else {
-        setStatus("Tersimpan sebagai draft lokal (Supabase belum terkonfigurasi)");
-        setDraft(null);
+        setStatus("Tersimpan sebagai draf lokal (Supabase belum terkonfigurasi)");
       }
-    } catch (err) {
-      setStatus(`Gagal menyimpan: ${err instanceof Error ? err.message : "Kesalahan sistem"}`);
+    } catch {
+      setStatus("Gagal menghubungi server");
     } finally {
       setIsSaving(false);
     }
@@ -249,15 +310,19 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     setStatus("Konfigurasi dikembalikan ke default");
   };
 
+  // Tab definition following Phase 34 Information Architecture
+  // 'works' keeps label "Proyek" for test script compatibility (scripts/check.mjs)
   const tabs: { key: AdminTabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { key: "appearance", label: "Tampilan 3D & Hero", icon: Sparkles },
+    { key: "overview", label: "Overview", icon: LayoutDashboard },
+    { key: "general", label: "Profil & Kontak", icon: User },
+    { key: "journey", label: "Linimasa Karier", icon: GraduationCap },
     { key: "works", label: "Proyek", icon: FolderGit2 },
-    { key: "general", label: "Profil & Identitas", icon: User },
-    { key: "journey", label: "Edukasi & Karir", icon: GraduationCap },
-    { key: "expertise", label: "Keahlian & Layanan", icon: Wrench },
-    { key: "credentials", label: "Sertifikat & CV", icon: Award },
-    { key: "content", label: "FAQ & Blog", icon: HelpCircle },
-    { key: "media", label: "Pustaka Media & SEO", icon: ImageIcon },
+    { key: "expertise", label: "Skill & Layanan", icon: Wrench },
+    { key: "credentials", label: "Sertifikasi & CV", icon: Award },
+    { key: "content", label: "FAQ & Teks", icon: HelpCircle },
+    { key: "media", label: "Pustaka Media", icon: ImageIcon },
+    { key: "appearance", label: "Tampilan & SEO", icon: Sparkles },
+    { key: "maintenance", label: "Cadangan & Riwayat", icon: ShieldCheck },
   ];
 
   return (
@@ -268,42 +333,86 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface/50 px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface hover:text-ink dark:border-line/40"
-              title="Lihat Situs Publik"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/60"
             >
               <ArrowLeft className="size-3.5" />
-              <span className="hidden sm:inline">Lihat Web</span>
+              <span>Kembali</span>
             </Link>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" />
-                <h1 className="text-sm font-bold text-ink sm:text-base">CMS ZekkTech Studio (Panel Admin)</h1>
+                <span className="font-display text-base font-bold text-ink">Panel Admin</span>
+                <span className="hidden sm:inline-flex rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand">
+                  CMS v3
+                </span>
                 {hasUnsavedChanges && (
-                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                    Ada Draf Belum Disimpan
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                    <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Draf Belum Disimpan
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-muted truncate max-w-[260px] sm:max-w-none">
-                {userEmail ? `Login: ${userEmail}` : "Mode Admin"} • Supabase:{" "}
-                <span className={cloudStatus?.supabase ? "text-emerald-600 font-semibold" : "text-amber-600"}>
-                  {cloudStatus?.supabase ? "Terhubung" : "Lokal"}
-                </span>{" "}
-                • R2:{" "}
-                <span className={cloudStatus?.r2 ? "text-emerald-600 font-semibold" : "text-slate-500"}>
-                  {cloudStatus?.r2 ? "Aktif" : "DataURI"}
-                </span>
+              <p className="text-[11px] text-muted hidden sm:block">
+                {userEmail || "admin"} • Kelola konfigurasi, aset, dan linimasa portofolio
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Pratinjau Draf */}
+            <Link
+              href="/admin/preview"
+              target="_blank"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-500/20 dark:text-amber-300"
+              title="Buka pratinjau draf tanpa mempublikasikan ke publik"
+            >
+              <Eye className="size-3.5" />
+              <span>Pratinjau Draf</span>
+            </Link>
+
+            {/* Riwayat Versi & Rollback */}
+            <button
+              type="button"
+              onClick={() => setShowRevisionsModal(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/60"
+              title="Lihat riwayat revisi dan pulihkan versi lama"
+            >
+              <History className="size-3.5 text-brand" />
+              <span className="hidden md:inline">Versi</span>
+            </button>
+
+            {/* Content Health Checker Badge */}
+            <button
+              type="button"
+              onClick={() => setShowHealthModal(true)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                healthReport.canPublish
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+              }`}
+              title="Periksa kesehatan dan integritas data konten"
+            >
+              <ShieldCheck className="size-3.5" />
+              <span>{healthReport.score}%</span>
+            </button>
+
+            {/* Simpan Draf Button */}
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft}
+              className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/80 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink disabled:opacity-50 dark:border-line/40 dark:bg-slate-900/80"
+              title="Simpan draf ke server tanpa mempublikasikannya ke publik"
+            >
+              <FileText className="size-3.5" />
+              <span>{isSavingDraft ? "Menyimpan..." : "Simpan Draf"}</span>
+            </button>
+
             <button
               type="button"
               onClick={pullFromCloud}
               disabled={syncingCloud}
-              className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink disabled:opacity-50 dark:border-line/40 dark:bg-slate-900/60"
+              className="hidden xl:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink disabled:opacity-50 dark:border-line/40 dark:bg-slate-900/60"
             >
               <CloudDownload className="size-3.5 text-brand" />
               <span>{syncingCloud ? "Menyinkronkan..." : "Tarik Cloud"}</span>
@@ -312,17 +421,19 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             <button
               type="button"
               onClick={handleReset}
-              className="hidden lg:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/60"
+              className="hidden 2xl:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/60"
             >
               <RotateCcw className="size-3.5" />
               <span>Reset</span>
             </button>
 
+            {/* Simpan & Publikasikan (Wajib 'Simpan' untuk script test compatibility) */}
             <button
               type="button"
-              onClick={handleSave}
+              onClick={handlePublish}
               disabled={isSaving}
               className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-brand/90 disabled:opacity-50"
+              title="Publikasikan draf langsung ke seluruh situs publik"
             >
               {isSaving ? (
                 <span className="size-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -335,21 +446,21 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex size-8 items-center justify-center rounded-xl border border-line text-muted transition hover:bg-rose-50 hover:text-rose-600 dark:border-line/40 dark:hover:bg-rose-950/20"
-              title="Keluar (Logout)"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 p-2 text-xs font-semibold text-muted transition hover:bg-rose-50 hover:text-rose-600 dark:border-line/40 dark:bg-slate-900/60 dark:hover:bg-rose-950/20 dark:hover:text-rose-400"
+              title="Keluar dari Panel Admin"
             >
               <LogOut className="size-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Validation Errors Banner */}
+        {/* Validation Errors Notice */}
         {validationErrors.length > 0 && (
           <div className="border-t border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs text-rose-700 dark:text-rose-300">
             <div className="mx-auto flex max-w-7xl items-center gap-2">
               <AlertTriangle className="size-4 shrink-0" />
               <div className="flex-1">
-                <span className="font-bold">Perbaiki kesalahan berikut sebelum menyimpan:</span>{" "}
+                <span className="font-bold">Perbaiki kesalahan berikut sebelum mempublikasikan:</span>{" "}
                 {validationErrors.join(" • ")}
               </div>
               <button
@@ -399,6 +510,16 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
         </div>
 
         {/* Tab Content Panes */}
+        {tab === "overview" && (
+          <TabOverview
+            config={config}
+            healthReport={healthReport}
+            onNavigateTab={(t) => setTab(t)}
+            onOpenHealthModal={() => setShowHealthModal(true)}
+            onOpenRevisionsModal={() => setShowRevisionsModal(true)}
+          />
+        )}
+
         {tab === "general" && (
           <TabGeneral
             config={config}
@@ -484,6 +605,22 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             inputClass={inputClass}
           />
         )}
+
+        {tab === "maintenance" && (
+          <TabMaintenance
+            config={config}
+            cloudStatus={cloudStatus}
+            healthReport={healthReport}
+            onApplyConfig={(newCfg) => {
+              setDraft(newCfg);
+              writeConfig(newCfg);
+            }}
+            onResetFactory={handleReset}
+            onOpenRevisionsModal={() => setShowRevisionsModal(true)}
+            onOpenHealthModal={() => setShowHealthModal(true)}
+            setStatus={setStatus}
+          />
+        )}
       </main>
 
       {/* CV Preview Modal */}
@@ -494,6 +631,24 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           onClose={() => setPreviewCvRole(null)}
         />
       )}
+
+      {/* Version History Modal */}
+      <ModalRevisions
+        isOpen={showRevisionsModal}
+        onClose={() => setShowRevisionsModal(false)}
+        onRestore={(restored) => {
+          setDraft(restored);
+          writeConfig(restored);
+          setStatus("Versi berhasil dipulihkan dan diterapkan di editor");
+        }}
+      />
+
+      {/* Content Health Checker Modal */}
+      <ModalHealth
+        isOpen={showHealthModal}
+        onClose={() => setShowHealthModal(false)}
+        config={config}
+      />
     </div>
   );
 }

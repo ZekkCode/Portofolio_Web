@@ -5,11 +5,11 @@ import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
-import { useAdaptivePerformance } from "@/lib/device-performance";
 import type { FolderEntry } from "@/components/folder";
 import type { RoleKey } from "@/components/cv-preview-modal";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
+import { usePrefetchOnIntent } from "@/hooks/use-prefetch-on-intent";
 import { ArrowUpRight, FileText } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -77,7 +77,7 @@ const CV_PAGES: CvPageInfo[] = [
  * Zero canvas rasterization or WebGL overhead while preserving all 4 CV categories,
  * visual identity, and full document modal preview.
  */
-function StaticCvFolder({
+export function StaticCvFolder({
   isOpen,
   pages,
   onOpenPreview,
@@ -162,12 +162,16 @@ export function CvFolderSection() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleKey>("all");
+
+  const { intentProps: cvIntentProps } = usePrefetchOnIntent(
+    () => import("@/components/cv-preview-modal"),
+    { key: "cv-preview-modal" }
+  );
   const [isFolderOpen, setIsFolderOpen] = useState(() => {
     if (typeof window === "undefined") return false;
     return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   });
   const [isMobile, setIsMobile] = useState(false);
-  const { isLite } = useAdaptivePerformance();
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -234,49 +238,42 @@ export function CvFolderSection() {
         ref={stageRef}
         className="relative mt-8 flex min-h-[400px] sm:min-h-[460px] items-center justify-center py-6"
       >
-        {isLite ? (
-          <StaticCvFolder
-            isOpen={isFolderOpen}
-            pages={CV_PAGES}
-            onOpenPreview={openPreview}
-          />
-        ) : (
-          <DynamicFolder
-            label="CV / Zekk"
-            color={isDark ? "#2563eb" : "#1b45c4"}
-            mode="flap"
-            variant="glass"
-            open={isFolderOpen}
-            onOpenChange={setIsFolderOpen}
-            size={isMobile ? 0.95 : 1.25}
-            items={folderItems}
-            paperColor="#ffffff"
-            tabPosition="right"
-            layout="spread"
-            openOn="click"
-            draggable={true}
-            zoomOnClick={false}
-            peek={true}
-            intro={false}
-            tilt={isMobile ? 0.35 : 0.6}
-            bounce={0.35}
-            speed={1.15}
-            frost={0.3}
-            theme={isDark ? "dark" : "light"}
-            onItemClick={(_item, index) => {
-              const item = CV_PAGES[index];
-              if (item) {
-                openPreview(item.roleKey);
-              }
-            }}
-          />
-        )}
+        <DynamicFolder
+          label="CV / Zekk"
+          color={isDark ? "#2563eb" : "#1b45c4"}
+          mode="flap"
+          variant="glass"
+          open={isFolderOpen}
+          onOpenChange={setIsFolderOpen}
+          size={isMobile ? 0.95 : 1.25}
+          items={folderItems}
+          paperColor="#ffffff"
+          tabPosition="right"
+          layout="spread"
+          openOn="click"
+          draggable={true}
+          zoomOnClick={false}
+          peek={true}
+          intro={false}
+          tilt={isMobile ? 0.35 : 0.6}
+          bounce={0.35}
+          speed={1.15}
+          frost={0.3}
+          theme={isDark ? "dark" : "light"}
+          onItemClick={(_item, index) => {
+            const item = CV_PAGES[index];
+            if (item) {
+              openPreview(item.roleKey);
+            }
+          }}
+        />
 
         {/* Floating Center Button: "Buka Berkas Karier" */}
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
           <button
             type="button"
             onClick={() => openPreview("all")}
+            {...cvIntentProps}
             className="pointer-events-auto group inline-flex min-h-[44px] h-11 items-center gap-2.5 rounded-xl border border-brand-light/30 bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             <FileText className="size-4 text-sky-200 transition-transform group-hover:scale-110 motion-reduce:transform-none" />

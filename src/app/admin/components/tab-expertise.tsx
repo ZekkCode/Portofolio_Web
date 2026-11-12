@@ -189,7 +189,7 @@ export function TabExpertise({
                     <div className="mt-1 flex items-center gap-2">
                       <select
                         value={tool.category}
-                        onChange={(e) => updateTechStackItem(tool.id, { category: e.target.value as any })}
+                        onChange={(e) => updateTechStackItem(tool.id, { category: e.target.value as TechStackItem["category"] })}
                         className="rounded border border-line bg-surface/50 px-2 py-0.5 text-[11px] text-body dark:border-line/30 dark:bg-slate-900"
                       >
                         <option value="uiux">UI/UX & Desain</option>

@@ -111,10 +111,18 @@ const viewFor = (tiltX: number, tiltY: number, width: number, height: number, ce
   return { x0, y0, width: x1-x0, height: y1-y0, inverse, transform, mist, far, reach };
 };
 
+const LAYOUT_CACHE = new Map<string, Layout>();
+
 const layoutFor = (shape: string, size: number): Layout => {
-  if (shape === 'hexagon') { const radius = size / SQRT3; return { stepX: radius * 1.5, stepY: size, radius }; }
-  if (shape === 'triangle') { const side = (size * 2) / SQRT3; return { stepX: side / 2, stepY: size, side }; }
-  return { stepX: size, stepY: size };
+  const key = `${shape}_${size}`;
+  let layout = LAYOUT_CACHE.get(key);
+  if (!layout) {
+    if (shape === 'hexagon') { const radius = size / SQRT3; layout = { stepX: radius * 1.5, stepY: size, radius }; }
+    else if (shape === 'triangle') { const side = (size * 2) / SQRT3; layout = { stepX: side / 2, stepY: size, side }; }
+    else { layout = { stepX: size, stepY: size }; }
+    LAYOUT_CACHE.set(key, layout);
+  }
+  return layout;
 };
 
 const centerOf = (shape: string, layout: Layout, i: number, j: number): number[] => {
@@ -640,20 +648,26 @@ export default function ShapeGrid({
     });
     resizeObserver.observe(container);
 
+    let isIntersecting = false;
     const visibility = new IntersectionObserver(entries => {
-      state.visible = entries.some(entry => entry.isIntersecting);
-      if (state.visible) wake();
+      isIntersecting = entries.some(entry => entry.isIntersecting);
+      state.visible = isIntersecting && !document.hidden;
+      if (state.visible) {
+        wake();
+      } else if (state.raf) {
+        cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      }
     });
     visibility.observe(container);
 
     const onVisibilityChange = () => {
-      if (document.hidden) {
-        state.visible = false;
+      state.visible = isIntersecting && !document.hidden;
+      if (state.visible) {
+        wake();
+      } else if (state.raf) {
         cancelAnimationFrame(state.raf);
         state.raf = 0;
-      } else {
-        state.visible = true;
-        wake();
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);

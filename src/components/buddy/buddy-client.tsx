@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import "@/lib/i18n";
 import { BUDDY_CONFIG } from "@/lib/buddy/buddy-config";
 import { BuddyAPI } from "@/lib/buddy/buddy-types";
 import { useBuddyRoaming } from "@/hooks/use-buddy-roaming";
 import { BuddySprite } from "@/components/buddy/buddy-sprite";
-import { BuddyChat } from "@/components/buddy/buddy-chat";
+import { usePrefetchOnIntent } from "@/hooks/use-prefetch-on-intent";
 import { useMounted } from "@/lib/use-mounted";
 import "@/components/buddy/buddy.css";
+
+const BuddyChat = dynamic(
+  () => import("@/components/buddy/buddy-chat").then((m) => m.BuddyChat),
+  { ssr: false }
+);
 
 export function BuddyClient() {
   const pathname = usePathname();
@@ -52,11 +58,17 @@ export function BuddyClient() {
     }
   }, [isChatOpen, playAction]);
 
+  const { prefetch: prefetchChat } = usePrefetchOnIntent(
+    () => import("@/components/buddy/buddy-chat"),
+    { key: "buddy-chat" }
+  );
+
   const handleSpriteHover = useCallback(() => {
+    prefetchChat();
     if (!isChatOpen && state === "idle" && deviceMode === "desktop") {
       playAction("waiting", 1200);
     }
-  }, [deviceMode, isChatOpen, playAction, state]);
+  }, [deviceMode, isChatOpen, playAction, state, prefetchChat]);
 
   // Send message to API
   const handleSendMessage = useCallback(

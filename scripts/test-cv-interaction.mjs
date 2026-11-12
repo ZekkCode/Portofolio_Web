@@ -117,12 +117,17 @@ try {
 
   // Click "Buka Berkas Karier"
   console.log("3. Opening CV preview from folder stage...");
-  const opened = await evaluate(`(() => {
-    const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Buka Berkas Karier') || b.textContent.includes('Buka Berkas CV Lengkap'));
-    if (!btn) return false;
-    btn.click();
-    return true;
-  })()`);
+  let opened = false;
+  for (let i = 0; i < 25; i++) {
+    opened = await evaluate(`(() => {
+      const btn = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Buka Berkas Karier') || b.textContent.includes('Buka Berkas CV Lengkap'));
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`);
+    if (opened) break;
+    await sleep(300);
+  }
   assert.ok(opened, "Tombol 'Buka Berkas CV Lengkap' tidak ditemukan");
   await sleep(1000);
 

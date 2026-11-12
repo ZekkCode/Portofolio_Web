@@ -1077,7 +1077,7 @@ const TechText = ({
 
   return (
     <Component
-      ref={containerRef as any}
+      ref={containerRef as React.Ref<HTMLDivElement>}
       className={`relative touch-pan-y select-none ${className}`.trim()}
       style={style}
       role={as === 'div' ? 'img' : undefined}

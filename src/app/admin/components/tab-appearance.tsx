@@ -70,7 +70,7 @@ const LANYARD_GROUPS: { title: string; fields: Field[] }[] = [
         options: ["glossy", "matte", "holographic", "metallic"],
       },
       { key: "metal", label: "Warna klip logam", kind: "select", options: ["graphite", "silver", "gold"] },
-      { key: "cornerRadius", label: "Corner radius", kind: "range", min: 0.05, max: 0.8, step: 0.01 },
+      { key: "cornerRadius", label: "Corner radius", kind: "range", min: 0.05, max: 1.0, step: 0.01 },
       { key: "size", label: "Ukuran kartu", kind: "range", min: 0.2, max: 0.8, step: 0.01 },
       { key: "anchor", label: "Posisi gantung", kind: "select", options: ["left", "center", "right"] },
     ],

@@ -157,8 +157,8 @@ const LOGO_LINK =
 const MARK =
   'grid h-[var(--pn-inner)] w-[var(--pn-inner)] place-items-center group-data-[layout=split]/nav:h-[var(--pn-mark)] group-data-[layout=split]/nav:w-[var(--pn-mark)] [&_img]:block [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_svg]:block [&_svg]:h-full [&_svg]:w-full';
 const BAR =
-  'relative z-[1] box-border flex h-[var(--pn-h)] shrink-0 min-w-max items-center rounded-full px-1.5 py-[var(--pn-pad)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:p-0';
-const TRACK = 'relative h-full';
+  'relative z-[1] box-border flex h-[var(--pn-h)] shrink-0 min-w-max items-center rounded-full px-1.5 py-[var(--pn-pad)] overflow-hidden group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:p-0';
+const TRACK = 'relative h-full overflow-hidden rounded-full';
 const LIST = 'm-0 flex h-full list-none items-stretch gap-[var(--pn-item-gap,2px)] p-0';
 const SLOT = 'group/slot flex';
 const ITEM =
@@ -170,7 +170,7 @@ const FACE_ALT =
 const FILL =
   'pointer-events-none absolute left-1/2 top-full z-[-1] h-[var(--pn-fill,200%)] w-[var(--pn-fill,200%)] scale-0 rounded-full [background:var(--pn-pill)] [margin:calc(var(--pn-fill,200%)/-2)_0_0_calc(var(--pn-fill,200%)/-2)] transition-transform duration-[360ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-data-[on]/slot:scale-100 group-data-[on]/slot:duration-[550ms] group-data-[on]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[hover]/slot:scale-100 group-data-[hover]/slot:duration-[550ms] group-data-[hover]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
 const GLIDE =
-  'pointer-events-none absolute inset-y-0 left-0 w-0 origin-center rounded-full opacity-0 [background:var(--pn-pill)] [box-shadow:var(--pn-pill-shadow)] will-change-[transform,width,opacity] group-data-[focus]/nav:[box-shadow:var(--pn-pill-shadow),0_0_0_2px_var(--pn-ring)]';
+  'pointer-events-none absolute inset-y-0 left-0 w-0 origin-center rounded-full opacity-0 [background:var(--pn-pill)] [box-shadow:var(--pn-pill-shadow)] will-change-[transform,width,opacity] group-data-[focus]/nav:[box-shadow:var(--pn-pill-shadow),0_0_0_2px_var(--pn-ring)] max-w-full';
 const INK =
   'pointer-events-none absolute inset-0 flex items-stretch gap-[var(--pn-item-gap,2px)] text-[var(--pn-pill-ink)] [clip-path:inset(0_100%_0_0)]';
 const INK_ITEM =
@@ -398,29 +398,39 @@ export const PillNav = ({
       const glideEl = glideRef.current;
       const ink = inkRef.current;
       const dot = dotRef.current;
-      const width = Math.max(0, state.x1 - state.x0);
-      const scale = state.press * state.pop;
+
+      // Strict numeric protection against NaN or boundless overflow
+      if (Number.isNaN(state.x0) || !Number.isFinite(state.x0)) state.x0 = 0;
+      if (Number.isNaN(state.x1) || !Number.isFinite(state.x1)) state.x1 = 0;
+      if (Number.isNaN(state.press) || !Number.isFinite(state.press)) state.press = 1;
+      if (Number.isNaN(state.pop) || !Number.isFinite(state.pop)) state.pop = 1;
+
+      const maxTrackW = trackWidth > 0 ? trackWidth : 800;
+      const rawWidth = state.x1 - state.x0;
+      const width = clamp(Math.max(0, rawWidth), 0, maxTrackW);
+      const scale = clamp(state.press * state.pop, 0.85, 1.15);
       const target = rects[glideIndex()];
       const squash = target ? 1 - clamp((width / Math.max(target.width, 1) - 1) * 0.3, 0, 0.14) : 1;
+      const safeX0 = clamp(state.x0, -20, maxTrackW + 20);
+
       if (glideEl) {
         glideEl.style.width = `${width}px`;
-        glideEl.style.transform = `translate3d(${state.x0}px, 0, 0) scale(${scale}, ${scale * squash})`;
-        glideEl.style.opacity = `${state.alpha}`;
+        glideEl.style.transform = `translate3d(${safeX0}px, 0, 0) scale(${scale}, ${scale * squash})`;
+        glideEl.style.opacity = `${clamp(state.alpha, 0, 1)}`;
       }
       if (ink) {
         const half = (width * scale) / 2;
-        const center = (state.x0 + state.x1) / 2;
+        const center = (safeX0 + safeX0 + width) / 2;
         const inset = (trackHeight * (1 - scale * squash)) / 2;
-        ink.style.clipPath = `inset(${inset}px ${trackWidth - center - half}px ${inset}px ${center - half}px round ${trackHeight / 2}px)`;
-        ink.style.opacity = `${state.alpha}`;
+        ink.style.clipPath = `inset(${inset}px ${Math.max(0, maxTrackW - center - half)}px ${inset}px ${Math.max(0, center - half)}px round ${trackHeight / 2}px)`;
+        ink.style.opacity = `${clamp(state.alpha, 0, 1)}`;
       }
       if (dot) {
         const pull = clamp(Math.abs(state.dotVelocity) / 700, 0, 2.2);
-        dot.style.transform = `translate3d(${state.dotX}px, 0, 0) scaleX(${1 + pull})`;
-        dot.style.opacity = `${state.dotAlpha}`;
+        dot.style.transform = `translate3d(${clamp(state.dotX, 0, maxTrackW)}px, 0, 0) scaleX(${1 + pull})`;
+        dot.style.opacity = `${clamp(state.dotAlpha, 0, 1)}`;
       }
     };
-
 
     const tick = (now: number) => {
       raf = 0;
@@ -458,10 +468,15 @@ export const PillNav = ({
           const h = dt / steps;
           for (let i = 0; i < steps; i++) {
             state.v0 += (-k0 * (state.x0 - t0) - 2 * zeta * Math.sqrt(k0) * state.v0) * h;
+            state.v0 = clamp(state.v0, -3000, 3000);
             state.x0 += state.v0 * h;
             state.v1 += (-k1 * (state.x1 - t1) - 2 * zeta * Math.sqrt(k1) * state.v1) * h;
+            state.v1 = clamp(state.v1, -3000, 3000);
             state.x1 += state.v1 * h;
           }
+          const maxBound = (trackWidth > 0 ? trackWidth : 800) + 50;
+          state.x0 = clamp(state.x0, -50, maxBound);
+          state.x1 = clamp(state.x1, -50, maxBound);
         }
         state.alpha += (1 - state.alpha) * (reduce ? 1 : 1 - Math.exp(-dt / 0.06));
         busy =
@@ -478,15 +493,23 @@ export const PillNav = ({
       }
 
       state.pop += (1 - state.pop) * (reduce ? 1 : 1 - Math.exp(-dt / 0.09));
+      state.pop = clamp(state.pop, 0.85, 1.15);
       if (Math.abs(1 - state.pop) > 0.001) busy = true;
 
+      // Safe sub-stepped Euler integration for press animation with damping clamp
       const pressTarget = state.pressing ? 0.95 : 1;
       if (reduce) {
         state.press = pressTarget;
         state.pressVelocity = 0;
       } else {
-        state.pressVelocity += (-700 * (state.press - pressTarget) - 30 * state.pressVelocity) * dt;
-        state.press += state.pressVelocity * dt;
+        const pressSteps = Math.ceil(dt / (1 / 240));
+        const ph = dt / pressSteps;
+        for (let i = 0; i < pressSteps; i++) {
+          state.pressVelocity += (-700 * (state.press - pressTarget) - 30 * state.pressVelocity) * ph;
+          state.pressVelocity = clamp(state.pressVelocity, -15, 15);
+          state.press += state.pressVelocity * ph;
+        }
+        state.press = clamp(state.press, 0.85, 1.15);
       }
       if (Math.abs(state.press - pressTarget) > 0.0005 || Math.abs(state.pressVelocity) > 0.01) busy = true;
 
@@ -622,7 +645,7 @@ export const PillNav = ({
 
   useEffect(() => {
     engineRef.current?.refresh();
-  });
+  }, [activeIndex, items.length]);
 
 
   useIsomorphicLayoutEffect(() => {

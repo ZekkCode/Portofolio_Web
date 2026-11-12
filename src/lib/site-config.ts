@@ -74,6 +74,7 @@ export type GeneralProfileConfig = {
   email: string;
   phone: string;
   whatsapp: string;
+  site?: string;
   socials: SocialLinkItem[];
 };
 
@@ -244,7 +245,15 @@ export type BlogConfig = {
   descEn?: string;
 };
 
+export type SeoConfig = {
+  metaTitle?: string;
+  metaDesc?: string;
+  keywords?: string[];
+  ogImage?: string;
+};
+
 export type SiteConfig = {
+  version?: number;
   headerLogoUrl: string;
   generalProfile: GeneralProfileConfig;
   stats: StatsConfig;
@@ -260,6 +269,8 @@ export type SiteConfig = {
   services: ServiceItemConfig[];
   faq: FaqItemConfig[];
   blog: BlogConfig;
+  seo?: SeoConfig;
+  sections?: Record<string, { visible: boolean; customTitle?: string }>;
 };
 
 export const defaultLanyard: LanyardConfig = {
@@ -661,6 +672,7 @@ export const defaultBlogConfig: BlogConfig = {
 };
 
 export const defaultSiteConfig: SiteConfig = {
+  version: 1,
   headerLogoUrl: "",
   generalProfile: defaultGeneralProfile,
   stats: defaultStats,
@@ -676,6 +688,26 @@ export const defaultSiteConfig: SiteConfig = {
   services: defaultServices,
   faq: defaultFaq,
   blog: defaultBlogConfig,
+  seo: {
+    metaTitle: `${profile.name} | ${profile.roles}`,
+    metaDesc: profile.bio[0],
+    keywords: ["Zakaria Mujur Prasetyo", "ZekkTech", "UI/UX Designer", "Frontend Developer"],
+    ogImage: "/opengraph-image",
+  },
+  sections: {
+    hero: { visible: true },
+    about: { visible: true },
+    journey: { visible: true },
+    achievements: { visible: true },
+    services: { visible: true },
+    cv: { visible: true },
+    stack: { visible: true },
+    projects: { visible: true },
+    blog: { visible: true },
+    certificates: { visible: true },
+    faq: { visible: true },
+    contact: { visible: true },
+  },
 };
 
 export const normalizeConfig = (input: unknown): SiteConfig => {
@@ -941,6 +973,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     : defaultBlogConfig;
 
   return {
+    version: typeof raw.version === "number" ? raw.version : 1,
     headerLogoUrl,
     generalProfile: normalizedGeneralProfile,
     stats: normalizedStats,
@@ -956,5 +989,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     services: normalizedServices,
     faq: normalizedFaq,
     blog: normalizedBlog,
+    seo: raw.seo || defaultSiteConfig.seo,
+    sections: raw.sections || defaultSiteConfig.sections,
   };
 };

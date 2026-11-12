@@ -6,6 +6,7 @@ import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { profile } from "@/lib/profile";
 import { translations } from "@/lib/translations";
+import { fetchPublishedContent } from "@/lib/content/public-content";
 import "./globals.css";
 
 const fontDisplay = Space_Grotesk({
@@ -41,207 +42,220 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(profile.site),
-  alternates: {
-    canonical: "/",
-    languages: {
-      "id-ID": "/",
-      "en-US": "/",
-      "x-default": "/",
-    },
-  },
-  title: {
-    default: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
-    template: "%s | ZekkTech",
-  },
-  description:
-    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif, proyek Next.js, dan desain antarmuka.",
-  applicationName: "ZekkTech Portfolio",
-  authors: [{ name: profile.name, url: profile.site }],
-  generator: "Next.js",
-  keywords: [
-    "Zakaria Mujur Prasetyo",
-    "ZekkTech",
-    "Zekk",
-    "zekksparow",
-    "UI/UX Designer Indonesia",
-    "Frontend Developer Indonesia",
-    "Web Developer Mojokerto",
-    "Web Developer Jawa Timur",
-    "Desainer UI/UX Mojokerto",
-    "Next.js Developer Indonesia",
-    "React Developer",
-    "TypeScript Developer",
-    "Tailwind CSS",
-    "Portfolio Web Developer",
-    "Graphic Designer Freelance",
-    "Jasa Pembuatan Website",
-    "IT Support Specialist",
-    "HIMATIF UTM",
-  ],
-  referrer: "origin-when-cross-origin",
-  creator: profile.name,
-  publisher: profile.brand,
-  category: "technology",
-  classification: "Portfolio & Professional Profile",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  openGraph: {
-    type: "profile",
-    firstName: "Zakaria",
-    lastName: "Mujur Prasetyo",
-    username: "zekksparow",
-    gender: "male",
-    locale: "id_ID",
-    alternateLocale: ["en_US"],
-    url: profile.site,
-    siteName: profile.brand,
-    title: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
-    description:
-      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif dan proyek digital.",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: `${profile.name} - ${profile.brand}`,
-        type: "image/png",
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await fetchPublishedContent();
+  const name = config.generalProfile?.name || profile.name;
+  const brand = config.generalProfile?.brand || profile.brand;
+  const roles = config.generalProfile?.roles || "UI/UX Designer & Frontend Developer";
+  const siteUrl = config.generalProfile?.site || profile.site;
+  const metaTitle = config.seo?.metaTitle || `${name} | ${roles}`;
+  const metaDesc =
+    config.seo?.metaDesc ||
+    config.generalProfile?.heroDesc ||
+    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif, proyek Next.js, dan desain antarmuka.";
+  const ogImage = config.seo?.ogImage || "/opengraph-image";
+
+  return {
+    metadataBase: new URL(siteUrl),
+    alternates: {
+      canonical: "/",
+      languages: {
+        "id-ID": "/",
+        "en-US": "/",
+        "x-default": "/",
       },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Zakaria Mujur Prasetyo | UI/UX Designer & Frontend Developer",
-    description:
-      "Portfolio Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer & Frontend Developer asal Mojokerto, Jawa Timur.",
-    creator: "@zekksparow",
-    site: "@zekksparow",
-    images: ["/opengraph-image"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    nocache: false,
-    googleBot: {
+    },
+    title: {
+      default: metaTitle,
+      template: `%s | ${brand}`,
+    },
+    description: metaDesc,
+    applicationName: `${brand} Portfolio`,
+    authors: [{ name, url: siteUrl }],
+    generator: "Next.js",
+    keywords:
+      config.seo?.keywords && config.seo.keywords.length > 0
+        ? config.seo.keywords
+        : [
+            name,
+            brand,
+            "Zekk",
+            "zekksparow",
+            "UI/UX Designer Indonesia",
+            "Frontend Developer Indonesia",
+            "Web Developer Mojokerto",
+            "Web Developer Jawa Timur",
+            "Desainer UI/UX Mojokerto",
+            "Next.js Developer Indonesia",
+            "React Developer",
+            "TypeScript Developer",
+            "Tailwind CSS",
+            "Portfolio Web Developer",
+            "Graphic Designer Freelance",
+            "Jasa Pembuatan Website",
+            "IT Support Specialist",
+            "HIMATIF UTM",
+          ],
+    referrer: "origin-when-cross-origin",
+    creator: name,
+    publisher: brand,
+    category: "technology",
+    classification: "Portfolio & Professional Profile",
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    openGraph: {
+      type: "profile",
+      firstName: name.split(" ")[0] || "Zakaria",
+      lastName: name.split(" ").slice(1).join(" ") || "Mujur Prasetyo",
+      username: "zekksparow",
+      gender: "male",
+      locale: "id_ID",
+      alternateLocale: ["en_US"],
+      url: siteUrl,
+      siteName: brand,
+      title: metaTitle,
+      description: metaDesc,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${name} - ${brand}`,
+          type: "image/png",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metaTitle,
+      description: metaDesc,
+      creator: "@zekksparow",
+      site: "@zekksparow",
+      images: [ogImage],
+    },
+    robots: {
       index: true,
       follow: true,
-      noimageindex: false,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      nocache: false,
+      googleBot: {
+        index: true,
+        follow: true,
+        noimageindex: false,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
-  },
-  icons: {
-    icon: [
-      { url: "/icon", type: "image/png", sizes: "32x32" },
-    ],
-    apple: [
-      { url: "/apple-icon", type: "image/png", sizes: "180x180" },
-    ],
-  },
-  other: {
-    "geo.region": "ID-JI",
-    "geo.placename": "Mojokerto",
-    "geo.position": "-7.4726;112.4385",
-    ICBM: "-7.4726, 112.4385",
-  },
-};
+    icons: {
+      icon: [{ url: "/icon", type: "image/png", sizes: "32x32" }],
+      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+    },
+    other: {
+      "geo.region": "ID-JI",
+      "geo.placename": "Mojokerto",
+      "geo.position": "-7.4726;112.4385",
+      ICBM: "-7.4726, 112.4385",
+    },
+  };
+}
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebSite",
-      "@id": `${profile.site}/#website`,
-      url: profile.site,
-      name: profile.brand,
-      description: "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech)",
-      inLanguage: ["id-ID", "en-US"],
-      publisher: {
-        "@id": `${profile.site}/#person`,
-      },
-    },
-    {
-      "@type": "Person",
-      "@id": `${profile.site}/#person`,
-      name: profile.name,
-      alternateName: [profile.nickname, profile.brand, "zekksparow"],
-      url: profile.site,
-      image: `${profile.site}/opengraph-image`,
-      jobTitle: [
-        "UI/UX Designer",
-        "Frontend Developer",
-        "Graphic Designer",
-        "IT Support",
-      ],
-      description: profile.bio[0],
-      gender: "Male",
-      email: profile.contact.email,
-      telephone: profile.contact.phone,
-      knowsLanguage: ["id", "en"],
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: "Mojokerto",
-        addressRegion: "Jawa Timur",
-        addressCountry: "ID",
-      },
-      affiliation: {
-        "@type": "CollegeOrUniversity",
-        name: "Universitas Trunojoyo Madura",
-        description: "Mahasiswa Aktif Teknik Informatika (2024)",
-      },
-      knowsAbout: [
-        "UI/UX Design",
-        "Frontend Development",
-        "Next.js",
-        "React",
-        "TypeScript",
-        "Tailwind CSS",
-        "Figma",
-        "WebGL",
-        "Graphic Design",
-        "Search Engine Optimization (SEO)",
-      ],
-      sameAs: profile.contact.socials.map((s) => s.href),
-    },
-    {
-      "@type": "ProfilePage",
-      "@id": `${profile.site}/#profilepage`,
-      url: profile.site,
-      name: `${profile.name} - ${profile.roles}`,
-      isPartOf: {
-        "@id": `${profile.site}/#website`,
-      },
-      about: {
-        "@id": `${profile.site}/#person`,
-      },
-      mainEntity: {
-        "@id": `${profile.site}/#person`,
-      },
-      primaryImageOfPage: `${profile.site}/opengraph-image`,
-    },
-    {
-      "@type": "FAQPage",
-      "@id": `${profile.site}/#faq`,
-      mainEntity: ([1, 2, 3, 4, 5] as const).map((i) => ({
-        "@type": "Question",
-        name: translations.id.faq[`q${i}`],
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: translations.id.faq[`a${i}`],
-        },
-      })),
-    },
-  ],
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const config = await fetchPublishedContent();
+  const name = config.generalProfile?.name || profile.name;
+  const brand = config.generalProfile?.brand || profile.brand;
+  const siteUrl = config.generalProfile?.site || profile.site;
+  const email = config.generalProfile?.email || profile.contact.email;
+  const phone = config.generalProfile?.phone || profile.contact.phone;
+  const bioIntro = config.generalProfile?.heroDesc || profile.bio[0];
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: brand,
+        description: `Portfolio resmi ${name} (${brand})`,
+        inLanguage: ["id-ID", "en-US"],
+        publisher: {
+          "@id": `${siteUrl}/#person`,
+        },
+      },
+      {
+        "@type": "Person",
+        "@id": `${siteUrl}/#person`,
+        name,
+        alternateName: [profile.nickname, brand, "zekksparow"],
+        url: siteUrl,
+        image: `${siteUrl}/opengraph-image`,
+        jobTitle: [
+          "UI/UX Designer",
+          "Frontend Developer",
+          "Graphic Designer",
+          "IT Support",
+        ],
+        description: bioIntro,
+        gender: "Male",
+        email,
+        telephone: phone,
+        knowsLanguage: ["id", "en"],
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Mojokerto",
+          addressRegion: "Jawa Timur",
+          addressCountry: "ID",
+        },
+        sameAs: (config.generalProfile?.socials || [])
+          .filter((s) => s.href?.startsWith("http"))
+          .map((s) => s.href),
+      },
+      {
+        "@type": "ProfilePage",
+        "@id": `${siteUrl}/#profilepage`,
+        url: siteUrl,
+        name: `${name} | Portfolio`,
+        isPartOf: {
+          "@id": `${siteUrl}/#website`,
+        },
+        about: {
+          "@id": `${siteUrl}/#person`,
+        },
+        mainEntity: {
+          "@id": `${siteUrl}/#person`,
+        },
+        primaryImageOfPage: `${siteUrl}/opengraph-image`,
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${siteUrl}/#faq`,
+        mainEntity:
+          config.faq && config.faq.length > 0
+            ? config.faq.map((item) => ({
+                "@type": "Question",
+                name: item.questionId,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.answerId,
+                },
+              }))
+            : ([1, 2, 3, 4, 5] as const).map((i) => ({
+                "@type": "Question",
+                name: translations.id.faq[`q${i}`],
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: translations.id.faq[`a${i}`],
+                },
+              })),
+      },
+    ],
+  };
+
   return (
     <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
       <body className="antialiased">
@@ -262,5 +276,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-

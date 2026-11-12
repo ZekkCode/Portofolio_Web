@@ -355,22 +355,28 @@ const traceRoundedRect = (path: PathLike, x: number, y: number, width: number, h
   path.bezierCurveTo(x, y + k, x + k, y, x + r, y);
 };
 
+// Module-level decoded image cache to prevent redundant fetches across re-renders/mounts
+const GLOBAL_LANYARD_IMAGE_CACHE = new Map<string, Promise<HTMLImageElement | null>>();
+
 const loadImage = (
-  cache: Map<string, Promise<HTMLImageElement | null>>,
+  _cache: Map<string, Promise<HTMLImageElement | null>>,
   url?: string
 ): Promise<HTMLImageElement | null> => {
   if (!url) return Promise.resolve(null);
-  const cached = cache.get(url);
+  const cached = GLOBAL_LANYARD_IMAGE_CACHE.get(url);
   if (cached) return cached;
   const promise = new Promise<HTMLImageElement | null>(resolve => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.decoding = 'async';
     image.onload = () => resolve(image);
-    image.onerror = () => resolve(null);
+    image.onerror = () => {
+      GLOBAL_LANYARD_IMAGE_CACHE.delete(url);
+      resolve(null);
+    };
     image.src = url;
   });
-  cache.set(url, promise);
+  GLOBAL_LANYARD_IMAGE_CACHE.set(url, promise);
   return promise;
 };
 
@@ -496,77 +502,87 @@ const makeCanvasTexture = (canvas: HTMLCanvasElement, anisotropy: number) => {
   return texture;
 };
 
+let memoGrainCanvas: HTMLCanvasElement | null = null;
+
 const buildGrainTexture = () => {
   const size = 128;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return new THREE.CanvasTexture(canvas);
-  const random = seeded(7);
-  const field = Float32Array.from({ length: size * size }, () => random());
-  const height = (x: number, y: number) => {
-    let sum = 0;
-    for (let j = -1; j <= 1; j++) {
-      for (let i = -1; i <= 1; i++) sum += field[((y + j + size) % size) * size + ((x + i + size) % size)];
+  if (!memoGrainCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return new THREE.CanvasTexture(canvas);
+    const random = seeded(7);
+    const field = Float32Array.from({ length: size * size }, () => random());
+    const height = (x: number, y: number) => {
+      let sum = 0;
+      for (let j = -1; j <= 1; j++) {
+        for (let i = -1; i <= 1; i++) sum += field[((y + j + size) % size) * size + ((x + i + size) % size)];
+      }
+      return (sum / 9) * 1.6;
+    };
+    const image = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const nx = height((x - 1 + size) % size, y) - height((x + 1) % size, y);
+        const ny = height(x, (y - 1 + size) % size) - height(x, (y + 1) % size);
+        const length = Math.hypot(nx, ny, 1);
+        const i = (y * size + x) * 4;
+        image.data[i] = ((nx / length) * 0.5 + 0.5) * 255;
+        image.data[i + 1] = ((ny / length) * 0.5 + 0.5) * 255;
+        image.data[i + 2] = ((1 / length) * 0.5 + 0.5) * 255;
+        image.data[i + 3] = 255;
+      }
     }
-    return (sum / 9) * 1.6;
-  };
-  const image = ctx.createImageData(size, size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const nx = height((x - 1 + size) % size, y) - height((x + 1) % size, y);
-      const ny = height(x, (y - 1 + size) % size) - height(x, (y + 1) % size);
-      const length = Math.hypot(nx, ny, 1);
-      const i = (y * size + x) * 4;
-      image.data[i] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[i + 1] = ((ny / length) * 0.5 + 0.5) * 255;
-      image.data[i + 2] = ((1 / length) * 0.5 + 0.5) * 255;
-      image.data[i + 3] = 255;
-    }
+    ctx.putImageData(image, 0, 0);
+    memoGrainCanvas = canvas;
   }
-  ctx.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(canvas);
+  const texture = new THREE.CanvasTexture(memoGrainCanvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(5, 7);
   return texture;
 };
 
+let memoWeaveData: Uint8Array | null = null;
+
 const buildWeaveTexture = () => {
   const size = 128;
-  const threads = 8;
-  const random = seeded(19);
-  const fiber = Float32Array.from({ length: size * size }, () => random());
-  const profile = (f: number) => Math.sqrt(Math.max(0, 1 - 4 * f * f));
-  const height = (x: number, y: number) => {
-    const px = ((x % size) + size) % size;
-    const py = ((y % size) + size) % size;
-    const u = (px / size) * threads;
-    const v = (py / size) * threads;
-    const cu = Math.floor(u);
-    const cv = Math.floor(v);
-    const fu = u - cu - 0.5;
-    const fv = v - cv - 0.5;
-    const lift = (cu + cv) % 2 === 0;
-    const warp = profile(fu) * (0.55 + 0.45 * Math.cos(fv * Math.PI * (lift ? 1 : 0.6)));
-    const weft = profile(fv) * (0.55 + 0.45 * Math.cos(fu * Math.PI * (lift ? 0.6 : 1)));
-    return (lift ? Math.max(warp, weft * 0.7) : Math.max(weft, warp * 0.7)) + fiber[py * size + px] * 0.08;
-  };
-  const data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const nx = (height(x - 1, y) - height(x + 1, y)) * 1.6;
-      const ny = (height(x, y - 1) - height(x, y + 1)) * 1.6;
-      const length = Math.hypot(nx, ny, 1);
-      const i = (y * size + x) * 4;
-      data[i] = ((nx / length) * 0.5 + 0.5) * 255;
-      data[i + 1] = ((ny / length) * 0.5 + 0.5) * 255;
-      data[i + 2] = ((1 / length) * 0.5 + 0.5) * 255;
-      data[i + 3] = 255;
+  if (!memoWeaveData) {
+    const threads = 8;
+    const random = seeded(19);
+    const fiber = Float32Array.from({ length: size * size }, () => random());
+    const profile = (f: number) => Math.sqrt(Math.max(0, 1 - 4 * f * f));
+    const height = (x: number, y: number) => {
+      const px = ((x % size) + size) % size;
+      const py = ((y % size) + size) % size;
+      const u = (px / size) * threads;
+      const v = (py / size) * threads;
+      const cu = Math.floor(u);
+      const cv = Math.floor(v);
+      const fu = u - cu - 0.5;
+      const fv = v - cv - 0.5;
+      const lift = (cu + cv) % 2 === 0;
+      const warp = profile(fu) * (0.55 + 0.45 * Math.cos(fv * Math.PI * (lift ? 1 : 0.6)));
+      const weft = profile(fv) * (0.55 + 0.45 * Math.cos(fu * Math.PI * (lift ? 0.6 : 1)));
+      return (lift ? Math.max(warp, weft * 0.7) : Math.max(weft, warp * 0.7)) + fiber[py * size + px] * 0.08;
+    };
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const nx = (height(x - 1, y) - height(x + 1, y)) * 1.6;
+        const ny = (height(x, y - 1) - height(x, y + 1)) * 1.6;
+        const length = Math.hypot(nx, ny, 1);
+        const i = (y * size + x) * 4;
+        data[i] = ((nx / length) * 0.5 + 0.5) * 255;
+        data[i + 1] = ((ny / length) * 0.5 + 0.5) * 255;
+        data[i + 2] = ((1 / length) * 0.5 + 0.5) * 255;
+        data[i + 3] = 255;
+      }
     }
+    memoWeaveData = data;
   }
-  const texture = new THREE.DataTexture(data, size, size);
+  const texture = new THREE.DataTexture(new Uint8Array(memoWeaveData), size, size);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.magFilter = THREE.LinearFilter;
@@ -1239,7 +1255,7 @@ const Lanyard = ({
 
       applied = { layoutKey, framingKey, imageKey, faceKey, strapColor: s.strapColor, strapScale };
       if (typeof window !== "undefined") {
-        (canvas as any).__lanyardMetrics = () => {
+        (canvas as unknown as { __lanyardMetrics?: () => object }).__lanyardMetrics = () => {
           const rect = canvas.getBoundingClientRect();
           const vHeight = frustum.height || 6;
           const anchorScreenY = rect.top + (0.5 - sim.anchor.y / vHeight) * rect.height;
@@ -1473,8 +1489,10 @@ const Lanyard = ({
         return;
       }
       if (event.pointerType === 'touch') return;
+      const wasHovering = hovering;
       hovering = !!pickCard();
       setCursor(hovering ? 'grab' : '');
+      if (hovering && !wasHovering) start();
     };
 
     const onPointerUp = (event: PointerEvent) => {
@@ -1490,7 +1508,10 @@ const Lanyard = ({
     const onTouchStart = (event: TouchEvent) => {
       if (!settingsRef.current!.interactive || event.touches.length !== 1) return;
       toPointer(event.touches[0]);
-      if (pickCard()) event.preventDefault();
+      if (pickCard()) {
+        event.preventDefault();
+        start();
+      }
     };
 
     canvas.addEventListener('pointerdown', onPointerDown);

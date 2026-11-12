@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { isR2Configured, uploadFileToR2 } from "@/lib/r2";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isR2Configured, uploadFileToR2, deleteR2Object } from "@/lib/r2";
+import { isSupabaseConfigured, getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
+import { isMediaReferenced } from "@/lib/content/media-catalog";
+import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FOLDERS = new Set(["uploads", "projects", "certificates", "cv", "avatar", "lanyard", "education", "logos"]);
@@ -195,5 +197,54 @@ export async function POST(request: Request) {
       { error: "Terjadi kesalahan server saat memproses unggah berkas" },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Permintaan lintas domain ditolak" }, { status: 403 });
+  }
+
+  const auth = await verifyAdminRequest(request);
+  if (!auth.isAuthenticated) {
+    return NextResponse.json({ error: "Akses ditolak: Operasi hapus hanya untuk admin." }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const keyOrUrl = body?.key || body?.url;
+
+    if (!keyOrUrl || typeof keyOrUrl !== "string") {
+      return NextResponse.json({ error: "Parameter key atau url diperlukan" }, { status: 400 });
+    }
+
+    // Periksa apakah berkas masih aktif ditautkan di portofolio
+    const supabase = getServiceRoleClient() || getSupabaseClient();
+    if (supabase) {
+      const { data } = await supabase
+        .from("site_config")
+        .select("config")
+        .eq("id", "current")
+        .maybeSingle();
+
+      if (data?.config) {
+        const activeConfig = normalizeConfig(data.config as Partial<SiteConfig>);
+        if (isMediaReferenced(keyOrUrl, activeConfig)) {
+          return NextResponse.json(
+            { error: "Berkas tidak dapat dihapus karena masih digunakan di dalam portofolio aktif." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    const deleted = await deleteR2Object(keyOrUrl);
+    if (!deleted) {
+      return NextResponse.json({ error: "Gagal menghapus berkas dari Cloudflare R2." }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Berkas berhasil dihapus dari Cloudflare R2." });
+  } catch {
+    return NextResponse.json({ error: "Terjadi kesalahan saat memproses penghapusan berkas" }, { status: 500 });
   }
 }

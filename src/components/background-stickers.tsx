@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { StickerPeel } from "@/components/sticker-peel";
 import { STICKER_LOGOS, type StickerItem } from "@/lib/sticker-manifest";
 import { useAdaptivePerformance } from "@/lib/device-performance";
+import { useInView } from "@/hooks/use-in-view";
+import { useMounted } from "@/lib/use-mounted";
 
 interface PlacementSlot {
   id: string;
@@ -29,28 +31,28 @@ const CANDIDATE_SLOTS: PlacementSlot[] = [
   { id: "slot-r3-hero-bot", side: "right", topPercent: 6.8, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 8, curlRadius: 7, peelDirection: -40 },
 
   // --- Section 2: About Me & Stats (9% - 19%) ---
-  { id: "slot-l4-about-top", side: "left", topPercent: 11.2, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 6, curlRadius: 7, peelDirection: 135 },
-  { id: "slot-r4-about-top", side: "right", topPercent: 11.2, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 45 },
+  { id: "slot-l4-about-top", side: "left", topPercent: 11.2, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 6, curlRadius: 7, peelDirection: 135 },
+  { id: "slot-r4-about-top", side: "right", topPercent: 11.2, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 45 },
   { id: "slot-l5-about-bot", side: "left", topPercent: 15.5, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -7, curlRadius: 7, peelDirection: -45 },
   { id: "slot-r5-about-bot", side: "right", topPercent: 15.5, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 7, curlRadius: 7, peelDirection: 135 },
 
   // --- Section 3: Academic Journey (19% - 29%) ---
-  { id: "slot-l6-acad-top", side: "left", topPercent: 21.0, horizontalShift: 10, mobileSafe: false, tabletSafe: true, baseRotation: 8, curlRadius: 7, peelDirection: 35 },
-  { id: "slot-r6-acad-top", side: "right", topPercent: 21.0, horizontalShift: -10, mobileSafe: false, tabletSafe: true, baseRotation: -8, curlRadius: 7, peelDirection: -50 },
+  { id: "slot-l6-acad-top", side: "left", topPercent: 21.0, horizontalShift: 10, mobileSafe: true, tabletSafe: true, baseRotation: 8, curlRadius: 7, peelDirection: 35 },
+  { id: "slot-r6-acad-top", side: "right", topPercent: 21.0, horizontalShift: -10, mobileSafe: true, tabletSafe: true, baseRotation: -8, curlRadius: 7, peelDirection: -50 },
   { id: "slot-l7-acad-bot", side: "left", topPercent: 25.5, horizontalShift: -8, mobileSafe: false, tabletSafe: false, baseRotation: -6, curlRadius: 7, peelDirection: 40 },
   { id: "slot-r7-acad-bot", side: "right", topPercent: 25.5, horizontalShift: 8, mobileSafe: false, tabletSafe: false, baseRotation: 6, curlRadius: 7, peelDirection: -40 },
 
   // --- Section 4: Experience Timeline (29% - 41%) ---
-  { id: "slot-l8-exp-top", side: "left", topPercent: 30.8, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
-  { id: "slot-r8-exp-top", side: "right", topPercent: 30.8, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: -45 },
+  { id: "slot-l8-exp-top", side: "left", topPercent: 30.8, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
+  { id: "slot-r8-exp-top", side: "right", topPercent: 30.8, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: -45 },
   { id: "slot-l9-exp-mid", side: "left", topPercent: 34.8, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -8, curlRadius: 7, peelDirection: 140 },
   { id: "slot-r9-exp-mid", side: "right", topPercent: 34.8, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 8, curlRadius: 7, peelDirection: 35 },
   { id: "slot-l10-exp-bot", side: "left", topPercent: 38.8, horizontalShift: 10, mobileSafe: false, tabletSafe: true, baseRotation: 6, curlRadius: 7, peelDirection: -35 },
   { id: "slot-r10-exp-bot", side: "right", topPercent: 38.8, horizontalShift: -10, mobileSafe: false, tabletSafe: true, baseRotation: -7, curlRadius: 7, peelDirection: 45 },
 
   // --- Section 5: Services & Offerings (41% - 52%) ---
-  { id: "slot-l11-serv-top", side: "left", topPercent: 43.5, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 35 },
-  { id: "slot-r11-serv-top", side: "right", topPercent: 43.5, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: -50 },
+  { id: "slot-l11-serv-top", side: "left", topPercent: 43.5, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 35 },
+  { id: "slot-r11-serv-top", side: "right", topPercent: 43.5, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: -50 },
   { id: "slot-l12-serv-bot", side: "left", topPercent: 48.0, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 8, curlRadius: 7, peelDirection: 40 },
   { id: "slot-r12-serv-bot", side: "right", topPercent: 48.0, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -8, curlRadius: 7, peelDirection: -35 },
 
@@ -61,28 +63,28 @@ const CANDIDATE_SLOTS: PlacementSlot[] = [
   { id: "slot-r14-cv-bot", side: "right", topPercent: 59.5, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -7, curlRadius: 7, peelDirection: 40 },
 
   // --- Section 7: Tech Stack (64% - 74%) ---
-  { id: "slot-l15-stack-top", side: "left", topPercent: 65.5, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 6, curlRadius: 7, peelDirection: 35 },
-  { id: "slot-r15-stack-top", side: "right", topPercent: 65.5, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: -45 },
+  { id: "slot-l15-stack-top", side: "left", topPercent: 65.5, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 6, curlRadius: 7, peelDirection: 35 },
+  { id: "slot-r15-stack-top", side: "right", topPercent: 65.5, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: -45 },
   { id: "slot-l16-stack-bot", side: "left", topPercent: 70.5, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -8, curlRadius: 7, peelDirection: 140 },
   { id: "slot-r16-stack-bot", side: "right", topPercent: 70.5, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 7, curlRadius: 7, peelDirection: 35 },
 
   // --- Section 8: Projects Grid (74% - 85%) ---
-  { id: "slot-l17-proj-top", side: "left", topPercent: 76.0, horizontalShift: 10, mobileSafe: false, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
-  { id: "slot-r17-proj-top", side: "right", topPercent: 76.0, horizontalShift: -10, mobileSafe: false, tabletSafe: true, baseRotation: -7, curlRadius: 7, peelDirection: -40 },
+  { id: "slot-l17-proj-top", side: "left", topPercent: 76.0, horizontalShift: 10, mobileSafe: true, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
+  { id: "slot-r17-proj-top", side: "right", topPercent: 76.0, horizontalShift: -10, mobileSafe: true, tabletSafe: true, baseRotation: -7, curlRadius: 7, peelDirection: -40 },
   { id: "slot-l18-proj-mid", side: "left", topPercent: 79.8, horizontalShift: -8, mobileSafe: false, tabletSafe: false, baseRotation: -6, curlRadius: 7, peelDirection: 135 },
   { id: "slot-r18-proj-mid", side: "right", topPercent: 79.8, horizontalShift: 8, mobileSafe: false, tabletSafe: false, baseRotation: 6, curlRadius: 7, peelDirection: 35 },
   { id: "slot-l19-proj-bot", side: "left", topPercent: 83.5, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 8, curlRadius: 7, peelDirection: -35 },
   { id: "slot-r19-proj-bot", side: "right", topPercent: 83.5, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -8, curlRadius: 7, peelDirection: 45 },
 
   // --- Section 9: Certificates & Blog (85% - 93%) ---
-  { id: "slot-l20-cert-top", side: "left", topPercent: 87.2, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 35 },
-  { id: "slot-r20-cert-top", side: "right", topPercent: 87.2, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: -45 },
+  { id: "slot-l20-cert-top", side: "left", topPercent: 87.2, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -6, curlRadius: 7, peelDirection: 35 },
+  { id: "slot-r20-cert-top", side: "right", topPercent: 87.2, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: -45 },
   { id: "slot-l21-cert-bot", side: "left", topPercent: 91.0, horizontalShift: 10, mobileSafe: false, tabletSafe: false, baseRotation: 6, curlRadius: 7, peelDirection: 140 },
   { id: "slot-r21-cert-bot", side: "right", topPercent: 91.0, horizontalShift: -10, mobileSafe: false, tabletSafe: false, baseRotation: -6, curlRadius: 7, peelDirection: 40 },
 
   // --- Section 10: FAQ & Contact (93% - 98%) ---
-  { id: "slot-l22-faq-bot", side: "left", topPercent: 94.5, horizontalShift: -8, mobileSafe: false, tabletSafe: true, baseRotation: -7, curlRadius: 7, peelDirection: -40 },
-  { id: "slot-r22-faq-bot", side: "right", topPercent: 94.5, horizontalShift: 8, mobileSafe: false, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
+  { id: "slot-l22-faq-bot", side: "left", topPercent: 94.5, horizontalShift: -8, mobileSafe: true, tabletSafe: true, baseRotation: -7, curlRadius: 7, peelDirection: -40 },
+  { id: "slot-r22-faq-bot", side: "right", topPercent: 94.5, horizontalShift: 8, mobileSafe: true, tabletSafe: true, baseRotation: 7, curlRadius: 7, peelDirection: 45 },
 ];
 
 interface ActiveSticker {
@@ -108,94 +110,176 @@ function createRandomSequence(seedStr: string) {
   };
 }
 
+function StickerSlotItem({
+  slot,
+  logo,
+  rotation,
+  width,
+  slotStyle,
+  isMobileOrLow,
+}: {
+  slot: PlacementSlot;
+  logo: StickerItem;
+  rotation: number;
+  width: number;
+  slotStyle: React.CSSProperties;
+  isMobileOrLow: boolean;
+}) {
+  // Continuous visibility tracking with 380px rootMargin:
+  // Dynamically mounts WebGL when in or approaching viewport and safely releases context when scrolled away.
+  // Guarantees active WebGL contexts never exceed 4-6 page-wide, eliminating browser context loss.
+  const { ref, isInView } = useInView<HTMLDivElement>({
+    rootMargin: "380px 0px 380px 0px",
+    trackDocumentVisibility: false,
+  });
+
+  return (
+    <div
+      ref={ref}
+      style={slotStyle}
+      className="pointer-events-auto flex items-center justify-center will-change-transform"
+    >
+      {isInView ? (
+        <StickerPeel
+          imageSrc={logo.src}
+          width={width}
+          rotate={rotation}
+          peelDirection={slot.peelDirection}
+          curlRadius={slot.curlRadius}
+          peelBackHoverPct={55}
+          peelBackActivePct={75}
+          finish="matte"
+          backColor="#ffffff"
+          lightingIntensity={0.65}
+          shadowIntensity={0.7}
+          followPointer={true}
+          draggable={false}
+          swing={0}
+          intro={false}
+          initialPosition="center"
+          dpr={isMobileOrLow ? 1 : 1.25}
+        />
+      ) : (
+        <div
+          style={{
+            width: `${width}px`,
+            height: `${width}px`,
+            transform: `rotate(${rotation}deg)`,
+          }}
+          className="flex items-center justify-center select-none pointer-events-none"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logo.src}
+            alt=""
+            width={width}
+            height={width}
+            decoding="async"
+            loading="lazy"
+            className="max-w-full max-h-full object-contain filter drop-shadow-xs"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function generateActiveStickers(): ActiveSticker[] {
+  if (typeof window === "undefined") return [];
+
+  const width = window.innerWidth;
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+
+  // Slots selection: guaranteed equal left/right balance across all screen sizes
+  const availableSlots = isMobile
+    ? CANDIDATE_SLOTS.filter((s) => s.mobileSafe)
+    : isTablet
+    ? CANDIDATE_SLOTS.filter((s) => s.tabletSafe)
+    : [...CANDIDATE_SLOTS];
+
+  // Read previous signature to guarantee variation on full page refresh
+  let prevSeed = "";
+  try {
+    prevSeed = sessionStorage.getItem(STORAGE_KEY) || "";
+  } catch {
+    // ignore
+  }
+
+  const newSeed = `${Date.now()}_${Math.random()}`;
+  const rng = createRandomSequence(newSeed);
+
+  // Shuffle logos with anti-duplicate distance guarantee
+  const prevIds = prevSeed.split(",");
+  let pool = STICKER_LOGOS.filter((l) => !prevIds.includes(l.id));
+  if (pool.length < availableSlots.length) {
+    pool = [...STICKER_LOGOS];
+  }
+  const shuffledPool = [...pool].sort(() => rng() - 0.5);
+
+  // Generate balanced assignments without close duplicate stickers
+  const assignedLogos: StickerItem[] = [];
+  const usedInWindow: string[] = [];
+  const WINDOW_SIZE = isMobile ? 6 : 10;
+
+  for (let i = 0; i < availableSlots.length; i++) {
+    // Pick a candidate not recently used
+    let candidates = shuffledPool.filter((l) => !usedInWindow.includes(l.id));
+    if (candidates.length === 0) {
+      candidates = shuffledPool;
+    }
+    const pick = candidates[Math.floor(rng() * candidates.length)] || shuffledPool[i % shuffledPool.length];
+    assignedLogos.push(pick);
+    usedInWindow.push(pick.id);
+    if (usedInWindow.length > WINDOW_SIZE) {
+      usedInWindow.shift();
+    }
+  }
+
+  // Build configuration with refined, compact sizing (desktop ~38px-42px, tablet ~32px-34px, mobile ~26px-28px)
+  const chosen: ActiveSticker[] = availableSlots.map((slot, index) => {
+    const logo = assignedLogos[index];
+    const rotationJitter = Math.round((rng() - 0.5) * 6); // -3deg to +3deg
+    const sizeJitter = Math.round((rng() - 0.5) * 4); // -2px to +2px
+
+    const stickerWidth = isMobile
+      ? Math.max(26, Math.min(28, 27 + sizeJitter))
+      : isTablet
+      ? Math.max(30, Math.min(34, 32 + sizeJitter))
+      : Math.max(36, Math.min(42, 39 + sizeJitter));
+
+    return {
+      slot,
+      logo,
+      rotation: slot.baseRotation + rotationJitter,
+      width: stickerWidth,
+    };
+  });
+
+  try {
+    const currentIds = chosen.map((c) => c.logo.id).join(",");
+    sessionStorage.setItem(STORAGE_KEY, currentIds);
+  } catch {
+    // ignore
+  }
+
+  return chosen;
+}
+
 export function BackgroundStickers() {
-  const [activeStickers, setActiveStickers] = useState<ActiveSticker[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const { isLite, isMobileOrLow } = useAdaptivePerformance();
+  const mounted = useMounted();
+  const [isMobileScreen, setIsMobileScreen] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const { isMobileOrLow } = useAdaptivePerformance();
 
   useEffect(() => {
-    setMounted(true);
-
-    const width = window.innerWidth;
-    // On mobile devices (< 768px), screen width has zero outer gutter.
-    // Preserves battery and prevents any typography collision on phones.
-    if (width < 768) {
-      setActiveStickers([]);
-      return;
-    }
-
-    const isTablet = width >= 768 && width < 1024;
-
-    // Slots selection: guaranteed equal left/right balance
-    const availableSlots = isTablet
-      ? CANDIDATE_SLOTS.filter((s) => s.tabletSafe)
-      : [...CANDIDATE_SLOTS];
-
-    // Read previous signature to guarantee variation on full page refresh
-    let prevSeed = "";
-    try {
-      prevSeed = sessionStorage.getItem(STORAGE_KEY) || "";
-    } catch {
-      // ignore
-    }
-
-    const newSeed = `${Date.now()}_${Math.random()}`;
-    const rng = createRandomSequence(newSeed);
-
-    // Shuffle logos with anti-duplicate distance guarantee
-    const prevIds = prevSeed.split(",");
-    let pool = STICKER_LOGOS.filter((l) => !prevIds.includes(l.id));
-    if (pool.length < availableSlots.length) {
-      pool = [...STICKER_LOGOS];
-    }
-    const shuffledPool = [...pool].sort(() => rng() - 0.5);
-
-    // Generate balanced assignments without close duplicate stickers
-    const assignedLogos: StickerItem[] = [];
-    const usedInWindow: string[] = [];
-    const WINDOW_SIZE = 10; // No repeating the same logo within 10 consecutive slots
-
-    for (let i = 0; i < availableSlots.length; i++) {
-      // Pick a candidate not recently used
-      let candidates = shuffledPool.filter((l) => !usedInWindow.includes(l.id));
-      if (candidates.length === 0) {
-        candidates = shuffledPool;
-      }
-      const pick = candidates[Math.floor(rng() * candidates.length)] || shuffledPool[i % shuffledPool.length];
-      assignedLogos.push(pick);
-      usedInWindow.push(pick.id);
-      if (usedInWindow.length > WINDOW_SIZE) {
-        usedInWindow.shift();
-      }
-    }
-
-    // Build configuration with refined, compact sizing (desktop ~38px-42px, tablet ~32px-34px, mobile ~26px-28px)
-    const chosen: ActiveSticker[] = availableSlots.map((slot, index) => {
-      const logo = assignedLogos[index];
-      const rotationJitter = Math.round((rng() - 0.5) * 6); // -3deg to +3deg
-      const sizeJitter = Math.round((rng() - 0.5) * 4); // -2px to +2px
-
-      const stickerWidth = isTablet
-        ? Math.max(30, Math.min(34, 32 + sizeJitter))
-        : Math.max(36, Math.min(42, 39 + sizeJitter));
-
-      return {
-        slot,
-        logo,
-        rotation: slot.baseRotation + rotationJitter,
-        width: stickerWidth,
-      };
-    });
-
-    try {
-      const currentIds = chosen.map((c) => c.logo.id).join(",");
-      sessionStorage.setItem(STORAGE_KEY, currentIds);
-    } catch {
-      // ignore
-    }
-
-    setActiveStickers(chosen);
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const activeStickers = useMemo(() => (mounted ? generateActiveStickers() : []), [mounted]);
 
   if (!mounted || activeStickers.length === 0) {
     return null;
@@ -211,61 +295,27 @@ export function BackgroundStickers() {
         const slotStyle: React.CSSProperties = {
           position: "absolute",
           top: `${slot.topPercent}%`,
-          ...(slot.side === "left"
-            ? {
-                left: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)`,
-              }
-            : {
-                right: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)`,
-              }),
+          ...(isMobileScreen
+            ? slot.side === "left"
+              ? { left: "clamp(4px, 2vw, 14px)" }
+              : { right: "clamp(4px, 2vw, 14px)" }
+            : slot.side === "left"
+            ? { left: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }
+            : { right: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }),
           width: `${width + 24}px`,
           height: `${width + 24}px`,
         };
 
         return (
-          <div
+          <StickerSlotItem
             key={`${slot.id}-${logo.id}`}
-            style={slotStyle}
-            className="pointer-events-auto flex items-center justify-center will-change-transform"
-          >
-            {isLite ? (
-              /* Lightweight static logo fallback for limited devices (Zero WebGL context, zero canvas) */
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={logo.src}
-                alt={logo.name}
-                loading="lazy"
-                width={width}
-                height={width}
-                className="pointer-events-auto object-contain select-none drop-shadow-sm transition-all duration-300 hover:scale-115 hover:-rotate-6 hover:drop-shadow-lg cursor-pointer active:scale-95"
-                style={{
-                  width: `${width}px`,
-                  height: `${width}px`,
-                  transform: `rotate(${rotation}deg)`,
-                }}
-              />
-            ) : (
-              <StickerPeel
-                imageSrc={logo.src}
-                width={width}
-                rotate={rotation}
-                peelDirection={slot.peelDirection}
-                curlRadius={slot.curlRadius}
-                peelBackHoverPct={55}
-                peelBackActivePct={75}
-                finish="matte"
-                backColor="#ffffff"
-                lightingIntensity={0.65}
-                shadowIntensity={0.7}
-                followPointer={true}
-                draggable={false}
-                swing={0}
-                intro={false}
-                initialPosition="center"
-                dpr={isMobileOrLow ? 1 : 1.5}
-              />
-            )}
-          </div>
+            slot={slot}
+            logo={logo}
+            rotation={rotation}
+            width={width}
+            slotStyle={slotStyle}
+            isMobileOrLow={isMobileOrLow}
+          />
         );
       })}
     </div>

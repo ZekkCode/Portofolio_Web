@@ -113,9 +113,9 @@ function ScrollTriggerBridge() {
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<LenisRef>(null);
-  const { tier, isLite, prefersReducedMotion } = useAdaptivePerformance();
+  const { tier, prefersReducedMotion } = useAdaptivePerformance();
 
-  const isNative = isLite || prefersReducedMotion;
+  const isNative = prefersReducedMotion;
 
   // Single RAF Loop: Lenis dikendalikan langsung oleh GSAP ticker tunggal
   useEffect(() => {
@@ -126,7 +126,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     }
 
     gsap.ticker.add(update);
-    gsap.ticker.lagSmoothing(0);
+    gsap.ticker.lagSmoothing(500, 33);
 
     return () => {
       gsap.ticker.remove(update);

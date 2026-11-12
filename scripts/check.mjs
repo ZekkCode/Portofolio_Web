@@ -1,9 +1,27 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+if (existsSync(".env.local")) {
+  try {
+    const envContent = readFileSync(".env.local", "utf-8");
+    for (const line of envContent.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx > 0) {
+        const k = trimmed.slice(0, eqIdx).trim();
+        const v = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+        if (!process.env[k]) {
+          process.env[k] = v;
+        }
+      }
+    }
+  } catch {}
+}
 
 const base = process.env.BASE_URL ?? "http://localhost:3000";
 const port = process.env.CHECK_PORT ? Number(process.env.CHECK_PORT) : 9400 + Math.floor(Math.random() * 500);

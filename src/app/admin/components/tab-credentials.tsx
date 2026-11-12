@@ -287,7 +287,7 @@ export function TabCredentials({
                     <label className="block text-xs font-semibold text-ink">Kategori Kompetensi</label>
                     <select
                       value={cert.category}
-                      onChange={(e) => updateCertificate(cert.id, { category: e.target.value as any })}
+                      onChange={(e) => updateCertificate(cert.id, { category: e.target.value as CertificateItem["category"] })}
                       className={`mt-1.5 ${inputClass}`}
                     >
                       <option value="design">Desain & UX</option>
@@ -488,7 +488,7 @@ export function TabCredentials({
                     <label className="block text-xs font-semibold text-ink">Kategori Pengakuan</label>
                     <select
                       value={ach.category}
-                      onChange={(e) => updateAchievement(ach.id, { category: e.target.value as any })}
+                      onChange={(e) => updateAchievement(ach.id, { category: e.target.value as AchievementItem["category"] })}
                       className={`mt-1.5 ${inputClass}`}
                     >
                       <option value="award">Penghargaan / Award</option>

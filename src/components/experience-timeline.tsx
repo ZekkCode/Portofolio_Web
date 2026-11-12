@@ -26,18 +26,26 @@ export function ExperienceTimeline() {
   }, [experience]);
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  });
+  const [scrollProgress, setScrollProgress] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
+  });
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !window.matchMedia) return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(media.matches);
-    const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    const listener = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+      if (e.matches) setScrollProgress(1);
+    };
     media.addEventListener("change", listener);
     return () => media.removeEventListener("change", listener);
   }, []);
@@ -49,7 +57,6 @@ export function ExperienceTimeline() {
     if (!timeline || !container || items.length === 0) return;
 
     if (prefersReducedMotion) {
-      setScrollProgress(1);
       return;
     }
 

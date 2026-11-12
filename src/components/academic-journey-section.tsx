@@ -61,18 +61,23 @@ export function AcademicJourneySection() {
 
   // Track state
   const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
+  });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  });
 
   const sectionRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !window.matchMedia) return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(media.matches);
     const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     media.addEventListener("change", listener);
     return () => media.removeEventListener("change", listener);
@@ -85,7 +90,6 @@ export function AcademicJourneySection() {
     if (!section || !container) return;
 
     if (prefersReducedMotion) {
-      setScrollProgress(1);
       return;
     }
 
@@ -370,6 +374,7 @@ export function AcademicJourneySection() {
                         transform: `scale(${logoScale})`,
                       }}
                       loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div

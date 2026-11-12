@@ -154,6 +154,20 @@
   }
 }
 
+
+@keyframes heroWordEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

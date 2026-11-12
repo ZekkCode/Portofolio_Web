@@ -1,21 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
-import { CvFolderSection } from "@/components/cv-folder-section";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
 import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
-import { ProfileCardStage } from "@/components/profile-card-stage";
-import { ProjectsSection } from "@/components/projects-section";
-import { BlogPreviewSection } from "@/components/blog-preview-section";
-import { AcademicJourneySection } from "@/components/academic-journey-section";
-import { AchievementsSection } from "@/components/achievements-section";
-import { ServicesSection } from "@/components/services-section";
-import { CertificatesSection } from "@/components/certificates-section";
-import { ExperienceTimeline } from "@/components/experience-timeline";
-import { FaqSection } from "@/components/faq-section";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
@@ -28,7 +19,41 @@ import { useMounted } from "@/lib/use-mounted";
 import { useAdaptivePerformance } from "@/lib/device-performance";
 import { profile } from "@/lib/profile";
 import { useSiteConfig, defaultTechStack } from "@/lib/site-store";
+import { isSectionVisible } from "@/lib/content/selectors";
 import { ArrowRight, FileText, Mail } from "lucide-react";
+import { AcademicJourneySection } from "@/components/academic-journey-section";
+import { AchievementsSection } from "@/components/achievements-section";
+import { ExperienceTimeline } from "@/components/experience-timeline";
+import { ServicesSection } from "@/components/services-section";
+import { ProjectsSection } from "@/components/projects-section";
+import { BlogPreviewSection } from "@/components/blog-preview-section";
+import { CertificatesSection } from "@/components/certificates-section";
+import { FaqSection } from "@/components/faq-section";
+import { SocialIcon, getSocialHoverClasses } from "@/components/social-icon";
+import { AnimatedHeroTitle } from "@/components/animated-hero-title";
+
+// Dynamically code-split heavy 3D/physics modules
+const DynamicCvFolderSection = dynamic(
+  () => import("@/components/cv-folder-section").then((m) => m.CvFolderSection),
+  {
+    ssr: false,
+    loading: () => (
+      <section id="cv" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28 min-h-[520px]">
+        <div id="resume" className="absolute top-0 -mt-24" aria-hidden="true" />
+      </section>
+    ),
+  }
+);
+
+const DynamicProfileCardStage = dynamic(
+  () => import("@/components/profile-card-stage").then((m) => m.ProfileCardStage),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-[280px] sm:w-[320px] aspect-[1/1.5] rounded-2xl bg-slate-100/60 dark:bg-slate-800/30 border border-line/60" />
+    ),
+  }
+);
 
 function Header() {
   const { t } = useTranslation();
@@ -101,10 +126,6 @@ function Hero() {
   const heroDesc = isEn ? (generalProfile?.heroDescEn || t("hero.desc")) : (generalProfile?.heroDesc || t("hero.desc"));
   const email = generalProfile?.email || profile.contact.email;
 
-  const nameParts = name.split(" ");
-  const firstLine = nameParts.slice(0, 2).join(" ");
-  const secondLine = nameParts.slice(2).join(" ");
-
   return (
     <section
       id="atas"
@@ -114,16 +135,8 @@ function Hero() {
       <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
         {/* Left Column: Editorial Information */}
         <div className="relative z-10 flex flex-col items-start gap-5 text-start order-2 lg:order-1 pt-1 sm:pt-0">
-          <ScrollReveal y={24} duration={0.75} className="space-y-3.5 w-full">
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-ink leading-[1.08]">
-              {firstLine}
-              {secondLine && (
-                <>
-                  <br />
-                  {secondLine}
-                </>
-              )}
-            </h1>
+          <ScrollReveal y={24} duration={0.75} className="space-y-3 w-full">
+            <AnimatedHeroTitle name={name} />
             <p className="text-base sm:text-lg font-semibold text-body">
               {roles}
             </p>
@@ -327,7 +340,11 @@ function Stack() {
                           alt={tool.name}
                           width={16}
                           height={16}
-                          className={`max-h-3.5 max-w-3.5 object-contain ${
+                          unoptimized
+                          loading="lazy"
+                          decoding="async"
+                          style={{ width: "auto", height: "auto" }}
+                          className={`size-3.5 object-contain ${
                             tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                               ? "dark:invert"
                               : ""
@@ -364,7 +381,11 @@ function Stack() {
                 alt={tool.name}
                 width={28}
                 height={28}
-                className={`max-h-7 max-w-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
+                unoptimized
+                loading="lazy"
+                decoding="async"
+                style={{ width: "auto", height: "auto" }}
+                className={`size-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
                   tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                     ? "dark:invert"
                     : ""
@@ -395,7 +416,11 @@ function Stack() {
                 alt={tool.name}
                 width={28}
                 height={28}
-                className={`max-h-7 max-w-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
+                unoptimized
+                loading="lazy"
+                decoding="async"
+                style={{ width: "auto", height: "auto" }}
+                className={`size-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
                   tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                     ? "dark:invert"
                     : ""
@@ -440,7 +465,7 @@ function Contact() {
           <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
             {/* KIRI: Hologram Profile Card */}
             <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-8">
-              <ProfileCardStage />
+              <DynamicProfileCardStage />
             </div>
 
             {/* KANAN: Panel Informasi Kontak */}
@@ -462,7 +487,7 @@ function Contact() {
                     className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                   >
                     <Mail className="size-4" />
-                    <span>{email}</span>
+                    <span>{t("nav.contactBtn", "Contact Me")}</span>
                   </a>
                   <SmoothNavLink
                     href="#cv"
@@ -500,10 +525,10 @@ function Contact() {
                           rel="noreferrer"
                           aria-label={social.label}
                           title={social.label}
-                          className="group flex size-11 items-center justify-center rounded-xl border border-line/70 bg-white/70 text-body shadow-2xs backdrop-blur-xs transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/40 dark:bg-slate-900/60 dark:text-slate-300 hover:text-brand hover:border-brand/40"
+                          className={`group flex size-11 items-center justify-center rounded-xl border border-line/70 bg-white/70 text-body shadow-2xs backdrop-blur-xs transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/40 dark:bg-slate-900/60 dark:text-slate-300 ${getSocialHoverClasses(social.label)}`}
                         >
-                          <span className="font-mono text-xs font-bold uppercase transition-transform duration-200 group-hover:scale-110">
-                            {social.label.slice(0, 2)}
+                          <span className="transition-transform duration-200 group-hover:scale-110 motion-reduce:transform-none">
+                            <SocialIcon label={social.label} className="size-5" />
                           </span>
                         </a>
                       </li>
@@ -548,10 +573,10 @@ function Footer() {
                     rel="noreferrer"
                     aria-label={s.label}
                     title={s.label}
-                    className="group flex size-11 items-center justify-center rounded-xl text-body transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 hover:text-brand"
+                    className={`group flex size-11 items-center justify-center rounded-xl text-body transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 ${getSocialHoverClasses(s.label)}`}
                   >
-                    <span className="font-mono text-xs font-bold uppercase transition-transform duration-200 group-hover:scale-110">
-                      {s.label.slice(0, 2)}
+                    <span className="transition-transform duration-200 group-hover:scale-110 motion-reduce:transform-none">
+                      <SocialIcon label={s.label} className="size-5" />
                     </span>
                   </a>
                 </li>
@@ -594,14 +619,28 @@ function Footer() {
 export default function Home() {
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
-  const { isLite, isBalanced, isFull } = useAdaptivePerformance();
+  const { isLite, isBalanced, isFull, prefersReducedMotion } = useAdaptivePerformance();
   const isDark = mounted && resolvedTheme === "dark";
   const gridLineColor = isDark ? "#171c2a" : "#e6e7f2";
+  const siteConfig = useSiteConfig();
+
+  const showHero = isSectionVisible(siteConfig, "hero");
+  const showAbout = isSectionVisible(siteConfig, "about");
+  const showJourney = isSectionVisible(siteConfig, "journey") || isSectionVisible(siteConfig, "education");
+  const showAchievements = isSectionVisible(siteConfig, "achievements");
+  const showServices = isSectionVisible(siteConfig, "services");
+  const showCv = isSectionVisible(siteConfig, "cv");
+  const showStack = isSectionVisible(siteConfig, "stack");
+  const showProjects = isSectionVisible(siteConfig, "projects") || isSectionVisible(siteConfig, "proyek");
+  const showBlog = isSectionVisible(siteConfig, "blog");
+  const showCertificates = isSectionVisible(siteConfig, "certificates");
+  const showFaq = isSectionVisible(siteConfig, "faq");
+  const showContact = isSectionVisible(siteConfig, "contact");
 
   return (
     <>
       <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
-        {isLite ? (
+        {prefersReducedMotion ? (
           <div
             className="absolute inset-0"
             style={{
@@ -617,10 +656,10 @@ export default function Home() {
             hoverColor={isDark ? "#2563eb" : "#1b45c4"}
             hoverFillColor={isDark ? "#1d4ed8" : "#1b45c4"}
             fillOpacity={isDark ? 0.12 : 0.08}
-            cellSize={isBalanced ? 48 : 44}
-            speed={isBalanced ? 0.06 : 0.14}
+            cellSize={isLite ? 52 : isBalanced ? 48 : 44}
+            speed={isLite ? 0.06 : isBalanced ? 0.09 : 0.14}
             lineWidth={1}
-            radius={isBalanced ? 1.2 : 1.8}
+            radius={isLite ? 1.0 : isBalanced ? 1.3 : 1.8}
             trail={0.45}
             glow={0}
             dpr={1}
@@ -636,18 +675,18 @@ export default function Home() {
       <ScrollToTop />
       <main className="relative pe-11 md:pe-0 transition-[padding] duration-200">
         <BackgroundStickers />
-        <Hero />
-        <About />
-        <AcademicJourneySection />
-        <AchievementsSection />
-        <ServicesSection />
-        <CvFolderSection />
-        <Stack />
-        <ProjectsSection />
-        <BlogPreviewSection />
-        <CertificatesSection />
-        <FaqSection />
-        <Contact />
+        {showHero ? <Hero /> : <div id="hero" className="sr-only" aria-hidden="true" />}
+        {showAbout ? <About /> : <div id="tentang" className="sr-only" aria-hidden="true" />}
+        {showJourney ? <AcademicJourneySection /> : <div id="journey" className="sr-only" aria-hidden="true" />}
+        {showAchievements && <AchievementsSection />}
+        {showServices ? <ServicesSection /> : <div id="services" className="sr-only" aria-hidden="true" />}
+        {showCv ? <DynamicCvFolderSection /> : <div id="cv" className="sr-only" aria-hidden="true" />}
+        {showStack ? <Stack /> : <div id="stack" className="sr-only" aria-hidden="true" />}
+        {showProjects ? <ProjectsSection /> : <div id="proyek" className="sr-only" aria-hidden="true" />}
+        {showBlog && <BlogPreviewSection />}
+        {showCertificates ? <CertificatesSection /> : <div id="certificates" className="sr-only" aria-hidden="true" />}
+        {showFaq ? <FaqSection /> : <div id="faq" className="sr-only" aria-hidden="true" />}
+        {showContact ? <Contact /> : <div id="kontak" className="sr-only" aria-hidden="true" />}
       </main>
       <Footer />
     </>

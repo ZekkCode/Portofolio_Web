@@ -35,9 +35,9 @@ export interface AdaptivePerformanceState {
   reportSlowFrame: (frameTimeMs: number) => void;
 }
 
-const DOWNGRADE_COOLDOWN_MS = 8000;
-const SLOW_FRAME_THRESHOLD_MS = 38; // ~26 FPS threshold
-const SLOW_FRAME_STRIKES_REQUIRED = 5;
+const DOWNGRADE_COOLDOWN_MS = 10000;
+const SLOW_FRAME_THRESHOLD_MS = 45; // ~22 FPS threshold
+const SLOW_FRAME_STRIKES_REQUIRED = 15;
 
 /**
  * Defensively probes whether WebGL/WebGL2 is available and functional.
@@ -49,6 +49,7 @@ export function probeWebGLSupport(): boolean {
   }
   try {
     const canvas = document.createElement("canvas");
+    canvas.setAttribute("data-transient-gl", "true");
     canvas.width = 1;
     canvas.height = 1;
     const gl =
@@ -98,7 +99,7 @@ export function calculateInitialTier(): {
   const hardwareConcurrency =
     typeof nav.hardwareConcurrency === "number" ? nav.hardwareConcurrency : undefined;
 
-  // 1. Mandatory Lite triggers
+  // 1. Mandatory Lite triggers (strictly for no WebGL or extreme constraints)
   if (!hasWebGL) {
     return { tier: "lite", hasWebGL: false, prefersReducedMotion, deviceMemory, hardwareConcurrency };
   }
@@ -108,15 +109,11 @@ export function calculateInitialTier(): {
   }
 
   const effectiveType = nav.connection?.effectiveType;
-  if (effectiveType === "slow-2g" || effectiveType === "2g" || effectiveType === "3g") {
+  if (effectiveType === "slow-2g" || effectiveType === "2g") {
     return { tier: "lite", hasWebGL, prefersReducedMotion, deviceMemory, hardwareConcurrency };
   }
 
-  if (typeof deviceMemory === "number" && deviceMemory < 4) {
-    return { tier: "lite", hasWebGL, prefersReducedMotion, deviceMemory, hardwareConcurrency };
-  }
-
-  if (typeof hardwareConcurrency === "number" && hardwareConcurrency <= 2) {
+  if (typeof deviceMemory === "number" && deviceMemory <= 1 && typeof hardwareConcurrency === "number" && hardwareConcurrency <= 2) {
     return { tier: "lite", hasWebGL, prefersReducedMotion, deviceMemory, hardwareConcurrency };
   }
 
@@ -247,12 +244,22 @@ export function AdaptivePerformanceProvider({
 
     // WebGL Context Loss Listener
     const onContextLost = (e: Event) => {
+      // Ignore normal lifecycle cleanup of background stickers or temporary probe canvases
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.hasAttribute?.("data-sticker-canvas") ||
+        target?.hasAttribute?.("data-transient-gl") ||
+        target?.dataset?.stickerCanvas ||
+        target?.dataset?.transientGl
+      ) {
+        return;
+      }
       e.preventDefault();
       setHasWebGL(false);
       tierRef.current = "lite";
       setTier("lite");
       if (process.env.NODE_ENV !== "production") {
-        console.warn("[AdaptivePerformance] WebGL context lost on page, switching to LITE fallback");
+        console.warn("[AdaptivePerformance] WebGL context lost on primary canvas, switching to LITE fallback");
       }
     };
     window.addEventListener("webglcontextlost", onContextLost, true);
@@ -267,11 +274,12 @@ export function AdaptivePerformanceProvider({
           longTaskObserver = new PerformanceObserver((list) => {
             const entries = list.getEntries();
             for (const entry of entries) {
-              if (entry.duration > 90) {
-                slowFrameCountRef.current += 2;
+              // Only consider severe long tasks (> 250ms) to prevent false-positive downgrades during rapid user clicks
+              if (entry.duration > 250) {
+                slowFrameCountRef.current += 1;
                 if (slowFrameCountRef.current >= SLOW_FRAME_STRIKES_REQUIRED) {
                   slowFrameCountRef.current = 0;
-                  downgradeTier("long task detected");
+                  downgradeTier("sustained long task detected");
                 }
               }
             }

@@ -1,5 +1,12 @@
 import { profile } from "@/lib/profile";
 import type { SiteConfig } from "@/lib/site-config";
+import {
+  getPublishedProfile,
+  getPublishedProjects,
+  getPublishedEducation,
+  getPublishedCertificates,
+  getPublishedTechStack,
+} from "@/lib/content/selectors";
 
 export interface KnowledgeMatch {
   reply: string;
@@ -19,42 +26,75 @@ export function queryBuddyKnowledge(
   // English detection
   const isEn =
     langHint === "en" ||
-    /\b(who|what|where|how|can|show|tell|project|skills|resume|cv|contact|email|hire|work|about)\b/i.test(query);
+    /\b(who|what|where|how|can|show|tell|project|skills|resume|cv|contact|email|hire|work|about|study|university|college|degree)\b/i.test(
+      query
+    );
 
-  const profName = config?.generalProfile?.name || profile.name;
-  const profRoles = isEn
-    ? config?.generalProfile?.rolesEn || profile.roles
-    : config?.generalProfile?.roles || profile.roles;
-  const profEmail = config?.generalProfile?.email || profile.contact.email;
+  const pubProfile = getPublishedProfile(config, isEn ? "en" : "id");
+  const pubProjects = getPublishedProjects(config, { locale: isEn ? "en" : "id" });
+  const pubEducation = getPublishedEducation(config, isEn ? "en" : "id");
+  const pubCerts = getPublishedCertificates(config);
+  const pubTechStack = getPublishedTechStack(config);
 
-  // Dynamic published projects
-  const publishedProjects = (config?.projects || []).filter((p) => p.published !== false);
-  const publishedCerts = (config?.certificates || []).filter((c) => c.published !== false);
-  const activeTools = (config?.techStack || []).filter((t) => t.visible !== false);
+  const profName = pubProfile.name;
+  const profRoles = pubProfile.roles;
+  const profEmail = pubProfile.email;
+  const profLocation = pubProfile.location;
 
   // 1. Greetings
   if (/^(halo|hai|hey|hi|hello|pagi|siang|sore|malam|assalamualaikum|tes|test|ping)/.test(query)) {
     return {
       reply: isEn
-        ? `Hi there! I'm Miss Minute, ${config?.generalProfile?.nickname || "Zekk"}'s companion. What would you like to know about his projects, skills, or CV?`
-        : `Halo! Mau aku antar ke seksi proyek, intip tech stack, atau buka berkas CV ATS ${config?.generalProfile?.nickname || "Zekk"}?`,
+        ? `Hi there! I'm Miss Minute, ${pubProfile.nickname}'s AI companion. What would you like to explore about his published projects, education, skills, or CV?`
+        : `Halo! Aku Miss Minute, asisten portofolio ${pubProfile.nickname}. Mau intip proyek terpublikasi, riwayat kuliah, tech stack, atau unduh CV ATS?`,
       action: "greeting",
       quickReplies: isEn
-        ? ["Who is Zekk?", "View Projects", "Tech Stack", "Download CV"]
-        : ["Siapa Zekk?", "Lihat Proyek", "Keahlian", "Download CV"],
+        ? ["Who is Zekk?", "View Projects", "Where did you study?", "Download CV"]
+        : ["Siapa Zekk?", "Lihat Proyek", "Kuliah di mana?", "Download CV"],
     };
   }
 
-  // 2. Who is Zekk / About
+  // 2. Education / Campus / Kuliah di mana
   if (
-    /siapa|tentang|about|who is|biodata|profil|profile|latar belakang|kuliah|pendidikan|universitas|mahasiswa/i.test(
+    /kuliah|kampus|pendidikan|universitas|sekolah|jurusan|study|where did you study|university|college|degree|trunojoyo/i.test(
+      query
+    )
+  ) {
+    if (pubEducation.length > 0) {
+      const primaryEdu = pubEducation[pubEducation.length - 1]; // latest
+      const details = `${primaryEdu.program} di ${primaryEdu.institution} (${primaryEdu.period})`;
+      return {
+        reply: isEn
+          ? `${profName} is studying ${primaryEdu.program} at ${primaryEdu.institution} (${primaryEdu.period}), located in ${primaryEdu.location}.`
+          : `${profName} saat ini menempuh studi ${details}, berlokasi di ${primaryEdu.location}.`,
+        action: "success",
+        link: "#tentang",
+        linkLabel: isEn ? "View Academic Journey" : "Lihat Riwayat Pendidikan",
+        quickReplies: isEn ? ["Featured Projects", "Tech Stack", "Contact"] : ["Proyek Pilihan", "Keahlian", "Kontak"],
+      };
+    }
+
+    return {
+      reply: isEn
+        ? `${profName} is an Informatics Engineering undergraduate student at Universitas Trunojoyo Madura.`
+        : `${profName} adalah mahasiswa S1 Teknik Informatika di Universitas Trunojoyo Madura (HIMATIF UTM).`,
+      action: "success",
+      link: "#tentang",
+      linkLabel: isEn ? "View About Section" : "Lihat Bagian Tentang",
+      quickReplies: isEn ? ["Projects", "CV ATS", "Contact"] : ["Proyek", "CV ATS", "Kontak"],
+    };
+  }
+
+  // 3. Who is Zekk / About
+  if (
+    /siapa|tentang|about|who is|biodata|profil|profile|latar belakang|asal|lokasi/i.test(
       query
     )
   ) {
     return {
       reply: isEn
-        ? `${profName} is an Informatics student and a ${profRoles}. He crafts clean UI/UX designs in Figma and engineers modern Next.js & TypeScript web applications.`
-        : `${profName} adalah mahasiswa Teknik Informatika sekaligus ${profRoles}. Ia fokus mendesain sistem antarmuka di Figma dan membangun web modern berbasis Next.js & TypeScript.`,
+        ? `${profName} is based in ${profLocation}, working as a ${profRoles}. He focuses on human-centered UI/UX systems and robust Next.js frontend web applications.`
+        : `${profName} berdomisili di ${profLocation}, berfokus sebagai ${profRoles}. Ia merancang antarmuka terstruktur di Figma dan merekayasa web modern dengan Next.js & TypeScript.`,
       action: "success",
       link: "#tentang",
       linkLabel: isEn ? "Read Full Bio" : "Buka Bagian Tentang",
@@ -62,17 +102,26 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 3. Projects / Portfolio
-  if (/proyek|project|karya|portfolio|portofolio|bikin apa|hasil|showcase|aplikasi|sigap/i.test(query)) {
-    const projectList = publishedProjects.length > 0
-      ? publishedProjects.slice(0, 3).map((p) => (isEn && p.titleEn ? p.titleEn : p.title)).join(", ")
-      : "";
+  // 4. Projects / Specific Project Categories (Frontend, IT, UI/UX)
+  if (/proyek|project|karya|portfolio|portofolio|bikin apa|hasil|showcase|aplikasi|frontend project|it project|design project/i.test(query)) {
+    const isFrontendFilter = /frontend|web|react|next/i.test(query);
+    const isDesignFilter = /design|ui|ux|desain/i.test(query);
 
-    if (projectList) {
+    let matching = pubProjects;
+    if (isFrontendFilter) {
+      matching = pubProjects.filter((p) => p.category === "it" || p.category === "both");
+    } else if (isDesignFilter) {
+      matching = pubProjects.filter((p) => p.category === "design" || p.category === "both");
+    }
+
+    const count = matching.length;
+    const names = matching.slice(0, 3).map((p) => p.title).join(", ");
+
+    if (count > 0) {
       return {
         reply: isEn
-          ? `Here are some of ${profName}'s featured projects: ${projectList}. Each combines interactive prototyping with robust frontend engineering.`
-          : `Beberapa proyek unggulan ${profName} meliputi: ${projectList}. Seluruh proyek dikerjakan dengan standar antarmuka Figma dan Next.js yang bersih.`,
+          ? `Currently there are ${count} published ${isFrontendFilter ? "Frontend/IT " : isDesignFilter ? "UI/UX " : ""}project(s), including: ${names}. All built with clean architecture and interactive polish.`
+          : `Saat ini terdapat ${count} proyek ${isFrontendFilter ? "Frontend/IT " : isDesignFilter ? "Desain UI/UX " : ""}yang terpublikasi, meliputi: ${names}. Seluruh karya dikembangkan dengan arsitektur bersih dan responsif.`,
         action: "success",
         link: "#proyek",
         linkLabel: isEn ? "Explore Projects" : "Lihat Grid Proyek",
@@ -82,8 +131,8 @@ export function queryBuddyKnowledge(
 
     return {
       reply: isEn
-        ? `${profName}'s curated portfolio projects are being updated in the showcase. You can explore his code repositories on GitHub directly!`
-        : `Koleksi proyek pilihan ${profName} sedang dikurasi di katalog publik. Kamu juga bisa langsung mengeksplorasi repositori kode di GitHub ZekkCode!`,
+        ? `No projects found in this filter right now. You can check the complete code repositories on GitHub (@ZekkCode)!`
+        : `Belum ada proyek yang ditampilkan pada filter ini. Kamu juga dapat langsung mengeksplorasi kode di GitHub ZekkCode!`,
       action: "success",
       link: "https://github.com/ZekkCode",
       linkLabel: isEn ? "View GitHub Repos" : "Buka GitHub ZekkCode",
@@ -91,16 +140,16 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 4. Skills / Tech Stack
+  // 5. Skills / Tech Stack
   if (/skill|keahlian|stack|teknologi|tools|bahasa|figma|next|react|typescript|tailwind|flutter/i.test(query)) {
-    const tools = activeTools.length > 0
-      ? activeTools.slice(0, 8).map((s) => s.name).join(", ")
+    const tools = pubTechStack.length > 0
+      ? pubTechStack.slice(0, 8).map((s) => s.name).join(", ")
       : "Figma, Next.js, React, TypeScript, Tailwind CSS, Flutter, MySQL, GitHub";
 
     return {
       reply: isEn
-        ? `${profName} specializes in UI/UX research & design in Figma, and engineering web applications with ${tools}.`
-        : `Keahlian utama ${profName} mencakup perancangan UI/UX & Design System di Figma, serta rekayasa frontend menggunakan ${tools}.`,
+        ? `${profName} specializes in UI/UX research & design in Figma, and engineering production web applications using ${tools}.`
+        : `Keahlian utama ${profName} mencakup perancangan antarmuka & Design System di Figma, serta rekayasa frontend menggunakan ${tools}.`,
       action: "success",
       link: "#stack",
       linkLabel: isEn ? "View Tech Stack" : "Lihat Tech Stack Lengkap",
@@ -108,7 +157,7 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 5. CV / Resume / Ats
+  // 6. CV / Resume / Ats
   if (/cv|resume|berkas|ats|riwayat|download cv|unduh cv|pdf/i.test(query)) {
     return {
       reply: isEn
@@ -121,16 +170,14 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 6. Certifications
-  if (/sertifikat|sertifikasi|certificate|credential|binar|dicoding|bnsp/i.test(query)) {
-    const certsCount = publishedCerts.length > 0
-      ? publishedCerts.length
-      : 8;
+  // 7. Certifications / Berapa sertifikat
+  if (/sertifikat|sertifikasi|certificate|credential|binar|dicoding|bnsp|berapa sertifikat/i.test(query)) {
+    const certsCount = pubCerts.length;
 
     return {
       reply: isEn
-        ? `${profName} holds ${certsCount} verified credentials including Binar Academy UI/UX Research & Design, Dicoding Frontend Web, and national BNSP certifications.`
-        : `${profName} memiliki ${certsCount} sertifikat terverifikasi, antara lain Binar Academy UI/UX Research & Design, Dicoding Indonesia Frontend Web, dan sertifikasi BNSP.`,
+        ? `${profName} currently holds ${certsCount} verified credentials with authentic evidence, including Binar Academy UI/UX Research & Design, Dicoding Frontend Web, and BNSP certifications.`
+        : `${profName} memiliki ${certsCount} sertifikat terverifikasi resmi dengan bukti kredensial otentik, antara lain Binar Academy UI/UX Research & Design, Dicoding Indonesia Frontend Web, dan sertifikasi BNSP.`,
       action: "success",
       link: "#certificates",
       linkLabel: isEn ? "View Certificates" : "Lihat Daftar Sertifikat",
@@ -138,12 +185,12 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 7. Contact / Hire / Email
-  if (/kontak|contact|email|hubungi|hire|kerja sama|freelance|whatsapp|wa|pesan|jasa/i.test(query)) {
+  // 8. Contact / Hire / Bagaimana menghubungi Zekk
+  if (/kontak|contact|email|hubungi|bagaimana menghubungi|hire|kerja sama|freelance|whatsapp|wa|pesan|jasa/i.test(query)) {
     return {
       reply: isEn
-        ? `You can reach out directly via email at ${profEmail} or through GitHub (@ZekkCode). He is open for UI/UX and Frontend collaborations!`
-        : `Kamu bisa menghubungi Zekk langsung via email di ${profEmail} atau melalui GitHub (@ZekkCode). Zekk terbuka untuk proyek UI/UX maupun Web Frontend!`,
+        ? `You can reach out directly via email at ${profEmail} or via GitHub (@ZekkCode). He is open for UI/UX design and frontend web engineering collaborations!`
+        : `Kamu bisa menghubungi Zekk langsung via email di ${profEmail} atau melalui GitHub (@ZekkCode). Zekk terbuka untuk kerja sama desain UI/UX maupun rekayasa web frontend!`,
       action: "success",
       link: "#kontak",
       linkLabel: isEn ? "Go to Contact Form" : "Menuju Form Kontak",
@@ -151,12 +198,27 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 8. Services / Layanan
+  // 9. Career & Organization Experience
+  if (/pengalaman|karier|career|organisasi|himatif|gdgoc|kerja|experience|riwayat kerja/i.test(query)) {
+    const pubExp = (config?.experience || []).filter((e) => e.published !== false);
+    const expList = pubExp.slice(0, 3).map((e) => `${e.role} (${e.org})`).join(", ");
+    return {
+      reply: isEn
+        ? `${profName} has served in several leadership and technical roles including: ${expList || "Head of Media Creative at HIMATIF UTM and Core Team at GDGoC UTM"}.`
+        : `${profName} memiliki rekam jejak peran dan organisasi: ${expList || "Kepala Divisi Media Creative di HIMATIF UTM dan Core Team di GDGoC UTM"}. Seluruh pengalaman tercatat rapi di linimasa portofolio.`,
+      action: "success",
+      link: "#tentang",
+      linkLabel: isEn ? "View Career Timeline" : "Lihat Linimasa Karier",
+      quickReplies: isEn ? ["Education", "Projects", "Download CV"] : ["Pendidikan", "Proyek", "Unduh CV"],
+    };
+  }
+
+  // 9. Services / Layanan
   if (/layanan|services|bisa bantu apa|service|jasa apa/i.test(query)) {
     return {
       reply: isEn
-        ? "Zekk provides core services in UI/UX & Design Systems, Frontend Web Development, Visual Identity & Digital Graphics, and IT Support & Systems."
-        : "Zekk menyediakan 4 pilar layanan: UI/UX & Desain Sistem, Frontend Web Development, Identitas Visual & Grafis, dan Dukungan IT & Sistem Linux.",
+        ? "Zekk provides 4 core pillars of services: UI/UX & Design Systems, Frontend Web Development, Creative Media & Digital Graphics, and IT Support & Systems."
+        : "Zekk menyediakan 4 pilar layanan: UI/UX & Desain Sistem, Frontend Web Development, Identitas Visual & Grafis Kreatif, dan Dukungan IT & Sistem Linux.",
       action: "success",
       link: "#services",
       linkLabel: isEn ? "View Services" : "Lihat 4 Pilar Layanan",
@@ -164,14 +226,14 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 9. Default / Fallback
+  // 10. Default / Fallback
   return {
     reply: isEn
-      ? `I can guide you through ${profName}'s projects, tech stack, experience, CV ATS, and contact info. Which one would you like to explore?`
-      : `Aku bisa bantu jelaskan proyek unggulan, tech stack, riwayat pengalaman, CV ATS, dan kontak ${profName}. Mau tahu yang mana dulu?`,
+      ? `I can guide you through ${profName}'s published projects, education at UTM, tech stack, verified certificates, CV ATS, and contact info. Which one would you like to explore?`
+      : `Aku bisa bantu jelaskan proyek terpublikasi, riwayat kuliah di UTM, tech stack, sertifikat terverifikasi, CV ATS, dan kontak ${profName}. Mau tahu yang mana dulu?`,
     action: "idle",
     quickReplies: isEn
-      ? ["Who is Zekk?", "Show Projects", "View CV", "Get in Touch"]
-      : ["Siapa Zekk?", "Lihat Proyek", "Buka CV", "Kontak Zekk"],
+      ? ["Who is Zekk?", "Show Projects", "Where did you study?", "Get in Touch"]
+      : ["Siapa Zekk?", "Lihat Proyek", "Kuliah di mana?", "Kontak Zekk"],
   };
 }

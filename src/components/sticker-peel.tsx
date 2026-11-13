@@ -667,6 +667,13 @@ export const StickerPeel = memo(function StickerPeel({
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const anisoExt =
+          gl.getExtension("EXT_texture_filter_anisotropic") ||
+          gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+        if (anisoExt) {
+          const maxAniso = gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1;
+          gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, maxAniso));
+        }
         sticker.aspect = ih / iw;
         sticker.meshX = scratch.width / w;
         sticker.meshY = scratch.height / h;
@@ -724,7 +731,7 @@ export const StickerPeel = memo(function StickerPeel({
     let resizePending = false;
     const applyLayout = () => {
       const s = settingsRef.current;
-      view.ratio = Math.min(s.dpr || window.devicePixelRatio || 1, 1.5);
+      view.ratio = Math.min(s.dpr || Math.max(window.devicePixelRatio || 2, 2), 3);
       bounds.width = Math.max(1, parent.clientWidth);
       bounds.height = Math.max(1, parent.clientHeight);
       const h = height();
@@ -774,7 +781,9 @@ export const StickerPeel = memo(function StickerPeel({
     const draw = () => {
       const s = settingsRef.current;
       const size = view.size;
-      root.style.transform = `translate3d(${state.x - size / 2}px, ${state.y - size / 2}px, 0)`;
+      const offsetX = state.press ? state.x - size / 2 : Math.round(state.x - size / 2);
+      const offsetY = state.press ? state.y - size / 2 : Math.round(state.y - size / 2);
+      root.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
       const angle = s.rotate + state.swing;
       const scale = 1;
       hit.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
@@ -817,7 +826,7 @@ export const StickerPeel = memo(function StickerPeel({
       gl.uniform1f(u.uShine, s.lighting);
       gl.uniform1f(u.uShadow, s.shadow * 0.55);
       gl.uniform1f(u.uTexel, sticker.texel / (w * sticker.meshX));
-      gl.uniform1f(u.uLod, Math.max(0, Math.log2(sticker.texel / (w * sticker.meshX * scale * view.ratio))));
+      gl.uniform1f(u.uLod, Math.max(0, Math.log2(sticker.texel / (w * sticker.meshX * scale * view.ratio)) - 0.85));
       const glint = toLocal(state.light);
       gl.uniform2f(u.uGlint, glint.x / (w * sticker.meshX) + 0.5, glint.y / (h * sticker.meshY) + 0.5);
       gl.disable(gl.DEPTH_TEST);

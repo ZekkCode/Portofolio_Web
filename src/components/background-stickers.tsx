@@ -157,7 +157,7 @@ function StickerSlotItem({
           swing={0}
           intro={false}
           initialPosition="center"
-          dpr={isMobileOrLow ? 1 : 1.25}
+          dpr={isMobileOrLow ? 2 : 2.5}
         />
       ) : (
         <div

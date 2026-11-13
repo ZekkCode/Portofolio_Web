@@ -26,7 +26,7 @@ export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardP
       {/* 1. Hanging Lanyard Strap Ribbon (comes down from behind the header) */}
       <div className="relative flex flex-col items-center z-10">
         <div
-          className="w-5 sm:w-6 h-28 sm:h-36 rounded-b-sm shadow-md relative overflow-hidden"
+          className="w-5 sm:w-6 h-12 sm:h-16 rounded-b-sm shadow-md relative overflow-hidden"
           style={{
             backgroundColor: strapColor || "#1b45c4",
             backgroundImage: "linear-gradient(180deg, #16369c 0%, #1b45c4 50%, #142e82 100%)",
@@ -45,12 +45,12 @@ export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardP
 
       {/* 3. Authentic ID Card Badge */}
       <div className="relative z-20 -mt-1.5 transition-transform duration-300 hover:rotate-0 hover:scale-[1.01] will-change-transform">
-        <div className="relative w-[220px] sm:w-[260px] lg:w-[285px] aspect-[1/1.406] rounded-2xl overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-slate-900">
+        <div className="relative w-[225px] sm:w-[265px] lg:w-[300px] aspect-[1/1.406] rounded-2xl overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-slate-900">
           <Image
             src={cardImage}
             alt="Zakaria Mujur Prasetyo - ID Badge"
             fill
-            sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 285px"
+            sizes="(max-width: 640px) 225px, (max-width: 1024px) 265px, 300px"
             priority
             className="object-contain"
           />
@@ -86,7 +86,7 @@ export function LanyardStage({ className = "" }: { className?: string }) {
   const shouldRenderStatic = !hasWebGL || contextLost;
 
   return (
-    <div className={`relative w-full ${className || "h-[500px] sm:h-[580px] lg:h-[640px]"}`}>
+    <div className={`relative w-full ${className || "h-[320px] sm:h-[400px] lg:h-[440px]"}`}>
       {shouldRenderStatic ? (
         <StaticLanyardCard
           frontImage={lanyard.frontImage || undefined}

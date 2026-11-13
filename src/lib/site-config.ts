@@ -282,9 +282,9 @@ export const defaultLanyard: LanyardConfig = {
   orientation: "portrait",
   finish: "glossy",
   cornerRadius: 0.3,
-  size: 0.36,
+  size: 0.58,
   anchor: "center",
-  strapLength: 0.32,
+  strapLength: 0.16,
   strapColor: "#123a9e",
   strapWidth: 0.65,
   metal: "silver",
@@ -755,10 +755,10 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
 
   // 3. Lanyard
   const rawLanyard = raw.lanyard ? { ...raw.lanyard } : undefined;
-  if (rawLanyard && (rawLanyard.size === 0.58 || rawLanyard.size === 0.6)) {
+  if (rawLanyard && (rawLanyard.size === 0.58 || rawLanyard.size === 0.6 || rawLanyard.size === 0.36 || rawLanyard.size === 0.44)) {
     rawLanyard.size = defaultLanyard.size;
   }
-  if (rawLanyard && (rawLanyard.strapLength === 0.85 || !rawLanyard.strapLength)) {
+  if (rawLanyard && (rawLanyard.strapLength === 0.85 || rawLanyard.strapLength === 0.32 || rawLanyard.strapLength === 0.18 || !rawLanyard.strapLength)) {
     rawLanyard.strapLength = defaultLanyard.strapLength;
   }
 

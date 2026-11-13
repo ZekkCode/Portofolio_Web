@@ -910,9 +910,9 @@ const Lanyard = ({
   orientation = 'portrait',
   finish = 'glossy',
   cornerRadius = 0.3,
-  size = 0.4,
+  size = 0.58,
   anchor = 'center',
-  strapLength = 0.35,
+  strapLength = 0.16,
   strapImage,
   strapColor = '#111111',
   strapWidth = 0.65,
@@ -1132,17 +1132,17 @@ const Lanyard = ({
       const s = settingsRef.current!;
       const aspect = view.width / view.height;
       const cardDiag = Math.hypot(layout.width, layout.height);
-      const strapRatio = mix(0.18, 0.44, clamp(s.strapLength, 0, 1));
-      
-      // Jamin headroom atas yang cukup agar kartu yang berputar diagonal dan berayun tidak pernah terpotong
-      // Headroom dermawan: beri ruang minimal 1.2x diagonal kartu di atas kartu agar ayunan ekstrem tidak pernah terpotong
-      const minHeadroom = cardDiag * 0.35 + 0.3;
-      const headroom = Math.max(minHeadroom, layout.height * 1.05 * strapRatio + 0.35);
+      const strapRatio = mix(0.08, 0.34, clamp(s.strapLength, 0, 1));
 
-      // Total viewHeight mencakup headroom atas + tinggi kartu + ruang ayunan bawah
-      const neededHeight = headroom + layout.height + cardDiag * 0.45 + 0.4;
-      let viewHeight = Math.max(layout.height / clamp(s.size * 0.88, 0.15, 0.75), neededHeight, 5.8);
-      const minimumWidth = Math.max(layout.width * 2.8, cardDiag * 1.8, 4.8);
+      // Jamin headroom atas proporsional agar tali ringkas dan ayunan tetap aman dari clipping
+      const minHeadroom = layout.height * 0.32 + 0.14;
+      const headroom = Math.max(minHeadroom, layout.height * 0.9 * strapRatio + 0.46);
+      const bottomSwing = cardDiag * 0.12 + 0.1;
+
+      // Total viewHeight menjaga kartu tampil lebih besar sekaligus tali ringkas
+      const neededHeight = headroom + layout.height + bottomSwing;
+      let viewHeight = Math.max(layout.height / clamp(s.size * 1.08, 0.22, 0.94), neededHeight, 3.6);
+      const minimumWidth = Math.max(layout.width * 2.05, cardDiag * 1.3, 3.4);
       if (viewHeight * aspect < minimumWidth) viewHeight = minimumWidth / aspect;
       const viewWidth = viewHeight * aspect;
       frustum.width = viewWidth;
@@ -1164,11 +1164,13 @@ const Lanyard = ({
       // Bagian atas canvas terselip di belakang sticky header sehingga tali tampak keluar dari balik header
       const anchorY = viewHeight / 2 - 0.02;
 
-      // Posisi kartu menggantung lebih rendah secara natural dengan tali panjang elegan
-      const isNarrow = aspect < 1.15;
-      const targetCenterY = isNarrow
-        ? clamp(-0.04 - (s.strapLength - 0.3) * 0.4, -0.18, 0.06)
-        : clamp(-0.25 - (s.strapLength - 0.3) * 0.6, -0.45, -0.08);
+      // Kartu besar dengan tali ringkas di atas dan ruang kosong minimal di bawah
+      const targetCardTop = viewHeight / 2 - headroom;
+      const targetCenterY = clamp(
+        targetCardTop - layout.height / 2,
+        -viewHeight / 2 + layout.height / 2 + 0.22,
+        viewHeight / 2 - minHeadroom - layout.height / 2
+      );
 
       const cardTop = targetCenterY + layout.height / 2;
       const hangTop = cardTop + (layout.hangY - layout.height / 2);

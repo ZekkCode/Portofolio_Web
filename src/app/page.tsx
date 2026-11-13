@@ -129,20 +129,22 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-4 sm:pt-14 pb-12 sm:pb-16"
+      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-3 sm:pt-8 lg:pt-10 pb-6 sm:pb-8"
     >
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
-      <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
+      <div className="grid items-start gap-3 sm:gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
         {/* Left Column: Editorial Information */}
-        <div className="relative z-10 flex flex-col items-start gap-5 text-start order-2 lg:order-1 pt-1 sm:pt-0">
-          <ScrollReveal y={24} duration={0.75} className="space-y-3 w-full">
+        <div className="relative z-10 flex flex-col items-start gap-4 sm:gap-5 text-start order-2 lg:order-1 pt-0 lg:pt-6">
+          <div className="space-y-2.5 w-full">
             <AnimatedHeroTitle name={name} />
-            <p className="text-base sm:text-lg font-semibold text-body">
-              {roles}
-            </p>
-          </ScrollReveal>
+            <ScrollReveal y={16} duration={0.65} delay={0.12}>
+              <p className="text-base sm:text-lg font-semibold text-body">
+                {roles}
+              </p>
+            </ScrollReveal>
+          </div>
 
-          <div className="space-y-6 w-full max-w-xl">
+          <ScrollReveal y={18} duration={0.65} delay={0.2} className="space-y-5 w-full max-w-xl">
             <p className="text-sm sm:text-base leading-relaxed text-body">
               {heroDesc}
             </p>
@@ -164,12 +166,12 @@ function Hero() {
                 <ArrowRight className="size-3.5" />
               </SmoothNavLink>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
 
         {/* Right Column: Interactive 3D Lanyard ID Card */}
         <div className="relative flex flex-col items-center justify-center lg:items-end w-full order-1 lg:order-2 z-20">
-          <div className="relative w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[460px] h-[380px] sm:h-[510px] lg:h-[680px] -mt-8 sm:-mt-[76px] lg:-mt-[84px]">
+          <div className="relative w-full max-w-[330px] sm:max-w-[400px] lg:max-w-[460px] h-[320px] sm:h-[400px] lg:h-[440px] -mt-6 sm:-mt-10 lg:-mt-[56px]">
             <LanyardStage className="h-full w-full" />
           </div>
         </div>
@@ -222,7 +224,7 @@ function About() {
   ];
 
   return (
-    <section id="tentang" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="tentang" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-6 pb-14 sm:pt-8 sm:pb-16">
       <div id="about" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div id="about-me" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>

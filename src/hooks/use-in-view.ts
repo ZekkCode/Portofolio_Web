@@ -11,6 +11,11 @@ interface UseInViewOptions {
    * Defaults to true.
    */
   trackDocumentVisibility?: boolean;
+  /**
+   * Disconnect after first intersection so mounted children remain mounted permanently.
+   * Defaults to false.
+   */
+  triggerOnce?: boolean;
 }
 
 /**
@@ -25,6 +30,7 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
     rootMargin = "0px",
     threshold = 0,
     trackDocumentVisibility = true,
+    triggerOnce = false,
   } = options;
 
   const elementRef = useRef<T | null>(null);
@@ -47,8 +53,12 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        isIntersectingRef.current = Boolean(entry && entry.isIntersecting);
+        const intersecting = Boolean(entry && entry.isIntersecting);
+        isIntersectingRef.current = intersecting;
         updateVisibility();
+        if (triggerOnce && intersecting) {
+          observer.disconnect();
+        }
       },
       { rootMargin, threshold }
     );
@@ -69,7 +79,7 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
         document.removeEventListener("visibilitychange", handleDocVisibility);
       }
     };
-  }, [rootMargin, threshold, trackDocumentVisibility]);
+  }, [rootMargin, threshold, trackDocumentVisibility, triggerOnce]);
 
   return { ref: elementRef, isInView };
 }

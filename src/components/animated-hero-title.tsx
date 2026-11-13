@@ -15,14 +15,14 @@ export function AnimatedHeroTitle({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if (reduced) {
-      setEntered(true);
-      return;
-    }
 
     let raf1 = 0;
     let raf2 = 0;
     raf1 = window.requestAnimationFrame(() => {
+      if (reduced) {
+        setEntered(true);
+        return;
+      }
       raf2 = window.requestAnimationFrame(() => {
         setEntered(true);
       });

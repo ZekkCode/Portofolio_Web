@@ -26,90 +26,119 @@ export function ExperienceTimeline() {
   }, [experience]);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
     if (typeof window === "undefined") return false;
     return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   });
-  const [scrollProgress, setScrollProgress] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
-  });
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const maxScrollRef = useRef(0);
+  const manualOverrideUntilRef = useRef(0);
+
+  const commitActiveIndex = useCallback((idx: number) => {
+    if (activeIndexRef.current !== idx) {
+      activeIndexRef.current = idx;
+      setActiveIndex(idx);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const listener = (e: MediaQueryListEvent) => {
       setPrefersReducedMotion(e.matches);
-      if (e.matches) setScrollProgress(1);
+      if (e.matches && progressBarRef.current) {
+        progressBarRef.current.style.transform = "scaleX(1)";
+      }
     };
     media.addEventListener("change", listener);
     return () => media.removeEventListener("change", listener);
   }, []);
 
-  // Parallax scroll: scrub horizontal timeline based on vertical page scroll
+  // Parallax scroll: scrub horizontal timeline based on vertical page scroll without per-frame React re-renders
   useEffect(() => {
     const timeline = timelineRef.current;
     const container = containerRef.current;
     if (!timeline || !container || items.length === 0) return;
 
     if (prefersReducedMotion) {
+      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(1)";
       return;
     }
 
+    const updateBounds = () => {
+      maxScrollRef.current = Math.max(0, container.scrollWidth - container.clientWidth);
+    };
+    updateBounds();
+
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateBounds) : null;
+    ro?.observe(container);
+
     const ctx = gsap.context(() => {
-      // 1. Scrub progress and smooth horizontal gliding on page scroll
       ScrollTrigger.create({
         trigger: timeline,
-        start: "top 85%",
-        end: "bottom 25%",
-        scrub: 0.8,
+        start: "top 86%",
+        end: "bottom 20%",
+        scrub: 0.65,
         invalidateOnRefresh: true,
+        onRefresh: updateBounds,
         onUpdate: (self) => {
           const p = self.progress;
-          setScrollProgress(p);
+          if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${p})`;
+          }
+
+          if (performance.now() < manualOverrideUntilRef.current) {
+            return;
+          }
 
           const activeIdx = Math.min(
             items.length - 1,
             Math.max(0, Math.floor(p * items.length + 0.15))
           );
-          setActiveIndex(activeIdx);
+          commitActiveIndex(activeIdx);
 
-          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+          const maxScroll = maxScrollRef.current;
           if (maxScroll > 0) {
             container.scrollLeft = maxScroll * p;
           }
         },
       });
 
-      // 2. Individual card horizontal parallax: LEFT -> RIGHT
-      cardRefs.current.forEach((card, idx) => {
-        if (!card) return;
-        const initialOffsetX = (idx + 1) * -45;
+      const validCards = cardRefs.current.filter((c): c is HTMLDivElement => Boolean(c));
+      if (validCards.length > 0) {
         gsap.fromTo(
-          card,
-          { x: initialOffsetX, opacity: 0.75 },
+          validCards,
+          {
+            x: (i: number) => (i + 1) * -38,
+            opacity: 0.75,
+          },
           {
             x: 0,
             opacity: 1,
             ease: "power1.out",
+            force3D: true,
             scrollTrigger: {
               trigger: timeline,
               start: "top 88%",
-              end: "bottom 35%",
-              scrub: 0.8,
+              end: "bottom 32%",
+              scrub: 0.7,
               invalidateOnRefresh: true,
             },
           }
         );
-      });
+      }
     }, timelineRef);
 
-    return () => ctx.revert();
-  }, [items.length, prefersReducedMotion]);
+    return () => {
+      ro?.disconnect();
+      ctx.revert();
+    };
+  }, [items.length, prefersReducedMotion, commitActiveIndex]);
 
   // Click on milestone node to jump
   const scrollToIndex = useCallback((index: number) => {
@@ -117,14 +146,28 @@ export function ExperienceTimeline() {
     const container = containerRef.current;
     if (!card || !container) return;
 
+    manualOverrideUntilRef.current = performance.now() + 2600;
     const targetLeft =
       card.offsetLeft - container.clientWidth / 2 + card.clientWidth / 2;
     container.scrollTo({
       left: Math.max(0, targetLeft),
       behavior: "smooth",
     });
-    setActiveIndex(index);
+    commitActiveIndex(index);
+  }, [commitActiveIndex]);
+
+  const markManualOverride = useCallback(() => {
+    manualOverrideUntilRef.current = performance.now() + 2000;
   }, []);
+
+  const handleTrackWheel = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        markManualOverride();
+      }
+    },
+    [markManualOverride]
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -189,12 +232,13 @@ export function ExperienceTimeline() {
           className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-line/80 dark:bg-line/40 rounded-full"
           aria-hidden="true"
         />
-        {/* Fill Progress Line */}
+        {/* Fill Progress Line (direct DOM update via ref — 0 re-renders) */}
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-brand dark:bg-blue-500 rounded-full origin-left will-change-transform transition-transform duration-150"
+          ref={progressBarRef}
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-brand dark:bg-blue-500 rounded-full origin-left"
           style={{
             width: "100%",
-            transform: `scaleX(${scrollProgress})`,
+            transform: prefersReducedMotion ? "scaleX(1)" : "scaleX(0)",
           }}
           aria-hidden="true"
         />
@@ -245,10 +289,13 @@ export function ExperienceTimeline() {
       <div
         ref={containerRef}
         onKeyDown={handleKeyDown}
+        onWheel={handleTrackWheel}
+        onPointerDown={markManualOverride}
+        onTouchStart={markManualOverride}
         tabIndex={0}
         role="region"
         aria-label="Daftar Pengalaman Karir & Organisasi"
-        className="flex gap-4 sm:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pt-1 pb-4 px-1 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl"
+        className="flex gap-4 sm:gap-5 overflow-x-auto pt-1 pb-4 px-1 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl"
         style={{ scrollbarWidth: "none" }}
       >
         {items.map((item, idx) => {
@@ -262,7 +309,7 @@ export function ExperienceTimeline() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`snap-center shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
+              className={`shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-md ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"

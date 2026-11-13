@@ -61,8 +61,8 @@ export function Parallax({
           return;
         }
 
-        // Amplitudo desktop halus (~240px baseline), mobile ringan (~80px baseline)
-        const baseDistance = typeof offset === "number" ? offset : speed * (mobile ? 90 : 260);
+        // Desktop ~32-54px range for speed 0.06-0.1, Mobile ~15-26px range for crisp depth without overflow
+        const baseDistance = typeof offset === "number" ? offset : speed * (mobile ? 260 : 540);
 
         gsap.fromTo(
           content,
@@ -72,11 +72,12 @@ export function Parallax({
           {
             y: align === "top" ? baseDistance : baseDistance * 0.5,
             ease: "none",
+            force3D: true,
             scrollTrigger: {
               trigger,
               start: align === "top" ? "top top" : "top bottom",
               end: align === "top" ? "bottom top" : "bottom top",
-              scrub: typeof scrub === "number" ? scrub : 0.7,
+              scrub: typeof scrub === "number" ? scrub : 0.65,
               invalidateOnRefresh: true,
             },
           }
@@ -88,8 +89,8 @@ export function Parallax({
   }, [align, speed, scrub, offset]);
 
   return (
-    <div ref={triggerRef} className={className} style={style}>
-      <div ref={contentRef} className="will-change-transform h-full w-full">
+    <div ref={triggerRef} data-parallax-speed={speed} className={className} style={style}>
+      <div ref={contentRef} className="h-full w-full">
         {children}
       </div>
     </div>

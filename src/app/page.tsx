@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
@@ -337,15 +336,14 @@ function Stack() {
                       className="inline-flex items-center gap-1.5 rounded-lg border border-line/70 bg-surface/70 px-2.5 py-1 text-xs font-medium text-ink dark:border-line/40 dark:bg-slate-900/60"
                     >
                       <div className="flex size-4 shrink-0 items-center justify-center">
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={tool.icon}
                           alt={tool.name}
-                          width={16}
-                          height={16}
-                          unoptimized
+                          width={14}
+                          height={14}
                           loading="lazy"
                           decoding="async"
-                          style={{ width: "auto", height: "auto" }}
                           className={`size-3.5 object-contain ${
                             tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                               ? "dark:invert"
@@ -378,15 +376,14 @@ function Stack() {
               title={tool.name}
               aria-label={tool.name}
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={tool.icon}
                 alt={tool.name}
                 width={28}
                 height={28}
-                unoptimized
                 loading="lazy"
                 decoding="async"
-                style={{ width: "auto", height: "auto" }}
                 className={`size-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
                   tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                     ? "dark:invert"
@@ -413,15 +410,14 @@ function Stack() {
               title={tool.name}
               aria-label={tool.name}
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={tool.icon}
                 alt={tool.name}
                 width={28}
                 height={28}
-                unoptimized
                 loading="lazy"
                 decoding="async"
-                style={{ width: "auto", height: "auto" }}
                 className={`size-7 object-contain transition-all duration-300 grayscale opacity-60 contrast-75 dark:opacity-45 group-hover/tool:grayscale-0 group-hover/tool:opacity-100 group-hover/tool:scale-110 ${
                   tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
                     ? "dark:invert"

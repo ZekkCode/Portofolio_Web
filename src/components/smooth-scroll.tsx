@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ReactLenis, useLenis, type LenisRef } from "lenis/react";
 import { useAdaptivePerformance } from "@/lib/device-performance";
 import gsap from "gsap";
@@ -68,42 +68,71 @@ function ScrollTriggerBridge() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [lenis]);
 
-  // 3. Refresh pengukuran ScrollTrigger hanya ketika layout benar-benar berubah
+  // 3. Coalesced, loop-safe ScrollTrigger.refresh only on genuine layout changes
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let resizeTimer: NodeJS.Timeout | null = null;
-    const debouncedRefresh = () => {
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
+    ScrollTrigger.config({ ignoreMobileResize: true });
+
+    let cancelled = false;
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    let refreshRaf = 0;
+    let isRefreshing = false;
+    let lastHeight = document.documentElement.scrollHeight;
+    let lastWidth = window.innerWidth;
+
+    const runRefresh = () => {
+      if (cancelled || isRefreshing) return;
+      isRefreshing = true;
+      try {
         ScrollTrigger.refresh();
-      }, 120);
+      } finally {
+        lastHeight = document.documentElement.scrollHeight;
+        lastWidth = window.innerWidth;
+        isRefreshing = false;
+      }
     };
 
-    // Saat seluruh web fonts siap dirender
+    const scheduleRefresh = (force = false) => {
+      if (cancelled || isRefreshing) return;
+      if (!force) {
+        const nextHeight = document.documentElement.scrollHeight;
+        const nextWidth = window.innerWidth;
+        if (Math.abs(nextHeight - lastHeight) < 12 && Math.abs(nextWidth - lastWidth) < 2) {
+          return;
+        }
+      }
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (cancelled) return;
+        if (refreshRaf) cancelAnimationFrame(refreshRaf);
+        refreshRaf = requestAnimationFrame(runRefresh);
+      }, 150);
+    };
+
     if (document.fonts?.ready) {
-      document.fonts.ready.then(() => {
-        ScrollTrigger.refresh();
-      });
+      document.fonts.ready.then(() => scheduleRefresh(true)).catch(() => {});
     }
 
-    // Saat aset gambar/halaman selesai dimuat
-    window.addEventListener("load", debouncedRefresh);
-    window.addEventListener("resize", debouncedRefresh);
+    const onLoadRefresh = () => scheduleRefresh(true);
+    const onResizeRefresh = () => scheduleRefresh(false);
+    window.addEventListener("load", onLoadRefresh, { passive: true });
+    window.addEventListener("resize", onResizeRefresh, { passive: true });
 
-    // Pantau perubahan tinggi konten dinamis secara presisi tanpa polling berkala
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined" && document.body) {
       resizeObserver = new ResizeObserver(() => {
-        debouncedRefresh();
+        scheduleRefresh(false);
       });
       resizeObserver.observe(document.body);
     }
 
     return () => {
-      window.removeEventListener("load", debouncedRefresh);
-      window.removeEventListener("resize", debouncedRefresh);
+      cancelled = true;
+      window.removeEventListener("load", onLoadRefresh);
+      window.removeEventListener("resize", onResizeRefresh);
       if (resizeTimer) clearTimeout(resizeTimer);
+      if (refreshRaf) cancelAnimationFrame(refreshRaf);
       resizeObserver?.disconnect();
     };
   }, []);
@@ -113,11 +142,21 @@ function ScrollTriggerBridge() {
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<LenisRef>(null);
-  const { tier, prefersReducedMotion } = useAdaptivePerformance();
+  const { prefersReducedMotion } = useAdaptivePerformance();
 
   const isNative = prefersReducedMotion;
 
-  // Single RAF Loop: Lenis dikendalikan langsung oleh GSAP ticker tunggal
+  const lenisOptions = useMemo(
+    () => ({
+      lerp: 0.085,
+      smoothWheel: !isNative,
+      wheelMultiplier: 1,
+      touchMultiplier: 1,
+    }),
+    [isNative]
+  );
+
+  // Single RAF Loop: Lenis synced 1:1 to GSAP ticker without lag-smoothing clamp
   useEffect(() => {
     if (isNative) return;
 
@@ -126,7 +165,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     }
 
     gsap.ticker.add(update);
-    gsap.ticker.lagSmoothing(500, 33);
+    gsap.ticker.lagSmoothing(0);
 
     return () => {
       gsap.ticker.remove(update);
@@ -138,11 +177,7 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       ref={lenisRef}
       root
       autoRaf={false}
-      options={{
-        lerp: tier === "full" ? 0.08 : 0.12,
-        duration: tier === "full" ? 1.15 : 0.8,
-        smoothWheel: !isNative,
-      }}
+      options={lenisOptions}
     >
       <ScrollTriggerBridge />
       {children}

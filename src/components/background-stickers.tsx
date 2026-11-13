@@ -125,11 +125,11 @@ function StickerSlotItem({
   slotStyle: React.CSSProperties;
   isMobileOrLow: boolean;
 }) {
-  // Continuous visibility tracking with 380px rootMargin:
-  // Dynamically mounts WebGL when in or approaching viewport and safely releases context when scrolled away.
-  // Guarantees active WebGL contexts never exceed 4-6 page-wide, eliminating browser context loss.
+  // Lazy one-shot mounting near viewport: once mounted with a lightweight 2D canvas
+  // backed by the shared WebGL2 sticker compositor, keep mounted to avoid scroll remount churn.
   const { ref, isInView } = useInView<HTMLDivElement>({
-    rootMargin: "380px 0px 380px 0px",
+    rootMargin: "420px 0px 420px 0px",
+    triggerOnce: true,
     trackDocumentVisibility: false,
   });
 
@@ -137,7 +137,7 @@ function StickerSlotItem({
     <div
       ref={ref}
       style={slotStyle}
-      className="pointer-events-auto flex items-center justify-center will-change-transform"
+      className="pointer-events-auto flex items-center justify-center"
     >
       {isInView ? (
         <StickerPeel
@@ -157,7 +157,7 @@ function StickerSlotItem({
           swing={0}
           intro={false}
           initialPosition="center"
-          dpr={isMobileOrLow ? 2 : 2.5}
+          dpr={isMobileOrLow ? 1.5 : 2}
         />
       ) : (
         <div

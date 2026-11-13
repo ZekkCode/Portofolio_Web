@@ -61,10 +61,7 @@ export function AcademicJourneySection() {
 
   // Track state
   const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
-  });
+  const activeIndexRef = useRef(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -73,7 +70,21 @@ export function AcademicJourneySection() {
 
   const sectionRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const maxScrollRef = useRef(0);
+  const manualOverrideUntilRef = useRef(0);
+
+  const markManualOverride = useCallback(() => {
+    manualOverrideUntilRef.current = performance.now() + 2000;
+  }, []);
+
+  const commitActiveIndex = useCallback((idx: number) => {
+    if (activeIndexRef.current !== idx) {
+      activeIndexRef.current = idx;
+      setActiveIndex(idx);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
@@ -83,66 +94,86 @@ export function AcademicJourneySection() {
     return () => media.removeEventListener("change", listener);
   }, []);
 
-  // Parallax scroll: scrub horizontal timeline based on vertical page scroll
+  // Parallax scroll: scrub horizontal timeline based on vertical page scroll without per-frame React re-renders
   useEffect(() => {
     const section = sectionRef.current;
     const container = scrollContainerRef.current;
     if (!section || !container) return;
 
     if (prefersReducedMotion) {
+      if (progressBarRef.current) progressBarRef.current.style.transform = "scaleX(1)";
       return;
     }
 
+    const updateBounds = () => {
+      maxScrollRef.current = Math.max(0, container.scrollWidth - container.clientWidth);
+    };
+    updateBounds();
+
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateBounds) : null;
+    ro?.observe(container);
+
     const ctx = gsap.context(() => {
-      // 1. Scrub progress and smooth horizontal gliding on page scroll
       ScrollTrigger.create({
         trigger: section,
-        start: "top 80%",
-        end: "bottom 30%",
-        scrub: 0.8,
+        start: "top 82%",
+        end: "bottom 22%",
+        scrub: 0.65,
         invalidateOnRefresh: true,
+        onRefresh: updateBounds,
         onUpdate: (self) => {
           const p = self.progress;
-          setScrollProgress(p);
+          if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${p})`;
+          }
+
+          if (performance.now() < manualOverrideUntilRef.current) {
+            return;
+          }
 
           const activeIdx = Math.min(
             items.length - 1,
             Math.max(0, Math.floor(p * items.length + 0.15))
           );
-          setActiveIndex(activeIdx);
+          commitActiveIndex(activeIdx);
 
-          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+          const maxScroll = maxScrollRef.current;
           if (maxScroll > 0) {
             container.scrollLeft = maxScroll * p;
           }
         },
       });
 
-      // 2. Individual card horizontal parallax: LEFT -> RIGHT
-      cardRefs.current.forEach((card, idx) => {
-        if (!card) return;
-        const initialOffsetX = (idx + 1) * -50;
+      const validCards = cardRefs.current.filter((c): c is HTMLDivElement => Boolean(c));
+      if (validCards.length > 0) {
         gsap.fromTo(
-          card,
-          { x: initialOffsetX, opacity: 0.7 },
+          validCards,
+          {
+            x: (i: number) => (i + 1) * -42,
+            opacity: 0.72,
+          },
           {
             x: 0,
             opacity: 1,
             ease: "power1.out",
+            force3D: true,
             scrollTrigger: {
               trigger: section,
-              start: "top 85%",
-              end: "bottom 40%",
-              scrub: 0.8,
+              start: "top 86%",
+              end: "bottom 38%",
+              scrub: 0.7,
               invalidateOnRefresh: true,
             },
           }
         );
-      });
+      }
     }, sectionRef);
 
-    return () => ctx.revert();
-  }, [items.length, prefersReducedMotion]);
+    return () => {
+      ro?.disconnect();
+      ctx.revert();
+    };
+  }, [items.length, prefersReducedMotion, commitActiveIndex]);
 
   // Click on year jump
   const handleYearClick = useCallback(
@@ -150,7 +181,8 @@ export function AcademicJourneySection() {
       const itemIndex = items.findIndex((e) => e.startYear === year);
       const container = scrollContainerRef.current;
       if (itemIndex !== -1) {
-        setActiveIndex(itemIndex);
+        manualOverrideUntilRef.current = performance.now() + 2600;
+        commitActiveIndex(itemIndex);
         const card = cardRefs.current[itemIndex];
         if (card && container) {
           container.scrollTo({
@@ -160,7 +192,7 @@ export function AcademicJourneySection() {
         }
       }
     },
-    [items]
+    [items, commitActiveIndex]
   );
 
   const toggleExpand = useCallback((id: string) => {
@@ -173,13 +205,24 @@ export function AcademicJourneySection() {
       if (!container) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
+        manualOverrideUntilRef.current = performance.now() + 2600;
         container.scrollBy({ left: -300, behavior: "smooth" });
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
+        manualOverrideUntilRef.current = performance.now() + 2600;
         container.scrollBy({ left: 300, behavior: "smooth" });
       }
     },
     []
+  );
+
+  const handleTrackWheel = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        markManualOverride();
+      }
+    },
+    [markManualOverride]
   );
 
   const activeEdu = items[activeIndex] || items[0];
@@ -240,12 +283,13 @@ export function AcademicJourneySection() {
             className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-line/80 dark:bg-line/40 rounded-full"
             aria-hidden="true"
           />
-          {/* Scroll-Linked Fill Progress Line (scaleX from Left to Right) */}
+          {/* Scroll-Linked Fill Progress Line (scaleX from Left to Right via ref — 0 re-renders) */}
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-brand dark:bg-blue-500 rounded-full origin-left will-change-transform transition-transform duration-150"
+            ref={progressBarRef}
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-brand dark:bg-blue-500 rounded-full origin-left"
             style={{
               width: "100%",
-              transform: `scaleX(${scrollProgress})`,
+              transform: prefersReducedMotion ? "scaleX(1)" : "scaleX(0)",
             }}
             aria-hidden="true"
           />
@@ -322,10 +366,13 @@ export function AcademicJourneySection() {
       <div
         ref={scrollContainerRef}
         onKeyDown={handleKeyDown}
+        onWheel={handleTrackWheel}
+        onPointerDown={markManualOverride}
+        onTouchStart={markManualOverride}
         tabIndex={0}
         role="region"
         aria-label="Daftar Kartu Jejak Akademik"
-        className="flex gap-5 sm:gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pt-2 pb-6 px-1 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-2xl"
+        className="flex gap-5 sm:gap-6 overflow-x-auto pt-2 pb-6 px-1 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-2xl"
         style={{ scrollbarWidth: "none" }}
       >
         {items.map((edu, idx) => {
@@ -354,7 +401,7 @@ export function AcademicJourneySection() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`snap-center shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
+              className={`shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-lg ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"

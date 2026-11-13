@@ -56,6 +56,15 @@ function useNavScrollState() {
 
   useEffect(() => {
     let rafId = 0;
+    let measureRafId = 0;
+    let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastEvalTime = 0;
+    let cachedDocHeight = 0;
+    let cachedWindowHeight = window.innerHeight;
+    let cachedWindowWidth = window.innerWidth;
+    let cachedHeaderHeight = 64;
+    let cachedFooterTop: number | null = null;
+    let cachedSections: { id: string; navHref: string; top: number; bottom: number }[] = [];
 
     const onManualUserScroll = () => {
       if (isLockedRef.current) {
@@ -64,13 +73,42 @@ function useNavScrollState() {
       }
     };
 
+    const measureLayout = () => {
+      measureRafId = 0;
+      const scrollY = window.scrollY;
+      cachedWindowHeight = window.innerHeight;
+      cachedWindowWidth = window.innerWidth;
+      cachedDocHeight = document.documentElement.scrollHeight;
+
+      const header = document.querySelector("header");
+      cachedHeaderHeight = header ? header.getBoundingClientRect().height : 64;
+
+      const footer = document.querySelector("footer");
+      cachedFooterTop = footer ? footer.getBoundingClientRect().top + scrollY : null;
+
+      const measured: { id: string; navHref: string; top: number; bottom: number }[] = [];
+      for (let i = 0; i < TRACKED_SECTIONS.length; i++) {
+        const id = TRACKED_SECTIONS[i];
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        measured.push({
+          id,
+          navHref: SECTION_NAV_MAP[id] || `#${id}`,
+          top: rect.top + scrollY,
+          bottom: rect.bottom + scrollY,
+        });
+      }
+      cachedSections = measured;
+    };
+
     const evaluate = () => {
       rafId = 0;
       if (isLockedRef.current) return;
 
       const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const docHeight = document.documentElement.scrollHeight;
+      const windowHeight = cachedWindowHeight;
+      const docHeight = cachedDocHeight || document.documentElement.scrollHeight;
 
       const nextScrolled = scrollY > 80;
       if (scrolledRef.current !== nextScrolled) {
@@ -80,9 +118,8 @@ function useNavScrollState() {
 
       let nextAtBottom = false;
       if (scrollY > 250) {
-        const footer = document.querySelector("footer");
-        if (footer) {
-          nextAtBottom = footer.getBoundingClientRect().top <= windowHeight - 40;
+        if (cachedFooterTop !== null) {
+          nextAtBottom = cachedFooterTop - scrollY <= windowHeight - 40;
         } else {
           nextAtBottom = docHeight - (scrollY + windowHeight) < 140;
         }
@@ -102,31 +139,27 @@ function useNavScrollState() {
         return;
       }
 
-      // 2. Reading focal point:
-      const header = document.querySelector("header");
-      const headerHeight = header ? header.getBoundingClientRect().height : 64;
-      const focalPoint = headerHeight + Math.min(windowHeight * 0.28, 200);
-
-      // Single pass over tracked sections (read getBoundingClientRect once per section)
+      // 2. Reading focal point (pure arithmetic against cached section offsets — 0 layout reads per scroll tick)
+      const focalPoint = cachedHeaderHeight + Math.min(windowHeight * 0.28, 200);
       let nextActive = "";
       let fallbackActive = "";
-      for (let i = 0; i < TRACKED_SECTIONS.length; i++) {
-        const id = TRACKED_SECTIONS[i];
-        const el = document.getElementById(id);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (i === 0 && rect.top > focalPoint + 40) {
+
+      for (let i = 0; i < cachedSections.length; i++) {
+        const sec = cachedSections[i];
+        const relTop = sec.top - scrollY;
+        const relBottom = sec.bottom - scrollY;
+        if (i === 0 && relTop > focalPoint + 40) {
           if (activeRef.current !== "") {
             activeRef.current = "";
             setActive("");
           }
           return;
         }
-        if (!nextActive && rect.top <= focalPoint && rect.bottom > focalPoint) {
-          nextActive = SECTION_NAV_MAP[id] || `#${id}`;
+        if (!nextActive && relTop <= focalPoint && relBottom > focalPoint) {
+          nextActive = sec.navHref;
         }
-        if (rect.top <= focalPoint + 80) {
-          fallbackActive = SECTION_NAV_MAP[id] || `#${id}`;
+        if (relTop <= focalPoint + 80) {
+          fallbackActive = sec.navHref;
         }
       }
 
@@ -137,28 +170,68 @@ function useNavScrollState() {
       }
     };
 
-    const onScrollOrResize = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(evaluate);
+    const scheduleEvaluate = () => {
+      if (rafId || throttleTimer) return;
+      const now = performance.now();
+      const elapsed = now - lastEvalTime;
+      if (elapsed >= 64) {
+        rafId = requestAnimationFrame(() => {
+          lastEvalTime = performance.now();
+          evaluate();
+        });
+      } else {
+        throttleTimer = setTimeout(() => {
+          throttleTimer = null;
+          if (!rafId) {
+            rafId = requestAnimationFrame(() => {
+              lastEvalTime = performance.now();
+              evaluate();
+            });
+          }
+        }, 64 - elapsed);
+      }
     };
 
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize, { passive: true });
-    window.addEventListener("wheel", onManualUserScroll, { passive: true });
-    window.addEventListener("touchmove", onManualUserScroll, { passive: true });
-    document.fonts?.ready?.then(onScrollOrResize).catch(() => {});
+    const scheduleMeasureAndEvaluate = () => {
+      if (measureRafId) return;
+      measureRafId = requestAnimationFrame(() => {
+        measureLayout();
+        lastEvalTime = performance.now();
+        evaluate();
+      });
+    };
 
-    const resizeObserver = new ResizeObserver(onScrollOrResize);
+    const onResize = () => {
+      const nextW = window.innerWidth;
+      const nextH = window.innerHeight;
+      if (Math.abs(nextW - cachedWindowWidth) < 2 && Math.abs(nextH - cachedWindowHeight) < 2) return;
+      scheduleMeasureAndEvaluate();
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      const nextDocHeight = document.documentElement.scrollHeight;
+      if (Math.abs(nextDocHeight - cachedDocHeight) < 12) return;
+      scheduleMeasureAndEvaluate();
+    });
     if (document.body) {
       resizeObserver.observe(document.body);
     }
 
+    window.addEventListener("scroll", scheduleEvaluate, { passive: true });
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("wheel", onManualUserScroll, { passive: true });
+    window.addEventListener("touchmove", onManualUserScroll, { passive: true });
+    document.fonts?.ready?.then(scheduleMeasureAndEvaluate).catch(() => {});
+
+    measureLayout();
     evaluate();
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
+      if (measureRafId) cancelAnimationFrame(measureRafId);
+      if (throttleTimer) clearTimeout(throttleTimer);
+      window.removeEventListener("scroll", scheduleEvaluate);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("wheel", onManualUserScroll);
       window.removeEventListener("touchmove", onManualUserScroll);
       resizeObserver.disconnect();

@@ -47,6 +47,7 @@ export function useBuddyRoaming({
 
   const updateState = useCallback(
     (newState: BuddyState) => {
+      if (stateRef.current === newState) return;
       stateRef.current = newState;
       setState(newState);
       onStateChange?.(newState);
@@ -195,8 +196,10 @@ export function useBuddyRoaming({
       const width = window.innerWidth;
       const nextMode: DeviceMode =
         width < 768 ? "mobile" : width < 1024 ? "tablet" : "desktop";
-      deviceModeRef.current = nextMode;
-      setDeviceMode(nextMode);
+      if (deviceModeRef.current !== nextMode) {
+        deviceModeRef.current = nextMode;
+        setDeviceMode(nextMode);
+      }
 
       // Clamp position within safe bounds
       const { minX, maxX } = getSafeBounds();
@@ -230,7 +233,8 @@ export function useBuddyRoaming({
 
     // On-demand 60FPS Physics Tick (runs ONLY while walking)
     const tick = (now: number) => {
-      rafId.current = null;
+      // Sentinel prevents updateState -> wakePhysics from spawning duplicate parallel loops
+      rafId.current = -1;
       const current = stateRef.current;
       const isWalking =
         (current === "walking-left" || current === "walking-right") &&
@@ -241,6 +245,7 @@ export function useBuddyRoaming({
         !document.hidden;
 
       if (!isWalking) {
+        rafId.current = null;
         lastTimeRef.current = 0;
         return;
       }
@@ -287,10 +292,10 @@ export function useBuddyRoaming({
     // Pause physics tick when tab is in background to save CPU and battery
     const onVisibilityChange = () => {
       if (document.hidden) {
-        if (rafId.current !== null) {
+        if (rafId.current !== null && rafId.current > 0) {
           cancelAnimationFrame(rafId.current);
-          rafId.current = null;
         }
+        rafId.current = null;
         lastTimeRef.current = 0;
       } else if (
         stateRef.current === "walking-left" ||
@@ -303,7 +308,8 @@ export function useBuddyRoaming({
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
+      if (rafId.current !== null && rafId.current > 0) cancelAnimationFrame(rafId.current);
+      rafId.current = null;
       if (timerRef.current) clearTimeout(timerRef.current);
       footerObserver?.disconnect();
       window.removeEventListener("resize", updateDeviceMode);

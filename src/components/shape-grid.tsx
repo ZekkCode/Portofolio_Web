@@ -293,7 +293,7 @@ export default function ShapeGrid({
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
       const view = viewFor(s.tiltX, s.tiltY, width, height, s.cellSize);
-      let ratio = s.dpr ?? Math.min(window.devicePixelRatio || 1, 2);
+      let ratio = s.dpr ?? Math.min(window.devicePixelRatio || 1, 1.5);
       const pixels = view.width * view.height * ratio * ratio;
       if (pixels > MAX_PIXELS) ratio *= Math.sqrt(MAX_PIXELS / pixels);
       state.width = width;
@@ -463,74 +463,82 @@ export default function ShapeGrid({
       }
 
       const glowing = s.glow > 0;
-      for (let i = i0; i <= i1; i++) {
-        for (let j = j0; j <= j1; j++) {
-          const [cx, cy] = centerOf(s.shape, layout, i, j);
-          const key = keyOf(i, j);
-          let value = state.lit.get(key) ?? 0;
-          let hue = state.hues.get(key) ?? 0;
-          if (state.cascades.length) {
-            const pulse = cascadeAt(s, cx, cy);
-            if (pulse > value) {
-              value = pulse;
-              hue = state.cascadeHue;
+      const hasActiveHighlights =
+        state.lit.size > 0 ||
+        state.cascades.length > 0 ||
+        (s.twinkle > 0 && !reduce) ||
+        introRadius !== Infinity;
+
+      if (hasActiveHighlights) {
+        for (let i = i0; i <= i1; i++) {
+          for (let j = j0; j <= j1; j++) {
+            const [cx, cy] = centerOf(s.shape, layout, i, j);
+            const key = keyOf(i, j);
+            let value = state.lit.get(key) ?? 0;
+            let hue = state.hues.get(key) ?? 0;
+            if (state.cascades.length) {
+              const pulse = cascadeAt(s, cx, cy);
+              if (pulse > value) {
+                value = pulse;
+                hue = state.cascadeHue;
+              }
             }
-          }
-          if (s.twinkle > 0 && !reduce) {
-            const seed = hash(i, j);
-            const wave = Math.sin(state.time * (0.35 + seed * 0.5) + seed * 40);
-            const sparkle = s.twinkle * 0.7 * Math.max(0, wave) ** 18;
-            if (sparkle > value) {
-              value = sparkle;
-              hue = seed * 360;
+            if (s.twinkle > 0 && !reduce) {
+              const seed = hash(i, j);
+              const wave = Math.sin(state.time * (0.35 + seed * 0.5) + seed * 40);
+              const sparkle = s.twinkle * 0.7 * Math.max(0, wave) ** 18;
+              if (sparkle > value) {
+                value = sparkle;
+                hue = seed * 360;
+              }
             }
-          }
-          if (introRadius !== Infinity) {
-            const front = introRadius - Math.hypot(cx - centerX, cy - centerY);
-            if (front < 0) continue;
-            const wave = Math.exp(-((front / (size * 1.4)) ** 2)) * 0.85;
-            if (wave > value) {
-              value = wave;
-              hue = (Math.atan2(cy - centerY, cx - centerX) * 180) / Math.PI + state.time * 120;
+            if (introRadius !== Infinity) {
+              const front = introRadius - Math.hypot(cx - centerX, cy - centerY);
+              if (front < 0) continue;
+              const wave = Math.exp(-((front / (size * 1.4)) ** 2)) * 0.85;
+              if (wave > value) {
+                value = wave;
+                hue = (Math.atan2(cy - centerY, cx - centerX) * 180) / Math.PI + state.time * 120;
+              }
             }
-          }
-          if (value <= 0.01) continue;
-          const color = s.rainbow ? tint(hue, s.tone) : s.hoverColor;
-          const x = cx - state.offsetX;
-          const y = cy - state.offsetY;
-          ctx.beginPath();
-          traceCell(ctx, s.shape, layout, size, i, j, x, y, markers ? value * size * 0.08 : s.lineWidth * 0.5);
-          if (markers) {
-            ctx.globalAlpha = Math.min(1, value);
+            if (value <= 0.01) continue;
+            const color = s.rainbow ? tint(hue, s.tone) : s.hoverColor;
+            const x = cx - state.offsetX;
+            const y = cy - state.offsetY;
+            ctx.beginPath();
+            traceCell(ctx, s.shape, layout, size, i, j, x, y, markers ? value * size * 0.08 : s.lineWidth * 0.5);
+            if (markers) {
+              ctx.globalAlpha = Math.min(1, value);
+              if (glowing) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = s.glow * 14 * value;
+              }
+              if (s.shape === 'dot') {
+                ctx.fillStyle = color;
+                ctx.fill();
+              } else {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = s.lineWidth * (1 + value * 0.6);
+                ctx.stroke();
+              }
+              ctx.shadowBlur = 0;
+              continue;
+            }
+            if (s.fillOpacity > 0) {
+              ctx.globalAlpha = Math.min(1, value) * s.fillOpacity;
+              ctx.fillStyle = s.rainbow ? color : s.hoverFillColor;
+              ctx.fill();
+            }
+            ctx.globalAlpha = Math.min(1, value) * 0.85;
             if (glowing) {
               ctx.shadowColor = color;
-              ctx.shadowBlur = s.glow * 14 * value;
+              ctx.shadowBlur = s.glow * 16 * value;
             }
-            if (s.shape === 'dot') {
-              ctx.fillStyle = color;
-              ctx.fill();
-            } else {
-              ctx.strokeStyle = color;
-              ctx.lineWidth = s.lineWidth * (1 + value * 0.6);
-              ctx.stroke();
-            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = s.lineWidth;
+            ctx.stroke();
             ctx.shadowBlur = 0;
-            continue;
           }
-          if (s.fillOpacity > 0) {
-            ctx.globalAlpha = Math.min(1, value) * s.fillOpacity;
-            ctx.fillStyle = s.rainbow ? color : s.hoverFillColor;
-            ctx.fill();
-          }
-          ctx.globalAlpha = Math.min(1, value) * 0.85;
-          if (glowing) {
-            ctx.shadowColor = color;
-            ctx.shadowBlur = s.glow * 16 * value;
-          }
-          ctx.strokeStyle = color;
-          ctx.lineWidth = s.lineWidth;
-          ctx.stroke();
-          ctx.shadowBlur = 0;
         }
       }
       ctx.globalAlpha = 1;

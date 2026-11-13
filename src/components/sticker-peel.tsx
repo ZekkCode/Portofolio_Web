@@ -384,6 +384,409 @@ const convexHull = (points: [number, number][]) => {
   return lower.slice(0, -1).concat(upper.slice(0, -1));
 };
 
+type PreparedStickerAsset = {
+  src: string;
+  texture: WebGLTexture;
+  aspect: number;
+  meshX: number;
+  meshY: number;
+  texel: number;
+  mask: Uint8Array;
+  maskW: number;
+  maskH: number;
+  hull: [number, number][];
+};
+
+type StickerDrawRequest = {
+  asset: PreparedStickerAsset;
+  s: Settings;
+  size: number;
+  ratio: number;
+  angle: number;
+  dx: number;
+  dy: number;
+  fold: number;
+  peel: number;
+  lift: number;
+  lightX: number;
+  lightY: number;
+  lightZ: number;
+  glintX: number;
+  glintY: number;
+};
+
+interface SharedStickerRenderer {
+  readonly lost: boolean;
+  prepareAsset: (src: string) => Promise<PreparedStickerAsset | null>;
+  renderTo2D: (
+    targetCanvas: HTMLCanvasElement,
+    targetCtx: CanvasRenderingContext2D,
+    req: StickerDrawRequest
+  ) => boolean;
+}
+
+let sharedStickerRenderer: SharedStickerRenderer | null = null;
+
+function getSharedStickerRenderer(): SharedStickerRenderer | null {
+  if (typeof window === "undefined") return null;
+  if (sharedStickerRenderer && !sharedStickerRenderer.lost) return sharedStickerRenderer;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 2;
+  canvas.height = 2;
+
+  let gl: WebGL2RenderingContext | null = null;
+  try {
+    gl = canvas.getContext("webgl2", {
+      alpha: true,
+      premultipliedAlpha: true,
+      antialias: true,
+      depth: true,
+      stencil: false,
+      powerPreference: "low-power",
+    });
+  } catch {
+    gl = null;
+  }
+  if (!gl) return null;
+
+  const program = link(gl, VERTEX, FRAGMENT);
+  const post = link(gl, POST_VERTEX, POST_FRAGMENT);
+  if (!program || !post) return null;
+
+  const u = program.uniforms;
+  const pu = post.uniforms;
+  const targets: Target[] = [0, 1].map(() => {
+    const target = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, target);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const buffer = gl.createFramebuffer()!;
+    return { texture: target, buffer, width: 0, height: 0 };
+  });
+
+  const sizeTargets = (viewSize: number) => {
+    const targetWidth = Math.max(1, Math.round(viewSize / 2));
+    const targetHeight = targetWidth;
+    targets.forEach((target) => {
+      if (target.width === targetWidth && target.height === targetHeight) return;
+      target.width = targetWidth;
+      target.height = targetHeight;
+      gl.bindTexture(gl.TEXTURE_2D, target.texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, targetWidth, targetHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.buffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target.texture, 0);
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  };
+
+  const vertices = new Float32Array((GRID + 1) * (GRID + 1) * 2);
+  for (let y = 0; y <= GRID; y++) {
+    for (let x = 0; x <= GRID; x++) {
+      const i = (y * (GRID + 1) + x) * 2;
+      vertices[i] = x / GRID;
+      vertices[i + 1] = y / GRID;
+    }
+  }
+  const indices = new Uint16Array(GRID * GRID * 6);
+  let cursor = 0;
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      const a = y * (GRID + 1) + x;
+      const b = a + 1;
+      const c = a + GRID + 1;
+      const d = c + 1;
+      indices.set([a, b, d, a, d, c], cursor);
+      cursor += 6;
+    }
+  }
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+  const scratch = document.createElement("canvas");
+  const scratchContext = scratch.getContext("2d", { willReadFrequently: true });
+  const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  const colorCache = new Map<string, number[]>();
+  const parse = (value: string): number[] => {
+    const key = String(value);
+    const cached = colorCache.get(key);
+    if (cached) return cached;
+    let rgb = [0.83, 0.83, 0.85];
+    if (probe) {
+      probe.clearRect(0, 0, 1, 1);
+      probe.fillStyle = "#d4d4d8";
+      probe.fillStyle = key;
+      probe.fillRect(0, 0, 1, 1);
+      const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
+      rgb = [r / 255, g / 255, b / 255];
+    }
+    colorCache.set(key, rgb);
+    return rgb;
+  };
+
+  const anisoExt =
+    gl.getExtension("EXT_texture_filter_anisotropic") ||
+    gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+  const maxAniso = anisoExt ? Math.min(4, gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1) : 1;
+
+  const assetCache = new Map<string, Promise<PreparedStickerAsset | null>>();
+  let isLost = false;
+
+  canvas.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    isLost = true;
+    assetCache.clear();
+    if (sharedStickerRenderer === renderer) {
+      sharedStickerRenderer = null;
+    }
+  });
+
+  const prepareAsset = (src: string): Promise<PreparedStickerAsset | null> => {
+    if (!src || isLost || gl.isContextLost()) return Promise.resolve(null);
+    const existing = assetCache.get(src);
+    if (existing) return existing;
+
+    const promise = loadSharedStickerImage(src)
+      .then((image): PreparedStickerAsset | null => {
+        if (!image || isLost || gl.isContextLost() || !scratchContext) {
+          assetCache.delete(src);
+          return null;
+        }
+        const iw = image.naturalWidth || 1;
+        const ih = image.naturalHeight || 1;
+        const fit = Math.min(1, MAX_TEXTURE / (Math.max(iw, ih) * (1 + 2 * PAD)));
+        const w = Math.max(1, Math.round(iw * fit));
+        const h = Math.max(1, Math.round(ih * fit));
+        const padX = Math.round(w * PAD);
+        const padY = Math.round(h * PAD);
+        scratch.width = w + padX * 2;
+        scratch.height = h + padY * 2;
+        scratchContext.clearRect(0, 0, scratch.width, scratch.height);
+        scratchContext.drawImage(image, padX, padY, w, h);
+
+        const texture = gl.createTexture();
+        if (!texture) {
+          assetCache.delete(src);
+          return null;
+        }
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scratch);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        if (anisoExt) {
+          gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+        }
+
+        const aspect = ih / iw;
+        const meshX = scratch.width / w;
+        const meshY = scratch.height / h;
+        const texel = scratch.width;
+
+        const maskW = Math.max(8, Math.round(MASK_SIZE * Math.min(1, iw / ih)));
+        const maskH = Math.max(8, Math.round(MASK_SIZE * Math.min(1, ih / iw)));
+        scratch.width = maskW;
+        scratch.height = maskH;
+        scratchContext.clearRect(0, 0, maskW, maskH);
+        scratchContext.drawImage(image, 0, 0, maskW, maskH);
+        const pixels = scratchContext.getImageData(0, 0, maskW, maskH).data;
+        const mask = new Uint8Array(maskW * maskH).fill(255);
+        const queue: number[] = [];
+        const visit = (px: number, py: number) => {
+          const i = py * maskW + px;
+          if (mask[i] === 0 || pixels[i * 4 + 3] > 100) return;
+          mask[i] = 0;
+          queue.push(i);
+        };
+        for (let px = 0; px < maskW; px++) {
+          visit(px, 0);
+          visit(px, maskH - 1);
+        }
+        for (let py = 0; py < maskH; py++) {
+          visit(0, py);
+          visit(maskW - 1, py);
+        }
+        while (queue.length) {
+          const i = queue.pop() as number;
+          const px = i % maskW;
+          const py = (i - px) / maskW;
+          if (px > 0) visit(px - 1, py);
+          if (px < maskW - 1) visit(px + 1, py);
+          if (py > 0) visit(px, py - 1);
+          if (py < maskH - 1) visit(px, py + 1);
+        }
+        const points: [number, number][] = [];
+        for (let py = 0; py < maskH; py++) {
+          for (let px = 0; px < maskW; px++) {
+            if (pixels[(py * maskW + px) * 4 + 3] > 127) {
+              points.push([(px + 0.5) / maskW - 0.5, (py + 0.5) / maskH - 0.5]);
+            }
+          }
+        }
+
+        return {
+          src,
+          texture,
+          aspect,
+          meshX,
+          meshY,
+          texel,
+          mask,
+          maskW,
+          maskH,
+          hull: convexHull(points),
+        };
+      })
+      .catch(() => {
+        assetCache.delete(src);
+        return null;
+      });
+
+    assetCache.set(src, promise);
+    return promise;
+  };
+
+  const count = GRID * GRID * 6;
+
+  const renderTo2D = (
+    targetCanvas: HTMLCanvasElement,
+    targetCtx: CanvasRenderingContext2D,
+    req: StickerDrawRequest
+  ): boolean => {
+    if (isLost || gl.isContextLost()) {
+      isLost = true;
+      return false;
+    }
+
+    const cw = Math.max(1, targetCanvas.width);
+    const ch = Math.max(1, targetCanvas.height);
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+    }
+
+    const { asset, s, size, ratio, angle, dx, dy, fold, peel, lift, lightX, lightY, lightZ, glintX, glintY } = req;
+    const w = s.width;
+    const h = w * asset.aspect;
+    const center = size / 2;
+    const peeled = peel > 0.001;
+    const scale = 1;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, cw, ch);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clearDepth(1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.useProgram(program.program);
+    gl.bindVertexArray(vao);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, asset.texture);
+    gl.uniform1i(u.uImage, 0);
+    gl.uniform2f(u.uCanvas, size, size);
+    gl.uniform2f(u.uMesh, w * asset.meshX, h * asset.meshY);
+    gl.uniform2f(u.uCenter, center, center);
+    gl.uniform2f(u.uDir, dx, dy);
+    gl.uniform1f(u.uFold, fold);
+    gl.uniform1f(u.uRadius, s.curlRadius);
+    gl.uniform1f(u.uAngle, angle);
+    gl.uniform1f(u.uScale, scale);
+    gl.uniform1f(u.uLift, lift * 18);
+    gl.uniform2f(u.uShadowOffset, 1.2, 2.4);
+    gl.uniform2f(u.uShadowSlope, 0.28, 0.55);
+    gl.uniform1i(u.uFinish, s.finish);
+    gl.uniform3fv(u.uBack, parse(s.backColor));
+    gl.uniform3f(u.uLight, lightX, lightY, lightZ);
+    gl.uniform1f(u.uShine, s.lighting);
+    gl.uniform1f(u.uShadow, s.shadow * 0.55);
+    gl.uniform1f(u.uTexel, asset.texel / (w * asset.meshX));
+    gl.uniform1f(u.uLod, Math.max(0, Math.log2(asset.texel / (w * asset.meshX * scale * ratio)) - 0.85));
+    gl.uniform2f(u.uGlint, glintX, glintY);
+    gl.disable(gl.DEPTH_TEST);
+
+    if (peeled) {
+      sizeTargets(size);
+      const [first, second] = targets;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, first.buffer);
+      gl.viewport(0, 0, first.width, first.height);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.disable(gl.BLEND);
+      gl.uniform1i(u.uPass, 2);
+      gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+      gl.useProgram(post.program);
+      gl.uniform1i(pu.uSource, 1);
+      gl.uniform1i(pu.uMode, 0);
+      gl.uniform1f(pu.uSigma, Math.min(4, (2.5 + s.curlRadius * 0.15) / 2));
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, second.buffer);
+      gl.bindTexture(gl.TEXTURE_2D, first.texture);
+      gl.uniform2f(pu.uStep, 1 / first.width, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, first.buffer);
+      gl.bindTexture(gl.TEXTURE_2D, second.texture);
+      gl.uniform2f(pu.uStep, 0, 1 / first.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, cw, ch);
+      gl.useProgram(program.program);
+      gl.activeTexture(gl.TEXTURE0);
+    }
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform1i(u.uPass, 0);
+    gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1i(u.uPass, 1);
+    gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+
+    if (peeled) {
+      gl.useProgram(post.program);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, targets[0].texture);
+      gl.uniform1i(pu.uMode, 1);
+      gl.uniform1f(pu.uStrength, s.shadow * 0.6);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.useProgram(program.program);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LESS);
+      gl.uniform1i(u.uPass, 3);
+      gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+      gl.disable(gl.DEPTH_TEST);
+    }
+
+    targetCtx.clearRect(0, 0, cw, ch);
+    targetCtx.drawImage(canvas, 0, 0, cw, ch);
+    return true;
+  };
+
+  const renderer: SharedStickerRenderer = {
+    get lost() {
+      return isLost;
+    },
+    prepareAsset,
+    renderTo2D,
+  };
+
+  sharedStickerRenderer = renderer;
+  return renderer;
+}
+
 export const StickerPeel = memo(function StickerPeel({
   imageSrc,
   width = 44,
@@ -415,25 +818,6 @@ export const StickerPeel = memo(function StickerPeel({
   const hitRef = useRef<HTMLDivElement>(null);
   const wakeRef = useRef<(() => void) | null>(null);
   const [fallback, setFallback] = useState(false);
-  const [inView, setInView] = useState(false);
-
-  // Lazy viewport mounting: only activate WebGL context when within 350px of the viewport
-  // This keeps active WebGL contexts strictly at 3-5 across the entire page, avoiding Chrome context limits.
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry) {
-          setInView(entry.isIntersecting);
-        }
-      },
-      { rootMargin: "350px 0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   const settings: Settings = {
     imageSrc,
@@ -464,7 +848,7 @@ export const StickerPeel = memo(function StickerPeel({
   });
 
   useEffect(() => {
-    if (!inView || fallback) return undefined;
+    if (fallback) return undefined;
 
     const root = rootRef.current;
     const canvas = canvasRef.current;
@@ -472,124 +856,14 @@ export const StickerPeel = memo(function StickerPeel({
     const parent = root?.parentElement;
     if (!root || !canvas || !hit || !parent) return undefined;
 
-    let gl: WebGL2RenderingContext | null = null;
-    try {
-      gl = canvas.getContext("webgl2", {
-        alpha: true,
-        premultipliedAlpha: true,
-        antialias: true,
-        depth: true,
-        stencil: false,
-        powerPreference: "low-power",
-      });
-    } catch {
-      gl = null;
-    }
-
-    if (!gl) {
-      setFallback(true);
+    const ctx2d = canvas.getContext("2d", { alpha: true });
+    const renderer = getSharedStickerRenderer();
+    if (!ctx2d || !renderer || renderer.lost) {
+      queueMicrotask(() => setFallback(true));
       return undefined;
     }
 
-    const program = link(gl, VERTEX, FRAGMENT);
-    const post = link(gl, POST_VERTEX, POST_FRAGMENT);
-    if (!program || !post) {
-      setFallback(true);
-      return undefined;
-    }
-
-    const u = program.uniforms;
-    const pu = post.uniforms;
-    const targets: Target[] = [0, 1].map(() => {
-      const target = gl.createTexture()!;
-      gl.bindTexture(gl.TEXTURE_2D, target);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      const buffer = gl.createFramebuffer()!;
-      return { texture: target, buffer, width: 0, height: 0 };
-    });
-
-    const sizeTargets = () => {
-      const targetWidth = Math.max(1, Math.round(view.size / 2));
-      const targetHeight = targetWidth;
-      targets.forEach((target) => {
-        if (target.width === targetWidth && target.height === targetHeight) return;
-        target.width = targetWidth;
-        target.height = targetHeight;
-        gl.bindTexture(gl.TEXTURE_2D, target.texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, targetWidth, targetHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, target.buffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target.texture, 0);
-      });
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    };
-
-    const vertices = new Float32Array((GRID + 1) * (GRID + 1) * 2);
-    for (let y = 0; y <= GRID; y++) {
-      for (let x = 0; x <= GRID; x++) {
-        const i = (y * (GRID + 1) + x) * 2;
-        vertices[i] = x / GRID;
-        vertices[i + 1] = y / GRID;
-      }
-    }
-    const indices = new Uint16Array(GRID * GRID * 6);
-    let cursor = 0;
-    for (let y = 0; y < GRID; y++) {
-      for (let x = 0; x < GRID; x++) {
-        const a = y * (GRID + 1) + x;
-        const b = a + 1;
-        const c = a + GRID + 1;
-        const d = c + 1;
-        indices.set([a, b, d, a, d, c], cursor);
-        cursor += 6;
-      }
-    }
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    const vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
-
-    const texture = gl.createTexture()!;
-    const scratch = document.createElement("canvas");
-    const scratchContext = scratch.getContext("2d", { willReadFrequently: true });
-    const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
-    const colorCache = new Map<string, number[]>();
-    const parse = (value: string): number[] => {
-      const key = String(value);
-      const cached = colorCache.get(key);
-      if (cached) return cached;
-      let rgb = [0.83, 0.83, 0.85];
-      if (probe) {
-        probe.clearRect(0, 0, 1, 1);
-        probe.fillStyle = "#d4d4d8";
-        probe.fillStyle = key;
-        probe.fillRect(0, 0, 1, 1);
-        const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
-        rgb = [r / 255, g / 255, b / 255];
-      }
-      colorCache.set(key, rgb);
-      return rgb;
-    };
-
-    const sticker: {
-      ready: boolean;
-      aspect: number;
-      meshX: number;
-      meshY: number;
-      texel: number;
-      mask: Uint8Array | null;
-      maskW: number;
-      maskH: number;
-      hull: [number, number][];
-    } = { ready: false, aspect: 1, meshX: 1, meshY: 1, texel: 1, mask: null, maskW: 1, maskH: 1, hull: [] };
+    let asset: PreparedStickerAsset | null = null;
     const view = { ratio: 1, size: 1, density: 0 };
     const bounds = { width: 1, height: 1 };
     const state = {
@@ -617,121 +891,36 @@ export const StickerPeel = memo(function StickerPeel({
     let raf = 0;
     let last = 0;
     let visible = true;
+    let drawnInitial = false;
+    let dirty = true;
     let loadedSrc: string | null = null;
     let alive = true;
 
-    const height = () => settingsRef.current.width * sticker.aspect;
+    const height = () => settingsRef.current.width * (asset?.aspect ?? 1);
 
     const extentAlong = (dx: number, dy: number): [number, number] => {
       const s = settingsRef.current;
       const w = s.width;
       const h = height();
-      if (!sticker.hull.length) {
+      if (!asset || !asset.hull.length) {
         const half = (Math.abs(dx) * w + Math.abs(dy) * h) / 2;
         return [-half, half];
       }
       let min = Infinity;
       let max = -Infinity;
-      sticker.hull.forEach(([px, py]) => {
+      for (let i = 0; i < asset.hull.length; i++) {
+        const [px, py] = asset.hull[i];
         const value = px * w * dx + py * h * dy;
         if (value < min) min = value;
         if (value > max) max = value;
-      });
+      }
       return [min, max];
-    };
-
-    const load = (src: string) => {
-      loadedSrc = src;
-      sticker.ready = false;
-      if (!src) return;
-
-      loadSharedStickerImage(src).then((image) => {
-        if (!image || !alive || loadedSrc !== src || !scratchContext) return;
-        const iw = image.naturalWidth || 1;
-        const ih = image.naturalHeight || 1;
-        const fit = Math.min(1, MAX_TEXTURE / (Math.max(iw, ih) * (1 + 2 * PAD)));
-        const w = Math.max(1, Math.round(iw * fit));
-        const h = Math.max(1, Math.round(ih * fit));
-        const padX = Math.round(w * PAD);
-        const padY = Math.round(h * PAD);
-        scratch.width = w + padX * 2;
-        scratch.height = h + padY * 2;
-        scratchContext.clearRect(0, 0, scratch.width, scratch.height);
-        scratchContext.drawImage(image, padX, padY, w, h);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scratch);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        const anisoExt =
-          gl.getExtension("EXT_texture_filter_anisotropic") ||
-          gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
-        if (anisoExt) {
-          const maxAniso = gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1;
-          gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, maxAniso));
-        }
-        sticker.aspect = ih / iw;
-        sticker.meshX = scratch.width / w;
-        sticker.meshY = scratch.height / h;
-        sticker.texel = scratch.width;
-        const maskW = Math.max(8, Math.round(MASK_SIZE * Math.min(1, iw / ih)));
-        const maskH = Math.max(8, Math.round(MASK_SIZE * Math.min(1, ih / iw)));
-        scratch.width = maskW;
-        scratch.height = maskH;
-        scratchContext.clearRect(0, 0, maskW, maskH);
-        scratchContext.drawImage(image, 0, 0, maskW, maskH);
-        const pixels = scratchContext.getImageData(0, 0, maskW, maskH).data;
-        const mask = new Uint8Array(maskW * maskH).fill(255);
-        const queue: number[] = [];
-        const visit = (x: number, y: number) => {
-          const i = y * maskW + x;
-          if (mask[i] === 0 || pixels[i * 4 + 3] > 100) return;
-          mask[i] = 0;
-          queue.push(i);
-        };
-        for (let x = 0; x < maskW; x++) {
-          visit(x, 0);
-          visit(x, maskH - 1);
-        }
-        for (let y = 0; y < maskH; y++) {
-          visit(0, y);
-          visit(maskW - 1, y);
-        }
-        while (queue.length) {
-          const i = queue.pop() as number;
-          const x = i % maskW;
-          const y = (i - x) / maskW;
-          if (x > 0) visit(x - 1, y);
-          if (x < maskW - 1) visit(x + 1, y);
-          if (y > 0) visit(x, y - 1);
-          if (y < maskH - 1) visit(x, y + 1);
-        }
-        const points: [number, number][] = [];
-        for (let y = 0; y < maskH; y++) {
-          for (let x = 0; x < maskW; x++) {
-            if (pixels[(y * maskW + x) * 4 + 3] > 127) points.push([(x + 0.5) / maskW - 0.5, (y + 0.5) / maskH - 0.5]);
-          }
-        }
-        sticker.mask = mask;
-        sticker.maskW = maskW;
-        sticker.maskH = maskH;
-        sticker.hull = convexHull(points);
-        sticker.ready = true;
-        layout();
-        wake();
-      }).catch(() => {
-        setFallback(true);
-      });
     };
 
     let resizePending = false;
     const applyLayout = () => {
       const s = settingsRef.current;
-      view.ratio = Math.min(s.dpr || Math.max(window.devicePixelRatio || 2, 2), 3);
+      view.ratio = Math.min(s.dpr || Math.max(window.devicePixelRatio || 2, 2), 2.5);
       bounds.width = Math.max(1, parent.clientWidth);
       bounds.height = Math.max(1, parent.clientHeight);
       const h = height();
@@ -741,8 +930,9 @@ export const StickerPeel = memo(function StickerPeel({
         view.density = view.ratio;
         root.style.width = `${size}px`;
         root.style.height = `${size}px`;
-        canvas.width = Math.round(size * view.ratio);
-        canvas.height = Math.round(size * view.ratio);
+        canvas.width = Math.max(1, Math.round(size * view.ratio));
+        canvas.height = Math.max(1, Math.round(size * view.ratio));
+        dirty = true;
       }
       hit.style.width = `${Math.ceil(s.width * 1.3)}px`;
       hit.style.height = `${Math.ceil(h * 1.3)}px`;
@@ -754,12 +944,8 @@ export const StickerPeel = memo(function StickerPeel({
         state.y = bounds.height / 2 + (offset.y || 0);
         state.light = { x: state.x - s.width * 0.45, y: state.y - h * 0.9, z: LIGHT_HEIGHT * 1.6 };
         state.placed = true;
+        dirty = true;
       }
-    };
-
-    const layout = () => {
-      resizePending = true;
-      wake();
     };
 
     const toParent = (event: PointerEvent): Point => {
@@ -778,21 +964,17 @@ export const StickerPeel = memo(function StickerPeel({
       };
     };
 
-    const draw = () => {
+    const draw = (): boolean => {
       const s = settingsRef.current;
       const size = view.size;
       const offsetX = state.press ? state.x - size / 2 : Math.round(state.x - size / 2);
       const offsetY = state.press ? state.y - size / 2 : Math.round(state.y - size / 2);
       root.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
       const angle = s.rotate + state.swing;
-      const scale = 1;
       hit.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clearDepth(1);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      if (!sticker.ready) return;
+
+      if (!asset) return true;
+
       const w = s.width;
       const h = height();
       const dx = -Math.sin(state.dir);
@@ -802,82 +984,60 @@ export const StickerPeel = memo(function StickerPeel({
       const fold = start + peel * (end - start);
       const lift = Math.max(0, state.lift);
       const center = size / 2;
-      const count = GRID * GRID * 6;
-      const peeled = peel > 0.001;
-      gl.useProgram(program.program);
-      gl.bindVertexArray(vao);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.uniform1i(u.uImage, 0);
-      gl.uniform2f(u.uCanvas, size, size);
-      gl.uniform2f(u.uMesh, w * sticker.meshX, h * sticker.meshY);
-      gl.uniform2f(u.uCenter, center, center);
-      gl.uniform2f(u.uDir, dx, dy);
-      gl.uniform1f(u.uFold, fold);
-      gl.uniform1f(u.uRadius, s.curlRadius);
-      gl.uniform1f(u.uAngle, angle);
-      gl.uniform1f(u.uScale, scale);
-      gl.uniform1f(u.uLift, lift * 18);
-      gl.uniform2f(u.uShadowOffset, 1.2, 2.4);
-      gl.uniform2f(u.uShadowSlope, 0.28, 0.55);
-      gl.uniform1i(u.uFinish, s.finish);
-      gl.uniform3fv(u.uBack, parse(s.backColor));
-      gl.uniform3f(u.uLight, state.light.x - (state.x - center), state.light.y - (state.y - center), state.light.z);
-      gl.uniform1f(u.uShine, s.lighting);
-      gl.uniform1f(u.uShadow, s.shadow * 0.55);
-      gl.uniform1f(u.uTexel, sticker.texel / (w * sticker.meshX));
-      gl.uniform1f(u.uLod, Math.max(0, Math.log2(sticker.texel / (w * sticker.meshX * scale * view.ratio)) - 0.85));
       const glint = toLocal(state.light);
-      gl.uniform2f(u.uGlint, glint.x / (w * sticker.meshX) + 0.5, glint.y / (h * sticker.meshY) + 0.5);
-      gl.disable(gl.DEPTH_TEST);
-      if (peeled) {
-        sizeTargets();
-        const [first, second] = targets;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, first.buffer);
-        gl.viewport(0, 0, first.width, first.height);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.disable(gl.BLEND);
-        gl.uniform1i(u.uPass, 2);
-        gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-        gl.useProgram(post.program);
-        gl.uniform1i(pu.uSource, 1);
-        gl.uniform1i(pu.uMode, 0);
-        gl.uniform1f(pu.uSigma, Math.min(4, (2.5 + s.curlRadius * 0.15) / 2));
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, second.buffer);
-        gl.bindTexture(gl.TEXTURE_2D, first.texture);
-        gl.uniform2f(pu.uStep, 1 / first.width, 0);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, first.buffer);
-        gl.bindTexture(gl.TEXTURE_2D, second.texture);
-        gl.uniform2f(pu.uStep, 0, 1 / first.height);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.useProgram(program.program);
-        gl.activeTexture(gl.TEXTURE0);
+
+      const activeRenderer = getSharedStickerRenderer();
+      if (!activeRenderer) {
+        setFallback(true);
+        return false;
       }
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      gl.uniform1i(u.uPass, 0);
-      gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-      gl.uniform1i(u.uPass, 1);
-      gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-      if (peeled) {
-        gl.useProgram(post.program);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, targets[0].texture);
-        gl.uniform1i(pu.uMode, 1);
-        gl.uniform1f(pu.uStrength, s.shadow * 0.6);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.useProgram(program.program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LESS);
-        gl.uniform1i(u.uPass, 3);
-        gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-        gl.disable(gl.DEPTH_TEST);
+
+      const ok = activeRenderer.renderTo2D(canvas, ctx2d, {
+        asset,
+        s,
+        size,
+        ratio: view.ratio,
+        angle,
+        dx,
+        dy,
+        fold,
+        peel,
+        lift,
+        lightX: state.light.x - (state.x - center),
+        lightY: state.light.y - (state.y - center),
+        lightZ: state.light.z,
+        glintX: glint.x / (w * asset.meshX) + 0.5,
+        glintY: glint.y / (h * asset.meshY) + 0.5,
+      });
+
+      if (!ok) {
+        setFallback(true);
+        return false;
       }
+
+      drawnInitial = true;
+      dirty = false;
+      return true;
+    };
+
+    const load = (src: string) => {
+      loadedSrc = src;
+      asset = null;
+      drawnInitial = false;
+      dirty = true;
+      if (!src) return;
+
+      renderer.prepareAsset(src).then((prepared) => {
+        if (!alive || loadedSrc !== src) return;
+        if (!prepared) {
+          setFallback(true);
+          return;
+        }
+        asset = prepared;
+        applyLayout();
+        if (!draw()) return;
+        if (visible && state.hover) wake();
+      });
     };
 
     const frame = (now: number) => {
@@ -886,7 +1046,10 @@ export const StickerPeel = memo(function StickerPeel({
         resizePending = false;
         applyLayout();
       }
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden) {
+        root.style.willChange = "";
+        return;
+      }
       const s = settingsRef.current;
       const dt = last ? clamp((now - last) / 1000, 0.001, 1 / 30) : 1 / 60;
       last = now;
@@ -920,15 +1083,19 @@ export const StickerPeel = memo(function StickerPeel({
       state.light.y += (lightTarget.y - state.light.y) * follow;
       state.light.z += (lightTarget.z - state.light.z) * follow;
 
-      canvas.style.opacity = "1";
-      draw();
-
       const moving =
         press !== null ||
         Math.abs(state.peel - peelTarget) > 0.0005 ||
         Math.abs(state.peelV) > 0.0005 ||
         Math.abs(wrapAngle(dirTarget - state.dir)) > 0.002 ||
         Math.hypot(lightTarget.x - state.light.x, lightTarget.y - state.light.y, lightTarget.z - state.light.z) > 0.5;
+
+      canvas.style.opacity = "1";
+      root.style.willChange = moving ? "transform" : "";
+
+      if ((dirty || moving || !drawnInitial) && asset) {
+        if (!draw()) return;
+      }
 
       if (moving) raf = requestAnimationFrame(frame);
       else last = 0;
@@ -938,8 +1105,17 @@ export const StickerPeel = memo(function StickerPeel({
       if (!raf && visible && !document.hidden) raf = requestAnimationFrame(frame);
     }
 
+    const layout = () => {
+      resizePending = true;
+      dirty = true;
+      wake();
+    };
+
     const updateHover = (event: PointerEvent) => {
       const point = toParent(event);
+      state.pointer.x = point.x;
+      state.pointer.y = point.y;
+      state.pointer.inside = true;
       state.local = toLocal(point);
       const s = settingsRef.current;
       const h = height();
@@ -954,34 +1130,26 @@ export const StickerPeel = memo(function StickerPeel({
     const onHitEnter = (event: PointerEvent) => {
       state.hover = true;
       updateHover(event);
+      dirty = true;
       wake();
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      const point = toParent(event);
-      const isInside = point.x >= 0 && point.y >= 0 && point.x <= bounds.width && point.y <= bounds.height;
-      const insideChanged = isInside !== state.pointer.inside;
-      state.pointer.x = point.x;
-      state.pointer.y = point.y;
-      state.pointer.inside = isInside;
-      if (isInside || insideChanged || state.hover || state.press) {
-        wake();
-      }
     };
 
     const onHitMove = (event: PointerEvent) => {
       updateHover(event);
+      dirty = true;
       wake();
     };
 
     const onHitLeave = () => {
       state.hover = false;
+      state.pointer.inside = false;
       hit.style.cursor = "";
+      dirty = true;
       wake();
     };
 
     const onHitDown = (event: PointerEvent) => {
-      if (event.button !== 0 || !sticker.ready) return;
+      if (event.button !== 0 || !asset) return;
       updateHover(event);
       if (!state.hover) return;
       const point = toParent(event);
@@ -996,6 +1164,7 @@ export const StickerPeel = memo(function StickerPeel({
       };
       hit.setPointerCapture?.(event.pointerId);
       hit.style.cursor = "pointer";
+      dirty = true;
       wake();
     };
 
@@ -1005,15 +1174,12 @@ export const StickerPeel = memo(function StickerPeel({
       state.press = null;
       if (hit.hasPointerCapture?.(event.pointerId)) hit.releasePointerCapture(event.pointerId);
       updateHover(event);
-      if (event.pointerType !== "mouse") state.hover = false;
-      wake();
-    };
-
-    const onLeaveWindow = () => {
-      if (state.pointer.inside) {
+      if (event.pointerType !== "mouse") {
+        state.hover = false;
         state.pointer.inside = false;
-        wake();
       }
+      dirty = true;
+      wake();
     };
 
     const onVisibility = () => {
@@ -1023,31 +1189,37 @@ export const StickerPeel = memo(function StickerPeel({
           cancelAnimationFrame(raf);
           raf = 0;
         }
-      } else {
+      } else if (visible && (dirty || !drawnInitial || state.hover || state.press !== null)) {
         wake();
       }
     };
 
-    const resizeObserver = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextW = entry ? Math.round(entry.contentRect.width) : parent.clientWidth;
+      const nextH = entry ? Math.round(entry.contentRect.height) : parent.clientHeight;
+      if (Math.abs(nextW - bounds.width) < 2 && Math.abs(nextH - bounds.height) < 2 && drawnInitial) return;
       layout();
-      wake();
     });
     resizeObserver.observe(parent);
 
-    const intersection = new IntersectionObserver((entries) => {
-      visible = entries.some((entry) => entry.isIntersecting);
-      if (visible) {
-        last = 0;
-        wake();
-      } else if (raf) {
-        cancelAnimationFrame(raf);
-        raf = 0;
-      }
-    });
+    const intersection = new IntersectionObserver(
+      (entries) => {
+        visible = entries.some((entry) => entry.isIntersecting);
+        if (visible) {
+          last = 0;
+          if (!drawnInitial || dirty || state.hover || state.press !== null) {
+            wake();
+          }
+        } else if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      },
+      { rootMargin: "220px 0px" }
+    );
     intersection.observe(parent);
 
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    document.documentElement.addEventListener("pointerleave", onLeaveWindow);
     document.addEventListener("visibilitychange", onVisibility);
     hit.addEventListener("pointerenter", onHitEnter);
     hit.addEventListener("pointermove", onHitMove);
@@ -1056,13 +1228,11 @@ export const StickerPeel = memo(function StickerPeel({
     hit.addEventListener("pointerup", onHitUp);
     hit.addEventListener("pointercancel", onHitUp);
 
+    applyLayout();
     load(settingsRef.current.imageSrc);
-    layout();
     wakeRef.current = () => {
       layout();
-      wake();
     };
-    wake();
 
     return () => {
       alive = false;
@@ -1070,8 +1240,6 @@ export const StickerPeel = memo(function StickerPeel({
       wakeRef.current = null;
       resizeObserver.disconnect();
       intersection.disconnect();
-      window.removeEventListener("pointermove", onPointerMove);
-      document.documentElement.removeEventListener("pointerleave", onLeaveWindow);
       document.removeEventListener("visibilitychange", onVisibility);
       hit.removeEventListener("pointerenter", onHitEnter);
       hit.removeEventListener("pointermove", onHitMove);
@@ -1079,24 +1247,8 @@ export const StickerPeel = memo(function StickerPeel({
       hit.removeEventListener("pointerdown", onHitDown);
       hit.removeEventListener("pointerup", onHitUp);
       hit.removeEventListener("pointercancel", onHitUp);
-
-      try {
-        gl.deleteTexture(texture);
-        targets.forEach((target) => {
-          gl.deleteTexture(target.texture);
-          gl.deleteFramebuffer(target.buffer);
-        });
-        gl.deleteProgram(post.program);
-        gl.deleteBuffer(vertexBuffer);
-        gl.deleteBuffer(indexBuffer);
-        gl.deleteVertexArray(vao);
-        gl.deleteProgram(program.program);
-        gl.getExtension("WEBGL_lose_context")?.loseContext();
-      } catch {
-        // Safe disposal
-      }
     };
-  }, [inView, fallback]);
+  }, [fallback]);
 
   useEffect(() => {
     wakeRef.current?.();
@@ -1105,12 +1257,12 @@ export const StickerPeel = memo(function StickerPeel({
   return (
     <div
       ref={rootRef}
-      className={`pointer-events-none absolute left-0 top-0 will-change-transform ${className}`.trim()}
+      className={`pointer-events-none absolute left-0 top-0 ${className}`.trim()}
       style={style}
       aria-hidden="true"
       {...rest}
     >
-      {inView && !fallback ? (
+      {!fallback ? (
         <>
           <canvas ref={canvasRef} data-sticker-canvas="true" className="pointer-events-none block h-full w-full" aria-hidden="true" />
           <div

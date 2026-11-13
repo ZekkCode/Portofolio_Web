@@ -26,7 +26,7 @@ export function FaqSection() {
         <SectionTitle title={t("faq.title")} desc={t("faq.desc")} />
       </ScrollReveal>
 
-      <Parallax speed={0.06}>
+      <Parallax speed={0.07}>
         <div className="mx-auto max-w-3xl rounded-2xl border border-line/80 bg-white shadow-2xs dark:border-line/60 dark:bg-[#111422] divide-y divide-line/60 dark:divide-line/40">
           {items.map((item, idx) => {
             const isOpen = openId === item.id;

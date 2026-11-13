@@ -260,7 +260,7 @@ export function ProjectsSection() {
       )}
 
       {filteredProjects.length === 0 ? (
-        <Parallax speed={0.015}>
+        <Parallax speed={0.06}>
           <div
             id="proyek-empty"
             className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
@@ -304,21 +304,23 @@ export function ProjectsSection() {
           </div>
         </Parallax>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProjects.map((project, idx) => {
-            const indexNum = String(idx + 1).padStart(2, "0");
+        <Parallax speed={0.055}>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredProjects.map((project, idx) => {
+              const indexNum = String(idx + 1).padStart(2, "0");
 
-            return (
-              <ProjectTiltedCard
-                key={project.id}
-                project={project}
-                indexNum={indexNum}
-                onPreview={setSelectedProject}
-                isEn={isEn}
-              />
-            );
-          })}
-        </div>
+              return (
+                <ProjectTiltedCard
+                  key={project.id}
+                  project={project}
+                  indexNum={indexNum}
+                  onPreview={setSelectedProject}
+                  isEn={isEn}
+                />
+              );
+            })}
+          </div>
+        </Parallax>
       )}
 
       {/* Repository Full Preview Modal (lazy-loaded on demand) */}

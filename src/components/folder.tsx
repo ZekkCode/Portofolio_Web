@@ -1504,8 +1504,14 @@ const Folder = ({
       return { ...slot, y: Math.min(slot.y, geometry.frontTop - geometry.docH * 0.5 * slot.s - 8 * geometry.scale) };
     };
 
+    let isFolderInView = true;
+
     const frame = (now: number) => {
       state.raf = 0;
+      if (!isFolderInView || document.hidden) {
+        state.last = 0;
+        return;
+      }
       const s = settingsRef.current;
       const { g: geometry } = s;
       ensureItems(s.count);
@@ -1729,7 +1735,7 @@ const Folder = ({
       });
 
       write();
-      if (busy || drag) state.raf = requestAnimationFrame(frame);
+      if ((busy || drag) && isFolderInView && !document.hidden) state.raf = requestAnimationFrame(frame);
       else state.last = 0;
     };
 
@@ -1917,7 +1923,7 @@ const Folder = ({
     };
 
     const wake = () => {
-      if (!state.raf) state.raf = requestAnimationFrame(frame);
+      if (!state.raf && isFolderInView && !document.hidden) state.raf = requestAnimationFrame(frame);
     };
 
     const beginIntro = () => {
@@ -2135,6 +2141,41 @@ const Folder = ({
       }
     }
 
+    const viewObserver =
+      typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver(
+            entries => {
+              const visible = entries.some(entry => entry.isIntersecting);
+              if (visible !== isFolderInView) {
+                isFolderInView = visible;
+                if (visible && !document.hidden) {
+                  state.last = 0;
+                  wake();
+                } else if (state.raf) {
+                  cancelAnimationFrame(state.raf);
+                  state.raf = 0;
+                  state.last = 0;
+                }
+              }
+            },
+            { rootMargin: '260px 0px' }
+          )
+        : null;
+    viewObserver?.observe(root);
+
+    const onVisibility = () => {
+      state.last = 0;
+      if (document.hidden) {
+        if (state.raf) {
+          cancelAnimationFrame(state.raf);
+          state.raf = 0;
+        }
+      } else if (isFolderInView) {
+        wake();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     engineRef.current = {
       wake,
       invalidate,
@@ -2169,6 +2210,8 @@ const Folder = ({
       document.removeEventListener('pointerdown', onDocumentDown);
       document.removeEventListener('keydown', onKey);
       observer?.disconnect();
+      viewObserver?.disconnect();
+      document.removeEventListener('visibilitychange', onVisibility);
       engineRef.current = null;
     };
   }, []);

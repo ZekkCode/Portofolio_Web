@@ -146,7 +146,7 @@ export function TabContent({
     visible: true,
     feedUrl: "https://zekktech.biz.id",
     portalUrl: "https://zekktech.biz.id/blog",
-    displayCount: 3,
+    displayCount: 4,
     titleId: "Catatan & Tulisan Terpilih",
     titleEn: "Selected Articles & Logs",
     descId: "",
@@ -847,8 +847,8 @@ export function TabContent({
                   type="number"
                   min={1}
                   max={12}
-                  value={blog.displayCount || 3}
-                  onChange={(e) => updateBlog({ displayCount: parseInt(e.target.value, 10) || 3 })}
+                  value={blog.displayCount || 4}
+                  onChange={(e) => updateBlog({ displayCount: parseInt(e.target.value, 10) || 4 })}
                   className={inputClass}
                 />
               </div>

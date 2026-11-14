@@ -446,6 +446,38 @@ export interface PublishedBlogPostItem {
   source: "manual" | "sync";
 }
 
+const ID_MONTH_MAP: Record<string, string> = {
+  januari: "Jan",
+  februari: "Feb",
+  pebruari: "Feb",
+  maret: "Mar",
+  april: "Apr",
+  mei: "May",
+  juni: "Jun",
+  juli: "Jul",
+  agustus: "Aug",
+  agu: "Aug",
+  agt: "Aug",
+  agst: "Aug",
+  september: "Sep",
+  oktober: "Oct",
+  okt: "Oct",
+  november: "Nov",
+  nopember: "Nov",
+  desember: "Dec",
+  des: "Dec",
+};
+
+function parseBlogDateMs(raw?: string): number {
+  if (!raw) return 0;
+  const trimmed = raw.trim();
+  const direct = Date.parse(trimmed);
+  if (!Number.isNaN(direct)) return direct;
+  const normalized = trimmed.replace(/\b([a-zA-Z]+)\b/g, (word) => ID_MONTH_MAP[word.toLowerCase()] || word);
+  const parsed = Date.parse(normalized);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function mergeBlogPostsWithOverrides(
   config?: Partial<SiteConfig>,
   externalSyncedPosts?: ManualBlogPostConfig[],
@@ -519,8 +551,8 @@ export function mergeBlogPostsWithOverrides(
   const combined = [...manual, ...synced].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     if (a.featured !== b.featured) return a.featured ? -1 : 1;
-    const da = Date.parse(a.date || "") || 0;
-    const db = Date.parse(b.date || "") || 0;
+    const da = parseBlogDateMs(a.date);
+    const db = parseBlogDateMs(b.date);
     return db - da;
   });
 

@@ -290,43 +290,46 @@ function generateActiveStickers(): ActiveSticker[] {
 
 export function BackgroundStickers() {
   const mounted = useMounted();
-  const [isMobileScreen, setIsMobileScreen] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
   const { isMobileOrLow } = useAdaptivePerformance();
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileScreen(window.innerWidth < 768);
+      setViewportWidth(window.innerWidth);
     };
+    handleResize();
     window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const activeStickers = useMemo(() => (mounted ? generateActiveStickers() : []), [mounted]);
+  // Only render background stickers when peripheral gutters beside max-w-5xl (1024px) are wide enough
+  // so stickers never overflow onto section headings or body content on mobile/tablet/narrow viewports.
+  const hasPeripheralGutter = viewportWidth >= 1160;
+  const activeStickers = useMemo(
+    () => (mounted && hasPeripheralGutter ? generateActiveStickers() : []),
+    [mounted, hasPeripheralGutter]
+  );
 
-  if (!mounted || activeStickers.length === 0) {
+  if (!mounted || !hasPeripheralGutter || activeStickers.length === 0) {
     return null;
   }
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-[1] xl:z-20 overflow-hidden select-none"
+      className="pointer-events-none absolute inset-0 z-0 overflow-hidden select-none"
       aria-hidden="true"
     >
       {activeStickers.map(({ slot, logo, rotation, width }) => {
-        if (isMobileScreen && (!slot.mobileSafe || slot.topPercent < 11)) {
-          return null;
-        }
-        const shiftSign = slot.horizontalShift >= 0 ? `+ ${slot.horizontalShift}px` : `- ${Math.abs(slot.horizontalShift)}px`;
+        const clampedShift = Math.min(slot.horizontalShift, 4);
+        const shiftExpr = clampedShift >= 0 ? `+ ${clampedShift}px` : `- ${Math.abs(clampedShift)}px`;
+        const outerOffset = width + 32;
+        const horizontalExpr = `clamp(6px, calc(50% - 512px - ${outerOffset}px ${shiftExpr}), 220px)`;
         const slotStyle: React.CSSProperties = {
           position: "absolute",
           top: `${slot.topPercent}%`,
-          ...(isMobileScreen
-            ? slot.side === "left"
-              ? { left: "-20px", opacity: 0.55 }
-              : { right: "-16px", opacity: 0.55 }
-            : slot.side === "left"
-            ? { left: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }
-            : { right: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }),
+          ...(slot.side === "left" ? { left: horizontalExpr } : { right: horizontalExpr }),
           width: `${width + 24}px`,
           height: `${width + 24}px`,
         };

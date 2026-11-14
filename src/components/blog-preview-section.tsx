@@ -95,6 +95,9 @@ export function BlogPreviewSection() {
   const ctaLabel =
     (isEn ? blog?.ctaLabelEn : blog?.ctaLabelId) ||
     t("blog.allPostsBtn", "Lihat Semua Artikel");
+  const displayHost = blogUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const mdSeeAllSpan = posts.length % 2 === 0 ? "md:col-span-2" : "md:col-span-1";
+  const lgSeeAllSpan = ["lg:col-span-3", "lg:col-span-2", "lg:col-span-1"][posts.length % 3];
 
   return (
     <section
@@ -200,20 +203,42 @@ export function BlogPreviewSection() {
                 </a>
               );
             })}
+
+            {/* Kartu ke-5: Lihat Semua mengarah langsung ke ZekkTech Blog */}
+            <a
+              href={blogUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-blog-see-all="true"
+              aria-label={`${ctaLabel} (${displayHost})`}
+              className={`group relative flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-dashed border-line/90 bg-slate-50/75 p-5 sm:p-6 transition-colors duration-200 hover:border-brand/50 hover:bg-brand/[0.03] dark:border-line/60 dark:bg-[#111422]/75 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${mdSeeAllSpan} ${lgSeeAllSpan}`}
+            >
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 text-xs font-mono text-muted">
+                  <span className="flex size-8 items-center justify-center rounded-lg border border-line/70 bg-white text-brand dark:border-line/50 dark:bg-[#161b2e] dark:text-blue-400">
+                    <Newspaper className="size-4" />
+                  </span>
+                  <span className="truncate">{displayHost}</span>
+                </div>
+
+                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors">
+                  {ctaLabel}
+                </h3>
+
+                <p className="max-w-lg text-xs sm:text-sm leading-relaxed text-body">
+                  {isEn
+                    ? "Read full technical articles, design notes, and the complete archive on ZekkTech Blog."
+                    : "Baca seluruh artikel teknologi, catatan desain, dan arsip tulisan lengkap langsung di ZekkTech Blog."}
+                </p>
+              </div>
+
+              <div className="inline-flex items-center gap-2 self-start rounded-xl border border-line/80 bg-white px-4 py-2 text-xs font-semibold text-ink transition-colors duration-200 group-hover:border-brand/40 group-hover:text-brand dark:border-line/60 dark:bg-[#161b2e] dark:text-slate-200 dark:group-hover:border-blue-500/50 dark:group-hover:text-blue-400">
+                <span>{isEn ? "View All on Blog" : "Lihat Semua Artikel"}</span>
+                <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
+              </div>
+            </a>
           </div>
         )}
-
-        <div className="mt-8 flex justify-center sm:hidden">
-          <a
-            href={blogUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-line bg-white px-6 py-2.5 text-xs font-semibold text-ink shadow-2xs transition-all hover:bg-brand/5 hover:border-brand/40 hover:text-brand dark:border-line/60 dark:bg-[#111422] dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            <span>{ctaLabel}</span>
-            <ArrowRight className="size-3.5" />
-          </a>
-        </div>
       </ScrollReveal>
     </section>
   );

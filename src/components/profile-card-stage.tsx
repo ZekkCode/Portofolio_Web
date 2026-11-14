@@ -7,14 +7,16 @@ import { profile } from "@/lib/profile";
 export function ProfileCardStage() {
   const { profileCard: pc, generalProfile, lanyard } = useSiteConfig();
   const resolvedAvatar = pc.avatarUrl || generalProfile?.avatarUrl || "/card-front-v2.webp";
+  const frontCardUrl = lanyard.frontImage || "/card-front-v2.webp";
+  const backCardUrl = lanyard.backImage || "/card-back-v2.webp";
   const secondaryAvatar =
-    !pc.avatarUrl &&
-    (resolvedAvatar === "/card-front-v2.webp" || resolvedAvatar === lanyard.frontImage)
-      ? lanyard.backImage || "/card-back-v2.webp"
+    (resolvedAvatar === "/card-front-v2.webp" || resolvedAvatar === frontCardUrl) &&
+    resolvedAvatar !== backCardUrl
+      ? backCardUrl
       : undefined;
 
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex w-full min-w-0 items-center justify-center">
       <ProfileCard
         {...pc}
         name={pc.name || generalProfile?.name || profile.name}

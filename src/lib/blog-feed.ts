@@ -44,6 +44,16 @@ export const VERIFIED_BLOG_POSTS: BlogPost[] = [
     publishedAt: "30 Apr 2026",
     url: "https://zekktech.biz.id/post/ke-mana-perginya-file-yang-dihapus-pads-hdd-dan-ssd-ternyata-tidak-langsung-hilang",
   },
+  {
+    id: "post-4",
+    title: "Mengenal TempleOS: Sistem Operasi “Suci” Unik Buatan Terry A. Davis",
+    slug: "mengenal-templeos-sistem-operasi-suci-unik-terry-a-davis",
+    excerpt: "TempleOS adalah sistem operasi 64-bit unik buatan Terry A. Davis yang dikenal dengan tampilan retro, bahasa HolyC, dan tema religiusnya. Simak pembahasan lengkapnya di sini.",
+    coverImage: "https://tiny-bread-e53d.zekkstore-zekkblog.workers.dev/covers/1777387250099-ZekkTechBlog-TempleOS.png",
+    category: "Berita Teknologi",
+    publishedAt: "28 Apr 2026",
+    url: "https://zekktech.biz.id/post/mengenal-templeos-sistem-operasi-suci-unik-terry-a-davis",
+  },
 ];
 
 export const BLOG_HOME_URL = "https://zekktech.biz.id/blog";

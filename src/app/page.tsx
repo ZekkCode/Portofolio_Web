@@ -43,6 +43,7 @@ import { CertificatesSection } from "@/components/certificates-section";
 import { FaqSection } from "@/components/faq-section";
 import { SocialIcon, getSocialHoverClasses } from "@/components/social-icon";
 import { AnimatedHeroTitle } from "@/components/animated-hero-title";
+import { ContactForm } from "@/components/contact-form";
 
 // Dynamically code-split heavy 3D/physics modules
 const DynamicCvFolderSection = dynamic(
@@ -130,23 +131,26 @@ function Hero() {
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-3 sm:gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
         {/* Left Column: Editorial Information */}
-        <div className="relative z-10 flex flex-col items-start gap-4 sm:gap-5 text-start order-2 lg:order-1 pt-0 lg:pt-6">
-          <div className="space-y-2.5 w-full">
-            <AnimatedHeroTitle name={pubProfile.name} />
-            <ScrollReveal y={16} duration={0.65} delay={0.12}>
+        <div className="relative z-10 flex w-full flex-col items-center lg:items-start gap-4 sm:gap-5 text-center lg:text-start order-2 lg:order-1 pt-0 lg:pt-6">
+          <div className="space-y-2.5 w-full max-w-xl mx-auto lg:mx-0">
+            <AnimatedHeroTitle
+              name={pubProfile.name}
+              className="w-full justify-center text-center lg:justify-start lg:text-start"
+            />
+            <ScrollReveal y={16} duration={0.65} delay={0.12} className="w-full">
               <p className="text-base sm:text-lg font-semibold text-body">
                 {pubProfile.roles || t("hero.roles")}
               </p>
             </ScrollReveal>
           </div>
 
-          <ScrollReveal y={18} duration={0.65} delay={0.2} className="space-y-5 w-full max-w-xl">
+          <ScrollReveal y={18} duration={0.65} delay={0.2} className="space-y-5 w-full max-w-xl mx-auto lg:mx-0">
             <p className="text-sm sm:text-base leading-relaxed text-body">
               {pubProfile.heroDesc || t("hero.desc")}
             </p>
 
             {/* Action Buttons */}
-            <div className="relative z-40 flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-1">
+            <div className="relative z-40 flex flex-col sm:flex-row w-full max-w-[280px] sm:max-w-none mx-auto lg:mx-0 lg:w-auto items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
               {primaryHref.startsWith("#") ? (
                 <SmoothNavLink
                   href={primaryHref}
@@ -530,110 +534,42 @@ function Contact() {
   const pubProfile = getPublishedProfile(config, locale);
   const sectionMeta = getPublishedSectionMeta(config, "contact", locale);
 
-  const statusDotClass =
-    pubProfile.availabilityStatus === "busy"
-      ? "bg-amber-500"
-      : pubProfile.availabilityStatus === "unavailable"
-      ? "bg-slate-400"
-      : "bg-emerald-500";
-
   const contactTitle = sectionMeta.title || contact.title || t("contact.title");
   const contactDesc = sectionMeta.desc || contact.desc || t("contact.desc");
 
   return (
-    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-14 sm:py-20">
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
-      <ScrollReveal y={24} className="w-full">
+      <ScrollReveal y={24} className="w-full min-w-0">
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white dark:border-line/60 dark:bg-[#111422]">
-          <div className={`grid items-stretch ${contact.showProfileCard ? "lg:grid-cols-[1fr_1fr]" : "lg:grid-cols-1"}`}>
+          <div className={`grid grid-cols-1 min-w-0 items-stretch ${contact.showProfileCard ? "lg:grid-cols-[0.95fr_1.15fr]" : "lg:grid-cols-1"}`}>
             {/* KIRI: Hologram Profile Card */}
             {contact.showProfileCard && (
-              <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-5 sm:p-8">
+              <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-4 sm:p-8">
                 <DynamicProfileCardStage />
               </div>
             )}
 
-            {/* KANAN: Panel Informasi Kontak */}
-            <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-8">
-              <div className="space-y-4">
-                <div>
-                  {(sectionMeta.eyebrow || contact.badge) && (
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
-                      {sectionMeta.eyebrow || contact.badge}
-                    </p>
-                  )}
-                  <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
-                    {contactTitle}
-                  </h2>
-                  <p className="mt-3 text-sm leading-relaxed text-body">
-                    {contactDesc}
+            {/* KANAN: Formulir Pesan Langsung (Turnstile & Anti-Spam) */}
+            <div className="relative min-w-0 flex flex-col justify-center p-5 sm:p-8 lg:p-10 space-y-6">
+              <div>
+                {(sectionMeta.eyebrow || contact.badge) && (
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
+                    {sectionMeta.eyebrow || contact.badge}
                   </p>
-                </div>
-
-                {/* Primary Email Action */}
-                <div className="flex flex-wrap items-center gap-4 pt-2">
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-ink active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-                  >
-                    <Mail className="size-4" />
-                    <span>{contact.emailCta || t("hero.emailBtn", "Kirim Email")}</span>
-                  </a>
-                  {contact.secondaryHref && (
-                    contact.secondaryHref.startsWith("#") ? (
-                      <SmoothNavLink
-                        href={contact.secondaryHref}
-                        className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-brand dark:text-slate-200 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-                      >
-                        <span>{contact.secondaryCta || t("hero.cvBtn", "Berkas Karier")}</span>
-                        <ArrowRight className="size-3.5" />
-                      </SmoothNavLink>
-                    ) : (
-                      <a
-                        href={contact.secondaryHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-brand dark:text-slate-200 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-                      >
-                        <span>{contact.secondaryCta || t("hero.cvBtn", "Berkas Karier")}</span>
-                        <ArrowRight className="size-3.5" />
-                      </a>
-                    )
-                  )}
-                </div>
+                )}
+                <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
+                  {contactTitle}
+                </h2>
+                <p className="mt-2.5 text-sm leading-relaxed text-body">
+                  {contactDesc}
+                </p>
               </div>
 
-              {/* Clean Direct Contact Ledger */}
-              <dl className="space-y-3 border-t border-line/60 pt-5 text-sm dark:border-line/40">
-                {contact.email && (
-                  <div className="flex items-baseline justify-between gap-4">
-                    <dt className="text-xs font-medium text-muted">Email</dt>
-                    <dd className="font-mono text-xs sm:text-sm font-semibold text-ink">
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="hover:text-brand dark:hover:text-blue-400 transition-colors"
-                      >
-                        {contact.email}
-                      </a>
-                    </dd>
-                  </div>
-                )}
-                {contact.location && (
-                  <div className="flex items-baseline justify-between gap-4">
-                    <dt className="text-xs font-medium text-muted">{t("contact.location").replace(/:$/, "")}</dt>
-                    <dd className="text-xs sm:text-sm font-semibold text-ink text-right">{contact.location}</dd>
-                  </div>
-                )}
-                {pubProfile.availabilityStatus !== "hidden" && contact.availability && (
-                  <div className="flex items-baseline justify-between gap-4">
-                    <dt className="text-xs font-medium text-muted">{t("contact.status").replace(/:$/, "")}</dt>
-                    <dd className="inline-flex items-center justify-end gap-2 text-xs sm:text-sm font-semibold text-brand dark:text-blue-400 text-right">
-                      <span className={`size-2 rounded-full ${statusDotClass} shrink-0`} aria-hidden="true" />
-                      <span>{contact.availability}</span>
-                    </dd>
-                  </div>
-                )}
-              </dl>
+              <ContactForm
+                submitLabel={contact.emailCta}
+                recipientEmail={contact.email}
+              />
             </div>
           </div>
         </div>

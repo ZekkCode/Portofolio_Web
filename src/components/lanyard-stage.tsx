@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSiteConfig } from "@/lib/site-store";
 import { useAdaptivePerformance } from "@/lib/device-performance";
+import { playSwitchSound } from "@/lib/sound-effects";
 
 interface StaticLanyardCardProps {
   frontImage?: string;
@@ -25,13 +26,13 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
   return (
     <div
       data-static-lanyard="true"
-      className="relative flex h-full w-full flex-col items-center justify-start select-none pt-2 sm:pt-4"
+      className="relative flex h-full w-full flex-col items-center justify-start select-none pt-1 min-[390px]:pt-2 sm:pt-3"
       aria-label="Zakaria Mujur P. ID Card"
     >
       {/* 1. Hanging Lanyard Strap Ribbon (comes down from behind the header) */}
       <div className="relative flex flex-col items-center z-10">
         <div
-          className="w-5 sm:w-6 h-12 sm:h-16 rounded-b-sm shadow-md relative overflow-hidden"
+          className="w-4 min-[390px]:w-5 sm:w-6 h-8 min-[390px]:h-10 sm:h-12 lg:h-14 rounded-b-sm shadow-md relative overflow-hidden"
           style={{
             backgroundColor: strapColor || "#1b45c4",
             backgroundImage: "linear-gradient(180deg, #16369c 0%, #1b45c4 50%, #142e82 100%)",
@@ -43,24 +44,28 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
 
         {/* 2. Metallic Swivel Clip / Carabiner Ring */}
         <div className="relative -mt-1 flex flex-col items-center">
-          <div className="size-4 rounded-full border-2 border-slate-300 bg-slate-400 shadow-sm" />
-          <div className="w-2.5 h-3.5 -mt-1 rounded-sm bg-gradient-to-b from-slate-200 to-slate-400 border border-slate-400 shadow-xs" />
+          <div className="size-3.5 sm:size-4 rounded-full border-2 border-slate-300 bg-slate-400 shadow-sm" />
+          <div className="w-2.5 h-3 sm:h-3.5 -mt-1 rounded-sm bg-gradient-to-b from-slate-200 to-slate-400 border border-slate-400 shadow-xs" />
         </div>
       </div>
 
       {/* 3. Authentic ID Card Badge (clickable to flip front/back in fallback mode) */}
       <button
         type="button"
-        onClick={() => setShowBack((prev) => !prev)}
+        data-sound="switch"
+        onClick={() => {
+          playSwitchSound();
+          setShowBack((prev) => !prev);
+        }}
         aria-pressed={showBack}
         aria-label={
           showBack
             ? "Kartu ID sisi belakang (Graphic Designer). Klik untuk kembali ke sisi depan."
             : "Kartu ID sisi depan (UI/UX & Frontend Dev). Klik untuk balik ke sisi belakang."
         }
-        className="group relative z-20 -mt-1.5 cursor-pointer rounded-[10px] transition-transform duration-300 motion-reduce:transition-none hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
+        className="group relative z-20 -mt-1 cursor-pointer rounded-[10px] transition-transform duration-300 motion-reduce:transition-none hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
       >
-        <div className="relative w-[225px] sm:w-[265px] lg:w-[300px] aspect-[1/1.406] rounded-[10px] overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-[#0038b8]">
+        <div className="relative w-[150px] min-[390px]:w-[180px] sm:w-[225px] lg:w-[250px] aspect-[1/1.406] rounded-[10px] overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-[#0038b8]">
           <Image
             src={cardImage}
             alt={
@@ -69,7 +74,7 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
                 : "Zakaria Mujur Prasetyo - UI/UX & Frontend Dev ID Badge"
             }
             fill
-            sizes="(max-width: 640px) 225px, (max-width: 1024px) 265px, 300px"
+            sizes="(max-width: 389px) 150px, (max-width: 639px) 180px, (max-width: 1023px) 225px, 250px"
             priority
             unoptimized
             className="object-cover"

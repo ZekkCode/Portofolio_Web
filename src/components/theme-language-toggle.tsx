@@ -3,6 +3,7 @@ import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import { getSavedLanguage, setLanguage } from "@/lib/i18n";
 import { useMounted } from "@/lib/use-mounted";
+import { playSwitchSound } from "@/lib/sound-effects";
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
@@ -22,7 +23,11 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      data-sound="switch"
+      onClick={() => {
+        playSwitchSound();
+        setTheme(isDark ? "light" : "dark");
+      }}
       className={`group flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-full border border-line/70 bg-white/95 text-ink shadow-2xs transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/95 dark:text-slate-200 ${className}`}
       aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode malam"}
       title={isDark ? "Mode Terang (Light)" : "Mode Malam (Dark)"}
@@ -80,6 +85,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   const currentLang = mounted ? (i18n.language?.startsWith("en") ? "en" : "id") : "id";
 
   const toggle = () => {
+    playSwitchSound();
     const next = currentLang === "id" ? "en" : "id";
     setLanguage(next);
   };
@@ -87,6 +93,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   return (
     <button
       type="button"
+      data-sound="switch"
       onClick={toggle}
       className={`inline-flex min-h-[44px] items-center rounded-full border border-line/70 bg-white/95 px-3.5 text-xs font-bold text-ink shadow-2xs transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/95 dark:text-slate-200 ${className}`}
       aria-label="Ganti bahasa / Switch language"

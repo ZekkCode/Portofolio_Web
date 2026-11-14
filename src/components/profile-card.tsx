@@ -1,5 +1,6 @@
 'use client';
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { playSwitchSound } from '@/lib/sound-effects';
 const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 8.9 5.2a2 2 0 0 0 2.2 0L22 7"/></svg>;
 type Palette = 'dark' | 'light';
 interface ProfileCardProps {
@@ -62,14 +63,14 @@ const INFO='absolute bottom-[18px] left-5 right-5 text-white z-[6]';
 const NAME='m-0 text-[20px] font-semibold leading-[1.25] tracking-[-0.01em] text-[inherit]';
 const TITLE='mx-0 mb-0 mt-1 text-[14px] leading-[1.45] text-white/78';
 const TILE_RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight)]`;
-const FOOTER='flex min-w-0 items-center gap-3 px-5 pb-2 pt-1.5';
-const AVATAR="relative h-9 w-9 flex-none overflow-hidden rounded-full [background:var(--pc-tile)] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:[box-shadow:inset_0_0_0_1px_var(--pc-tile-edge)]";
+const FOOTER='flex min-w-0 items-center gap-2 sm:gap-3 px-2.5 sm:px-5 pb-2 pt-1.5';
+const AVATAR="relative h-8 w-8 sm:h-9 sm:w-9 flex-none overflow-hidden rounded-full [background:var(--pc-tile)] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:[box-shadow:inset_0_0_0_1px_var(--pc-tile-edge)]";
 const AVATAR_IMAGE = 'block h-full w-full object-cover object-[50%_15%]';
 const AVATAR_IMAGE_CARD = 'block h-full w-full object-cover object-[50%_39%] scale-[1.75]';
 const META='flex min-w-0 flex-1 flex-col gap-[3px]';
-const HANDLE='overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-semibold leading-[1.25] text-[var(--pc-ink)]';
-const STATUS="flex items-center gap-1.5 whitespace-nowrap text-[12.5px] leading-[1.25] text-[var(--pc-muted)]";
-const CONTACT='flex h-9 flex-none cursor-pointer items-center gap-1.5 rounded-[calc(var(--pc-radius)*0.75)] border-none px-3.5 font-[inherit] text-[13px] font-semibold text-[var(--pc-ink)] [background:var(--pc-tile)] [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight),var(--pc-tile-shadow)] transition-[filter,transform] duration-200 hover:[filter:var(--pc-hover)] active:scale-[0.96] active:duration-0 active:[filter:var(--pc-press)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-ink)]';
+const HANDLE='overflow-hidden text-ellipsis whitespace-nowrap text-[13px] sm:text-[14px] font-semibold leading-[1.25] text-[var(--pc-ink)]';
+const STATUS="flex items-center gap-1.5 whitespace-nowrap text-[11.5px] sm:text-[12.5px] leading-[1.25] text-[var(--pc-muted)]";
+const CONTACT='flex h-8 sm:h-9 flex-none cursor-pointer items-center gap-1 sm:gap-1.5 rounded-[calc(var(--pc-radius)*0.75)] border-none px-2.5 sm:px-3.5 font-[inherit] text-[12px] sm:text-[13px] font-semibold text-[var(--pc-ink)] [background:var(--pc-tile)] [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight),var(--pc-tile-shadow)] transition-[filter,transform] duration-200 hover:[filter:var(--pc-hover)] active:scale-[0.96] active:duration-0 active:[filter:var(--pc-press)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-ink)]';
 const GLARE=`${LAYER} mix-blend-overlay`;
 const RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-frame-edge),inset_0_1px_0_var(--pc-frame-highlight)]`;
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
@@ -205,7 +206,11 @@ const ProfileCard=({avatarUrl='',secondaryAvatarUrl,iconUrl,miniAvatarUrl,imageF
           {canToggle && (
             <button
               type="button"
-              onClick={() => setShowSecondary((prev) => !prev)}
+              data-sound="switch"
+              onClick={() => {
+                playSwitchSound();
+                setShowSecondary((prev) => !prev);
+              }}
               aria-pressed={showSecondary}
               aria-label={
                 showSecondary

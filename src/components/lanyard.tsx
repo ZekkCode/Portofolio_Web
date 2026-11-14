@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import * as THREE from 'three';
+import { playSwitchSound, suppressCursorClick } from '@/lib/sound-effects';
 
 type Orientation = 'portrait' | 'landscape';
 type Finish = 'glossy' | 'matte' | 'holographic' | 'metallic';
@@ -1506,6 +1507,7 @@ const Lanyard = ({
       }
       sim.turn = sim.turn === 0 ? Math.PI * direction : 0;
       body.angular.addScaledVector(up, FLIP_SPIN * direction);
+      playSwitchSound();
     };
 
     const onPointerEnter = () => {
@@ -1557,7 +1559,11 @@ const Lanyard = ({
     const onPointerUp = (event: PointerEvent) => {
       if (!sim.grab) return;
       sim.grab = null;
-      if (press && event.type === 'pointerup' && performance.now() - press.time < 450) flip(press.point);
+      if (press && event.type === 'pointerup' && performance.now() - press.time < 450) {
+        flip(press.point);
+      } else {
+        suppressCursorClick(150);
+      }
       press = null;
       canvas.releasePointerCapture?.(event.pointerId);
       setCursor(hovering && event.pointerType !== 'touch' ? 'grab' : '');

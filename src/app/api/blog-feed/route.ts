@@ -5,6 +5,20 @@ import { mergeBlogPostsWithOverrides } from "@/lib/content/selectors";
 
 export const dynamic = "force-dynamic";
 
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;|&apos;/g, "'")
+    .replace(/&ldquo;|&rdquo;/g, '"')
+    .replace(/&lsquo;|&rsquo;/g, "'")
+    .replace(/&ndash;/g, "-")
+    .replace(/&mdash;/g, "\u2014")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 async function fetchExternalBlogFeed(baseFeedUrl: string, limit: number, noCache = false): Promise<BlogPost[]> {
   const timeoutMs = 4500;
   const controller = new AbortController();
@@ -76,7 +90,7 @@ async function fetchExternalBlogFeed(baseFeedUrl: string, limit: number, noCache
           let coverImage = "";
           const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
           if (imgMatch) {
-            const rawSrc = imgMatch[1];
+            const rawSrc = imgMatch[1].replace(/&amp;/g, "&");
             if (rawSrc.includes("url=")) {
               const urlParam = rawSrc.match(/url=([^&]+)/);
               coverImage = urlParam ? decodeURIComponent(urlParam[1]) : rawSrc;
@@ -88,7 +102,7 @@ async function fetchExternalBlogFeed(baseFeedUrl: string, limit: number, noCache
           const textClean = inner
             .replace(/<[^>]+>/g, "\n")
             .split("\n")
-            .map((s) => s.trim())
+            .map((s) => decodeHtmlEntities(s.trim()))
             .filter(Boolean);
 
           parsedPosts.push({

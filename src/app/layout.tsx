@@ -4,6 +4,7 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
+import { GlobalClickSound } from "@/components/global-click-sound";
 import { profile } from "@/lib/profile";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import {
@@ -264,6 +265,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AdaptivePerformanceProvider>
             <SmoothScroll>
+              <GlobalClickSound />
               {children}
               <BuddyClient />
             </SmoothScroll>

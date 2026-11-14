@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { useSiteConfig } from "@/lib/site-store";
 import { getPublishedProfile } from "@/lib/content/selectors";
+import { playSwitchSound } from "@/lib/sound-effects";
 
 interface PersonaCardItem {
   id: "dev" | "design";
@@ -45,7 +46,10 @@ export function AboutPersonaCard() {
   ];
 
   const activeCard = cards[activeIndex];
-  const toggleCard = () => setActiveIndex((prev) => (prev === 0 ? 1 : 0));
+  const toggleCard = () => {
+    playSwitchSound();
+    setActiveIndex((prev) => (prev === 0 ? 1 : 0));
+  };
 
   return (
     <div className="flex flex-col items-center lg:items-end w-full">
@@ -54,6 +58,7 @@ export function AboutPersonaCard() {
         <div className="pr-3.5 pb-2.5 sm:pr-5 sm:pb-4">
           <button
             type="button"
+            data-sound="switch"
             onClick={toggleCard}
             aria-pressed={activeIndex === 1}
             aria-label={
@@ -109,7 +114,11 @@ export function AboutPersonaCard() {
                     type="button"
                     role="tab"
                     aria-selected={selected}
-                    onClick={() => setActiveIndex(idx as 0 | 1)}
+                    data-sound={selected ? undefined : "switch"}
+                    onClick={() => {
+                      if (!selected) playSwitchSound();
+                      setActiveIndex(idx as 0 | 1);
+                    }}
                     className={`relative whitespace-nowrap py-1 text-[11px] sm:text-xs transition-colors focus:outline-none focus-visible:text-brand ${
                       selected
                         ? "font-semibold text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-brand dark:after:bg-blue-400"
@@ -124,6 +133,7 @@ export function AboutPersonaCard() {
 
             <button
               type="button"
+              data-sound="switch"
               onClick={toggleCard}
               aria-label={isEn ? "Switch card layer" : "Ganti lapisan kartu"}
               className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap py-1 text-[11px] font-medium text-muted hover:text-ink transition-colors focus:outline-none focus-visible:text-brand"

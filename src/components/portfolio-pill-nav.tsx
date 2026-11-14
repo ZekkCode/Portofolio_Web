@@ -17,12 +17,16 @@ import {
   Compass,
   FileText,
   FolderOpen,
+  Globe,
   GraduationCap,
   HelpCircle,
   Layers3,
+  Link2,
   Mail,
+  Newspaper,
   UserRound,
   Wrench,
+  type LucideIcon,
 } from "lucide-react";
 
 if (typeof window !== "undefined") {
@@ -55,34 +59,46 @@ const TRACKED_SECTIONS = [
   "kontak",
 ];
 
+const NAV_ICON_MAP: Record<string, LucideIcon> = {
+  user: UserRound,
+  "user-round": UserRound,
+  userround: UserRound,
+  file: FileText,
+  "file-text": FileText,
+  filetext: FileText,
+  layers: Layers3,
+  layers3: Layers3,
+  folder: FolderOpen,
+  "folder-open": FolderOpen,
+  folderopen: FolderOpen,
+  mail: Mail,
+  graduation: GraduationCap,
+  "graduation-cap": GraduationCap,
+  graduationcap: GraduationCap,
+  briefcase: Briefcase,
+  award: Award,
+  wrench: Wrench,
+  help: HelpCircle,
+  "help-circle": HelpCircle,
+  helpcircle: HelpCircle,
+  newspaper: Newspaper,
+  "book-open": BookOpen,
+  bookopen: BookOpen,
+  globe: Globe,
+  link: Link2,
+};
+
 function renderNavIcon(iconName?: string, size = 16) {
-  const props = { size, strokeWidth: size > 16 ? 2 : 1.8, "aria-hidden": true as const, className: "shrink-0" };
-  switch (iconName) {
-    case "UserRound":
-      return <UserRound {...props} />;
-    case "FileText":
-      return <FileText {...props} />;
-    case "Layers3":
-      return <Layers3 {...props} />;
-    case "FolderOpen":
-      return <FolderOpen {...props} />;
-    case "Mail":
-      return <Mail {...props} />;
-    case "GraduationCap":
-      return <GraduationCap {...props} />;
-    case "Briefcase":
-      return <Briefcase {...props} />;
-    case "Award":
-      return <Award {...props} />;
-    case "Wrench":
-      return <Wrench {...props} />;
-    case "HelpCircle":
-      return <HelpCircle {...props} />;
-    case "BookOpen":
-      return <BookOpen {...props} />;
-    default:
-      return <Compass {...props} />;
-  }
+  const key = (iconName || "").trim().toLowerCase();
+  const Icon = NAV_ICON_MAP[key] || Compass;
+  return (
+    <Icon
+      size={size}
+      strokeWidth={size > 16 ? 2 : 1.8}
+      aria-hidden="true"
+      className="shrink-0"
+    />
+  );
 }
 
 function useNavScrollState(navHrefs: string[]) {

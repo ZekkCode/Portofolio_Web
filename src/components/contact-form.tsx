@@ -117,14 +117,25 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
     }
   }, []);
 
+  const effectiveTheme: "dark" | "light" =
+    resolvedTheme === "dark"
+      ? "dark"
+      : resolvedTheme === "light"
+        ? "light"
+        : typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light";
+
   // Muat skrip & render widget Cloudflare Turnstile
   useEffect(() => {
     if (!turnstileSiteKey) return;
 
     let cancelled = false;
+    let mountedInRun = false;
 
     const mountWidget = () => {
-      if (cancelled || !widgetContainerRef.current || !window.turnstile) return;
+      if (cancelled || mountedInRun || !widgetContainerRef.current || !window.turnstile) return;
+      mountedInRun = true;
 
       if (widgetIdRef.current) {
         try {
@@ -143,7 +154,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         const widgetSize: "compact" | "flexible" = containerWidth < 305 ? "compact" : "flexible";
         const id = window.turnstile.render(widgetContainerRef.current, {
           sitekey: turnstileSiteKey,
-          theme: resolvedTheme === "dark" ? "dark" : "light",
+          theme: effectiveTheme,
           language: locale,
           size: widgetSize,
           callback: (token) => {
@@ -163,6 +174,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         widgetIdRef.current = id;
         setTurnstileReady(true);
       } catch {
+        mountedInRun = false;
         setTurnstileReady(false);
       }
     };
@@ -176,14 +188,17 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         script.id = TURNSTILE_SCRIPT_ID;
         script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
         script.async = true;
-        script.defer = true;
         document.head.appendChild(script);
       }
 
-      const onLoad = () => mountWidget();
+      let pollId = 0;
+      const onLoad = () => {
+        window.clearInterval(pollId);
+        mountWidget();
+      };
       script.addEventListener("load", onLoad);
 
-      const pollId = window.setInterval(() => {
+      pollId = window.setInterval(() => {
         if (window.turnstile) {
           window.clearInterval(pollId);
           mountWidget();
@@ -216,7 +231,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         widgetIdRef.current = null;
       }
     };
-  }, [turnstileSiteKey, resolvedTheme, locale]);
+  }, [turnstileSiteKey, effectiveTheme, locale]);
 
   const validateClient = (): boolean => {
     const errors: Partial<Record<FieldKey, string>> = {};

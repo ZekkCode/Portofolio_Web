@@ -14,7 +14,10 @@ function ScrollTriggerBridge() {
   const lenis = useLenis();
 
   // 1. Sinkronisasi Lenis scroll event dengan ScrollTrigger.update
-  useLenis(() => {
+  useLenis((instance) => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { __zekkLenisScroll?: number }).__zekkLenisScroll = instance.scroll;
+    }
     ScrollTrigger.update();
   });
 
@@ -72,7 +75,10 @@ function ScrollTriggerBridge() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    ScrollTrigger.config({ ignoreMobileResize: true });
+    ScrollTrigger.config({
+      ignoreMobileResize: true,
+      autoRefreshEvents: "visibilitychange,DOMContentLoaded,load",
+    });
 
     let cancelled = false;
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,6 +86,11 @@ function ScrollTriggerBridge() {
     let isRefreshing = false;
     let lastHeight = document.documentElement.scrollHeight;
     let lastWidth = window.innerWidth;
+    let lastWheelAt = 0;
+
+    const markScrollActivity = () => {
+      lastWheelAt = performance.now();
+    };
 
     const runRefresh = () => {
       if (cancelled || isRefreshing) return;
@@ -93,21 +104,27 @@ function ScrollTriggerBridge() {
       }
     };
 
-    const scheduleRefresh = (force = false) => {
+    const scheduleRefresh = (checkLayoutDelta = true) => {
       if (cancelled || isRefreshing) return;
-      if (!force) {
+      if (checkLayoutDelta) {
         const nextHeight = document.documentElement.scrollHeight;
         const nextWidth = window.innerWidth;
-        if (Math.abs(nextHeight - lastHeight) < 12 && Math.abs(nextWidth - lastWidth) < 2) {
+        if (Math.abs(nextHeight - lastHeight) < 36 && Math.abs(nextWidth - lastWidth) < 4) {
           return;
         }
       }
       if (resizeTimer) clearTimeout(resizeTimer);
+      const elapsed = performance.now() - lastWheelAt;
+      const delayMs = Math.max(260, Math.ceil(280 - elapsed));
       resizeTimer = setTimeout(() => {
         if (cancelled) return;
+        if (performance.now() - lastWheelAt < 250) {
+          scheduleRefresh(false);
+          return;
+        }
         if (refreshRaf) cancelAnimationFrame(refreshRaf);
         refreshRaf = requestAnimationFrame(runRefresh);
-      }, 150);
+      }, delayMs);
     };
 
     if (document.fonts?.ready) {
@@ -115,9 +132,11 @@ function ScrollTriggerBridge() {
     }
 
     const onLoadRefresh = () => scheduleRefresh(true);
-    const onResizeRefresh = () => scheduleRefresh(false);
+    const onResizeRefresh = () => scheduleRefresh(true);
     window.addEventListener("load", onLoadRefresh, { passive: true });
     window.addEventListener("resize", onResizeRefresh, { passive: true });
+    window.addEventListener("wheel", markScrollActivity, { passive: true });
+    window.addEventListener("touchmove", markScrollActivity, { passive: true });
 
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined" && document.body) {
@@ -131,6 +150,8 @@ function ScrollTriggerBridge() {
       cancelled = true;
       window.removeEventListener("load", onLoadRefresh);
       window.removeEventListener("resize", onResizeRefresh);
+      window.removeEventListener("wheel", markScrollActivity);
+      window.removeEventListener("touchmove", markScrollActivity);
       if (resizeTimer) clearTimeout(resizeTimer);
       if (refreshRaf) cancelAnimationFrame(refreshRaf);
       resizeObserver?.disconnect();

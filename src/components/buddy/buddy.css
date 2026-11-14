@@ -12,6 +12,7 @@
   z-index: 35;
   pointer-events: none;
   will-change: transform;
+  contain: layout style;
 }
 
 .buddy-interactive {
@@ -30,10 +31,10 @@
   pointer-events: auto;
 }
 
-/* Mobile (<768px): Compact Speech Bubble with safe area */
+/* Mobile (<768px): Compact Speech Bubble & edge-docked safe area */
 @media (max-width: 767px) {
   .buddy-root {
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   }
 
   .buddy-chat-floating {
@@ -41,6 +42,13 @@
     left: 0;
     width: min(312px, calc(100vw - 28px));
     max-height: min(400px, calc(100dvh - 110px));
+  }
+}
+
+@media (max-width: 420px) {
+  .buddy-interactive {
+    transform: scale(0.82);
+    transform-origin: bottom left;
   }
 }
 

@@ -90,7 +90,6 @@ export function Parallax({
               start: align === "top" ? "top top" : "top bottom",
               end: align === "bottom" ? "bottom bottom" : "bottom top",
               scrub: typeof scrub === "number" ? scrub : 0.65,
-              invalidateOnRefresh: true,
             },
           }
         );
@@ -102,7 +101,7 @@ export function Parallax({
 
   return (
     <div ref={triggerRef} data-parallax-speed={speed} className={className} style={style}>
-      <div ref={contentRef} className="h-full w-full">
+      <div ref={contentRef} className="h-full w-full will-change-transform">
         {children}
       </div>
     </div>

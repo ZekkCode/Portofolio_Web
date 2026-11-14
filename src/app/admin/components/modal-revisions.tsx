@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { RevisionsIndexItem } from "@/lib/content/revisions";
+import type { RevisionsIndexItem } from "@/lib/content/types";
 import type { SiteConfig } from "@/lib/site-store";
 import { History, RotateCcw, X, Clock, User, AlertTriangle, Layers } from "lucide-react";
 

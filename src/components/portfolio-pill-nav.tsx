@@ -1,14 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import PillNav, { type PillNavItem } from "@/components/pill-nav";
 import { useSmoothScrollTo } from "@/components/parallax";
-import { FileText, FolderOpen, Layers3, Mail, UserRound } from "lucide-react";
+import { useSiteConfig } from "@/lib/site-store";
+import { getPublishedNavigation, getPublishedProfile } from "@/lib/content/selectors";
+import {
+  Award,
+  BookOpen,
+  Briefcase,
+  Compass,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  HelpCircle,
+  Layers3,
+  Mail,
+  UserRound,
+  Wrench,
+} from "lucide-react";
 
-const SECTION_NAV_MAP: Record<string, string> = {
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+const SECTION_NAV_DEFAULT: Record<string, string> = {
   tentang: "#tentang",
   akademik: "#tentang",
   services: "#tentang",
@@ -34,7 +55,37 @@ const TRACKED_SECTIONS = [
   "kontak",
 ];
 
-function useNavScrollState() {
+function renderNavIcon(iconName?: string, size = 16) {
+  const props = { size, strokeWidth: size > 16 ? 2 : 1.8, "aria-hidden": true as const, className: "shrink-0" };
+  switch (iconName) {
+    case "UserRound":
+      return <UserRound {...props} />;
+    case "FileText":
+      return <FileText {...props} />;
+    case "Layers3":
+      return <Layers3 {...props} />;
+    case "FolderOpen":
+      return <FolderOpen {...props} />;
+    case "Mail":
+      return <Mail {...props} />;
+    case "GraduationCap":
+      return <GraduationCap {...props} />;
+    case "Briefcase":
+      return <Briefcase {...props} />;
+    case "Award":
+      return <Award {...props} />;
+    case "Wrench":
+      return <Wrench {...props} />;
+    case "HelpCircle":
+      return <HelpCircle {...props} />;
+    case "BookOpen":
+      return <BookOpen {...props} />;
+    default:
+      return <Compass {...props} />;
+  }
+}
+
+function useNavScrollState(navHrefs: string[]) {
   const [active, setActive] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const [atBottom, setAtBottom] = useState(false);
@@ -43,6 +94,7 @@ function useNavScrollState() {
   const atBottomRef = useRef<boolean>(false);
   const lockTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLockedRef = useRef<boolean>(false);
+  const hrefSignature = navHrefs.join("|");
 
   const lockToSection = useCallback((sectionHref: string, durationMs = 800) => {
     isLockedRef.current = true;
@@ -65,6 +117,15 @@ function useNavScrollState() {
     let cachedHeaderHeight = 64;
     let cachedFooterTop: number | null = null;
     let cachedSections: { id: string; navHref: string; top: number; bottom: number }[] = [];
+
+    const allowedSet = new Set(hrefSignature.split("|").filter(Boolean));
+    const resolveNavHref = (id: string): string => {
+      const direct = `#${id}`;
+      if (allowedSet.has(direct)) return direct;
+      const mapped = SECTION_NAV_DEFAULT[id] || direct;
+      if (allowedSet.has(mapped)) return mapped;
+      return direct;
+    };
 
     const onManualUserScroll = () => {
       if (isLockedRef.current) {
@@ -94,7 +155,7 @@ function useNavScrollState() {
         const rect = el.getBoundingClientRect();
         measured.push({
           id,
-          navHref: SECTION_NAV_MAP[id] || `#${id}`,
+          navHref: resolveNavHref(id),
           top: rect.top + scrollY,
           bottom: rect.bottom + scrollY,
         });
@@ -106,7 +167,8 @@ function useNavScrollState() {
       rafId = 0;
       if (isLockedRef.current) return;
 
-      const scrollY = window.scrollY;
+      const lenisY = (window as unknown as { __zekkLenisScroll?: number }).__zekkLenisScroll;
+      const scrollY = typeof lenisY === "number" ? lenisY : window.scrollY;
       const windowHeight = cachedWindowHeight;
       const docHeight = cachedDocHeight || document.documentElement.scrollHeight;
 
@@ -129,17 +191,15 @@ function useNavScrollState() {
         setAtBottom(nextAtBottom);
       }
 
-      // 1. When near bottom of page, activate the last nav section (#kontak)
+      const lastAnchor = cachedSections[cachedSections.length - 1]?.navHref || "#kontak";
       if (scrollY + windowHeight >= docHeight - 70) {
-        const target = "#kontak";
-        if (activeRef.current !== target) {
-          activeRef.current = target;
-          setActive(target);
+        if (activeRef.current !== lastAnchor) {
+          activeRef.current = lastAnchor;
+          setActive(lastAnchor);
         }
         return;
       }
 
-      // 2. Reading focal point (pure arithmetic against cached section offsets — 0 layout reads per scroll tick)
       const focalPoint = cachedHeaderHeight + Math.min(windowHeight * 0.28, 200);
       let nextActive = "";
       let fallbackActive = "";
@@ -171,25 +231,15 @@ function useNavScrollState() {
     };
 
     const scheduleEvaluate = () => {
-      if (rafId || throttleTimer) return;
+      if (throttleTimer) return;
       const now = performance.now();
       const elapsed = now - lastEvalTime;
-      if (elapsed >= 64) {
-        rafId = requestAnimationFrame(() => {
-          lastEvalTime = performance.now();
-          evaluate();
-        });
-      } else {
-        throttleTimer = setTimeout(() => {
-          throttleTimer = null;
-          if (!rafId) {
-            rafId = requestAnimationFrame(() => {
-              lastEvalTime = performance.now();
-              evaluate();
-            });
-          }
-        }, 64 - elapsed);
-      }
+      const waitMs = elapsed >= 96 ? 16 : Math.ceil(96 - elapsed);
+      throttleTimer = setTimeout(() => {
+        throttleTimer = null;
+        lastEvalTime = performance.now();
+        evaluate();
+      }, waitMs);
     };
 
     const scheduleMeasureAndEvaluate = () => {
@@ -208,15 +258,7 @@ function useNavScrollState() {
       scheduleMeasureAndEvaluate();
     };
 
-    const resizeObserver = new ResizeObserver(() => {
-      const nextDocHeight = document.documentElement.scrollHeight;
-      if (Math.abs(nextDocHeight - cachedDocHeight) < 12) return;
-      scheduleMeasureAndEvaluate();
-    });
-    if (document.body) {
-      resizeObserver.observe(document.body);
-    }
-
+    ScrollTrigger.addEventListener("refresh", scheduleMeasureAndEvaluate);
     window.addEventListener("scroll", scheduleEvaluate, { passive: true });
     window.addEventListener("resize", onResize, { passive: true });
     window.addEventListener("wheel", onManualUserScroll, { passive: true });
@@ -230,119 +272,108 @@ function useNavScrollState() {
       if (rafId) cancelAnimationFrame(rafId);
       if (measureRafId) cancelAnimationFrame(measureRafId);
       if (throttleTimer) clearTimeout(throttleTimer);
+      ScrollTrigger.removeEventListener("refresh", scheduleMeasureAndEvaluate);
       window.removeEventListener("scroll", scheduleEvaluate);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("wheel", onManualUserScroll);
       window.removeEventListener("touchmove", onManualUserScroll);
-      resizeObserver.disconnect();
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
     };
-  }, []);
+  }, [hrefSignature]);
 
   return { activeSection: active, scrolled, atBottom, lockToSection };
 }
 
-export function PortfolioPillNav() {
-  const { t } = useTranslation();
+function ThemedPillNav(props: Omit<ComponentProps<typeof PillNav>, "theme">) {
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
-  const { activeSection, scrolled, atBottom, lockToSection } = useNavScrollState();
+  const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
+  return <PillNav {...props} theme={navTheme} />;
+}
+
+export function PortfolioPillNav() {
+  const { i18n } = useTranslation();
+  const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
+  const config = useSiteConfig();
+  const pubProfile = useMemo(() => getPublishedProfile(config, locale), [config, locale]);
+  const navConfigItems = useMemo(() => getPublishedNavigation(config, locale), [config, locale]);
+  const navHrefs = useMemo(() => navConfigItems.map((n) => n.href), [navConfigItems]);
+  const { activeSection, scrolled, atBottom, lockToSection } = useNavScrollState(navHrefs);
   const scrollTo = useSmoothScrollTo();
 
-  const navTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
+  const brandInitials = useMemo(() => {
+    const raw = (pubProfile.brand || "ZekkTech").trim();
+    const caps = raw.match(/[A-Z]/g);
+    if (caps && caps.length >= 2) return `${caps[0]}${caps[1]}`;
+    return raw.slice(0, 2).toUpperCase();
+  }, [pubProfile.brand]);
 
-  const desktopNavItems: PillNavItem[] = [
-    {
-      label: t("nav.about"),
-      href: "#tentang",
-      icon: <UserRound size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-    {
-      label: t("nav.cv"),
-      href: "#cv",
-      ariaLabel: t("nav.cv"),
-      icon: <FileText size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-    {
-      label: t("nav.stack"),
-      href: "#stack",
-      icon: <Layers3 size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-    {
-      label: t("nav.projects"),
-      href: "#proyek",
-      icon: <FolderOpen size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-    {
-      label: t("nav.contact"),
-      href: "#kontak",
-      icon: <Mail size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0" />,
-    },
-  ];
+  const desktopNavItems: PillNavItem[] = useMemo(
+    () =>
+      navConfigItems.map((item) => ({
+        label: item.label,
+        href: item.href,
+        ariaLabel: item.label,
+        icon: renderNavIcon(item.iconName, 16),
+      })),
+    [navConfigItems]
+  );
 
   const handleItemClick = (item: PillNavItem, _index: number, e: React.MouseEvent<HTMLElement>) => {
     if (item.href?.startsWith("#")) {
       e.preventDefault();
       lockToSection(item.href);
       scrollTo(item.href);
-    } else if (item.href?.startsWith("http")) {
-      e.preventDefault();
-      window.open(item.href, "_blank", "noopener,noreferrer");
+    } else if (item.href?.startsWith("http") || item.href?.startsWith("/")) {
+      const targetItem = navConfigItems.find((n) => n.href === item.href);
+      if (targetItem?.openInNewTab || item.href?.startsWith("http")) {
+        e.preventDefault();
+        window.open(item.href, "_blank", "noopener,noreferrer");
+      }
     }
   };
 
-  const mobileRailItems = [
-    {
-      id: "atas",
-      label: "Home",
-      href: "#atas",
-      icon: (
-        <span className="font-display text-[10.5px] font-black italic tracking-tighter text-inherit">
-          ZT
-        </span>
-      ),
-    },
-    {
-      id: "tentang",
-      label: t("nav.about", "Tentang"),
-      href: "#tentang",
-      icon: <UserRound size={17} strokeWidth={2} aria-hidden="true" />,
-    },
-    {
-      id: "cv",
-      label: t("nav.cv", "CV ATS"),
-      href: "#cv",
-      icon: <FileText size={17} strokeWidth={2} aria-hidden="true" />,
-    },
-    {
-      id: "stack",
-      label: t("nav.stack", "Tech Stack"),
-      href: "#stack",
-      icon: <Layers3 size={17} strokeWidth={2} aria-hidden="true" />,
-    },
-    {
-      id: "proyek",
-      label: t("nav.projects", "Proyek"),
-      href: "#proyek",
-      icon: <FolderOpen size={17} strokeWidth={2} aria-hidden="true" />,
-    },
-    {
-      id: "kontak",
-      label: t("nav.contact", "Kontak"),
-      href: "#kontak",
-      icon: <Mail size={17} strokeWidth={2} aria-hidden="true" />,
-    },
-  ];
+  const mobileRailItems = useMemo(
+    () => [
+      {
+        id: "atas",
+        label: "Home",
+        href: "#atas",
+        icon: (
+          <span className="font-display text-[10.5px] font-black italic tracking-tighter text-inherit">
+            {brandInitials}
+          </span>
+        ),
+        openInNewTab: false,
+      },
+      ...navConfigItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        href: item.href,
+        icon: renderNavIcon(item.iconName, 17),
+        openInNewTab: Boolean(item.openInNewTab),
+      })),
+    ],
+    [brandInitials, navConfigItems]
+  );
 
-  const handleMobileNavClick = (href: string, e: React.MouseEvent<HTMLElement>) => {
+  const handleMobileNavClick = (
+    href: string,
+    openInNewTab: boolean | undefined,
+    e: React.MouseEvent<HTMLElement>
+  ) => {
     if (href.startsWith("#")) {
       e.preventDefault();
       scrollTo(href);
-    } else if (href.startsWith("http")) {
+    } else if (href.startsWith("http") || openInNewTab) {
       e.preventDefault();
       window.open(href, "_blank", "noopener,noreferrer");
     }
   };
+
+  if (navConfigItems.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -355,13 +386,13 @@ export function PortfolioPillNav() {
         }`}
       >
         <div className="pointer-events-auto overflow-hidden rounded-full">
-          <PillNav
+          <ThemedPillNav
             logo={
               <span className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-black italic tracking-tighter text-white shadow-sm">
-                ZT
+                {brandInitials}
               </span>
             }
-            logoAlt="ZekkTech Home"
+            logoAlt={`${pubProfile.brand} Home`}
             logoHref="#atas"
             items={desktopNavItems}
             activeHref={activeSection}
@@ -371,7 +402,6 @@ export function PortfolioPillNav() {
             hoverEffect="glide"
             indicator="pill"
             surface="solid"
-            theme={navTheme}
             size="md"
             highlightColor="#1b45c4"
             highlightTextColor="#ffffff"
@@ -387,7 +417,7 @@ export function PortfolioPillNav() {
       {/* MOBILE: Sleek vertical icon-only rail along the right edge */}
       <nav
         aria-label="Navigasi Cepat Mobile"
-        className={`fixed end-[calc(0.625rem+env(safe-area-inset-right,0px))] top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-full border border-line/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-md transition-all duration-300 md:hidden dark:border-white/10 dark:bg-[#0c0e17]/90 ${
+        className={`fixed end-[calc(0.625rem+env(safe-area-inset-right,0px))] top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-full border border-line/80 bg-white/95 p-1.5 shadow-xl transition-all duration-300 md:hidden dark:border-white/10 dark:bg-[#0c0e17]/95 ${
           !atBottom
             ? "translate-x-0 opacity-100 pointer-events-auto"
             : "translate-x-12 opacity-0 pointer-events-none"
@@ -401,7 +431,6 @@ export function PortfolioPillNav() {
 
           return (
             <div key={item.id} className="flex flex-col items-center">
-              {/* Subtle divider below home button */}
               {index === 1 && (
                 <span
                   className="mb-1.5 h-px w-4 bg-line/80 dark:bg-white/10"
@@ -410,7 +439,7 @@ export function PortfolioPillNav() {
               )}
               <a
                 href={item.href}
-                onClick={(e) => handleMobileNavClick(item.href, e)}
+                onClick={(e) => handleMobileNavClick(item.href, item.openInNewTab, e)}
                 aria-label={item.label}
                 aria-current={isActive ? "location" : undefined}
                 title={item.label}
@@ -422,8 +451,7 @@ export function PortfolioPillNav() {
               >
                 {item.icon}
 
-                {/* Floating tooltip label on hover/focus */}
-                <span className="pointer-events-none absolute end-[calc(100%+8px)] top-1/2 -translate-y-1/2 rounded-md bg-slate-900/95 px-2 py-1 text-[11px] font-medium text-white shadow-md backdrop-blur-xs whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 dark:bg-slate-800/95">
+                <span className="pointer-events-none absolute end-[calc(100%+8px)] top-1/2 -translate-y-1/2 rounded-md bg-slate-900/95 px-2 py-1 text-[11px] font-medium text-white shadow-md whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 dark:bg-slate-800/95">
                   {item.label}
                 </span>
               </a>

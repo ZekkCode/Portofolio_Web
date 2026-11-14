@@ -23,7 +23,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className={`group flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-full border border-line/70 bg-white/85 text-ink shadow-2xs backdrop-blur-md transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/85 dark:text-slate-200 ${className}`}
+      className={`group flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-full border border-line/70 bg-white/95 text-ink shadow-2xs transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/95 dark:text-slate-200 ${className}`}
       aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode malam"}
       title={isDark ? "Mode Terang (Light)" : "Mode Malam (Dark)"}
     >
@@ -88,7 +88,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={toggle}
-      className={`inline-flex min-h-[44px] items-center rounded-full border border-line/70 bg-white/85 px-3.5 text-xs font-bold text-ink shadow-2xs backdrop-blur-md transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/85 dark:text-slate-200 ${className}`}
+      className={`inline-flex min-h-[44px] items-center rounded-full border border-line/70 bg-white/95 px-3.5 text-xs font-bold text-ink shadow-2xs transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/95 dark:text-slate-200 ${className}`}
       aria-label="Ganti bahasa / Switch language"
       title={currentLang === "id" ? "Switch to English" : "Ganti ke Bahasa Indonesia"}
     >

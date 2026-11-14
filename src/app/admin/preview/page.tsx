@@ -2,8 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySessionToken } from "@/lib/auth-server";
 import { PreviewClient } from "./preview-client";
-import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
-import { normalizeConfig, defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
+import { fetchDraftOrPublishedContent } from "@/lib/content/public-content";
 
 export const dynamic = "force-dynamic";
 
@@ -20,37 +19,13 @@ export default async function AdminPreviewPage() {
     redirect("/admin/login");
   }
 
-  // Ambil draf terbaru dari database
-  let draftConfig: SiteConfig = defaultSiteConfig;
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
-      if (supabase) {
-        const { data: draftData } = await supabase
-          .from("site_config")
-          .select("config")
-          .eq("id", "draft")
-          .maybeSingle();
+  const { config: draftConfig, updatedAt } = await fetchDraftOrPublishedContent();
 
-        if (draftData?.config) {
-          draftConfig = normalizeConfig(draftData.config as Partial<SiteConfig>);
-        } else {
-          // Jika draf kosong, gunakan published config
-          const { data: pubData } = await supabase
-            .from("site_config")
-            .select("config")
-            .eq("id", "current")
-            .maybeSingle();
-
-          if (pubData?.config) {
-            draftConfig = normalizeConfig(pubData.config as Partial<SiteConfig>);
-          }
-        }
-      }
-    } catch {
-      // fallback
-    }
-  }
-
-  return <PreviewClient initialConfig={draftConfig} userEmail={verified.email || "admin"} />;
+  return (
+    <PreviewClient
+      initialConfig={draftConfig}
+      initialUpdatedAt={updatedAt}
+      userEmail={verified.email || "admin"}
+    />
+  );
 }

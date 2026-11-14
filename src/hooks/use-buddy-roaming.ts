@@ -88,9 +88,8 @@ export function useBuddyRoaming({
     const mode = deviceModeRef.current;
 
     if (mode === "mobile") {
-      // Mobile (<768px): Micro-walk safe zone near bottom-left corner (16px - 48px)
-      // Keeps buddy fully clear of content reading areas and interactions
-      return { minX: 16, maxX: 48 };
+      // Mobile (<768px): Edge-tucked safe walk zone near bottom-left margin (8px - 22px)
+      return { minX: 8, maxX: 22 };
     }
 
     if (mode === "tablet") {

@@ -54,7 +54,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: clip;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    /* body transition removed to avoid style/animation storms during rapid theme toggles */
   }
 
   ::selection {
@@ -65,13 +65,19 @@
 /* ===========================================================
    CUSTOM SLEEK SCROLLBAR (LIGHT / DARK)
    =========================================================== */
-/* Firefox */
-* {
+/* Firefox (scoped to root and scroll containers so theme toggles never invalidate every DOM/SVG node via `.dark *`) */
+html,
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
 }
 
-.dark * {
+html.dark,
+html.dark .overflow-x-auto,
+html.dark .overflow-y-auto,
+html.dark .overflow-auto {
   scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
 
@@ -138,6 +144,11 @@
 .animate-marquee:hover,
 .animate-marquee-reverse:hover {
   animation-play-state: paused;
+}
+
+.marquee-paused .animate-marquee,
+.marquee-paused .animate-marquee-reverse {
+  animation-play-state: paused !important;
 }
 
 /* ===========================================================

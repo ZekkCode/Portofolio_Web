@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSiteConfig } from "@/lib/site-store";
@@ -8,6 +8,7 @@ import { useAdaptivePerformance } from "@/lib/device-performance";
 
 interface StaticLanyardCardProps {
   frontImage?: string;
+  backImage?: string;
   strapColor?: string;
 }
 
@@ -15,11 +16,15 @@ interface StaticLanyardCardProps {
  * Lightweight static fallback preserving the exact blue lanyard ribbon,
  * metallic clasp, and authentic 1:1.4 ID card proportions without Three.js or WebGL.
  */
-export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardProps) {
-  const cardImage = frontImage || "/card-front.webp";
+export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticLanyardCardProps) {
+  const [showBack, setShowBack] = useState(false);
+  const frontSrc = frontImage || "/card-front-v2.webp";
+  const backSrc = backImage || frontImage || "/card-back-v2.webp";
+  const cardImage = showBack ? backSrc : frontSrc;
 
   return (
     <div
+      data-static-lanyard="true"
       className="relative flex h-full w-full flex-col items-center justify-start select-none pt-2 sm:pt-4"
       aria-label="Zakaria Mujur P. ID Card"
     >
@@ -43,19 +48,34 @@ export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardP
         </div>
       </div>
 
-      {/* 3. Authentic ID Card Badge */}
-      <div className="relative z-20 -mt-1.5 transition-transform duration-300 hover:rotate-0 hover:scale-[1.01]">
-        <div className="relative w-[225px] sm:w-[265px] lg:w-[300px] aspect-[1/1.406] rounded-2xl overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-slate-900">
+      {/* 3. Authentic ID Card Badge (clickable to flip front/back in fallback mode) */}
+      <button
+        type="button"
+        onClick={() => setShowBack((prev) => !prev)}
+        aria-pressed={showBack}
+        aria-label={
+          showBack
+            ? "Kartu ID sisi belakang (Graphic Designer). Klik untuk kembali ke sisi depan."
+            : "Kartu ID sisi depan (UI/UX & Frontend Dev). Klik untuk balik ke sisi belakang."
+        }
+        className="group relative z-20 -mt-1.5 cursor-pointer rounded-[10px] transition-transform duration-300 motion-reduce:transition-none hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
+      >
+        <div className="relative w-[225px] sm:w-[265px] lg:w-[300px] aspect-[1/1.406] rounded-[10px] overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-[#0038b8]">
           <Image
             src={cardImage}
-            alt="Zakaria Mujur Prasetyo - ID Badge"
+            alt={
+              showBack
+                ? "Zakaria Mujur Prasetyo - Graphic Designer ID Badge"
+                : "Zakaria Mujur Prasetyo - UI/UX & Frontend Dev ID Badge"
+            }
             fill
             sizes="(max-width: 640px) 225px, (max-width: 1024px) 265px, 300px"
             priority
-            className="object-contain"
+            unoptimized
+            className="object-cover"
           />
         </div>
-      </div>
+      </button>
     </div>
   );
 }
@@ -70,35 +90,37 @@ export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
   const { hasWebGL } = useAdaptivePerformance();
   const [contextLost, setContextLost] = useState(false);
+  const [initFailed, setInitFailed] = useState(false);
 
-  // Fallback trigger if WebGL context is lost at runtime
-  useEffect(() => {
-    const handleContextLost = () => {
-      setContextLost(true);
-    };
-    window.addEventListener("webglcontextlost", handleContextLost, true);
-    return () => {
-      window.removeEventListener("webglcontextlost", handleContextLost, true);
-    };
-  }, []);
-
-  // 3D Lanyard stays Three.js everywhere WebGL is supported
-  const shouldRenderStatic = !hasWebGL || contextLost;
+  const shouldUnmount3D = !hasWebGL || initFailed;
+  const showStaticOverlay = shouldUnmount3D || contextLost;
 
   return (
-    <div className={`relative w-full ${className || "h-[320px] sm:h-[400px] lg:h-[440px]"}`}>
-      {shouldRenderStatic ? (
-        <StaticLanyardCard
-          frontImage={lanyard.frontImage || undefined}
-          strapColor={lanyard.strapColor || undefined}
-        />
-      ) : (
-        <DynamicLanyard
-          {...lanyard}
-          frontImage={lanyard.frontImage || undefined}
-          backImage={lanyard.backImage || undefined}
-          strapImage={lanyard.strapImage || undefined}
-        />
+    <div
+      data-lanyard-stage="true"
+      className={`relative w-full ${className || "h-[320px] sm:h-[400px] lg:h-[440px]"}`}
+    >
+      {showStaticOverlay && (
+        <div className={shouldUnmount3D ? "h-full w-full" : "absolute inset-0 z-10 h-full w-full"}>
+          <StaticLanyardCard
+            frontImage={lanyard.frontImage || undefined}
+            backImage={lanyard.backImage || undefined}
+            strapColor={lanyard.strapColor || undefined}
+          />
+        </div>
+      )}
+      {!shouldUnmount3D && (
+        <div className={contextLost ? "h-full w-full opacity-0 pointer-events-none" : "h-full w-full"}>
+          <DynamicLanyard
+            {...lanyard}
+            frontImage={lanyard.frontImage || undefined}
+            backImage={lanyard.backImage || undefined}
+            strapImage={lanyard.strapImage || undefined}
+            onInitFailed={() => setInitFailed(true)}
+            onContextLost={() => setContextLost(true)}
+            onContextRestored={() => setContextLost(false)}
+          />
+        </div>
       )}
     </div>
   );

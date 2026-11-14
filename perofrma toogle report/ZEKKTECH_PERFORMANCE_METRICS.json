@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "date_wib": "2026-11-14",
+  "url": "https://zakariamp.vercel.app/",
+  "source": {"branch": "master", "sha": "61026002c6f944cfbfcce033be627c3fa262527c", "matched_to_deployment": null},
+  "environment": {"browser": "Cloud Chrome", "version": null, "viewport_css_px": [1363, 936], "client_width_px": 1353, "scroll_width_px": 1353, "page_height_px_sample": 8304, "local_chromium_attempt": "failed to launch: ProcessSingleton socket operation not permitted"},
+  "user_reported_prior_inp_ms": 1944,
+  "lab_metrics": {"inp_ms": null, "event_timing_ms": null, "lcp_ms": null, "cls": null, "long_tasks": null, "loaf": null, "fps": null, "frame_times_ms": null, "gpu_utilization": null, "memory": null},
+  "theme": {
+    "normal": {"clicks": 10, "observed_dom_class_changes": 10, "configured_pause_ms": 450},
+    "sequential_mouse": {"commands": 30, "controller_elapsed_ms": 17958, "final_theme": "light"},
+    "sequential_keyboard": {"commands": 20, "keys_alternated": ["Enter", "Space"], "focus_verified_by_tab": true, "checkpoints": {"1": "dark", "2": "light", "10": "light", "20": "light"}},
+    "burst_comparison": [
+      {"target": "theme", "requested_clicks": 30, "controller_elapsed_ms": 3180, "dispatch_timeout": true, "delivered_clicks": null, "final_theme": "dark"},
+      {"target": "blank_hero_area", "requested_clicks": 30, "controller_elapsed_ms": 211, "dispatch_timeout": false},
+      {"target": "theme", "requested_clicks": 10, "controller_elapsed_ms": 1654, "dispatch_timeout": false},
+      {"target": "blank_hero_area", "requested_clicks": 10, "controller_elapsed_ms": 157, "dispatch_timeout": false}
+    ],
+    "controller_elapsed_ms_is_input_to_paint": false,
+    "after_burst_wheel_scroll_y_px": 3930,
+    "theme_persisted_on_reload": true
+  },
+  "scroll": {
+    "wheel_scroll_y_px": [0, 934, 4672, 4082, 7368, 1],
+    "page_down_up_scroll_y_px": [0, 749, 1498, 749, 0],
+    "about_parallax": {"scroll_y_px": [0, 299, 0], "translate_y_px": [-8.7669, 0.1948, -8.7668]},
+    "stack_marquee_track_x_px": [[-920.96, -574.04], [-972.12, -522.88]]
+  },
+  "visuals": {"hero_lanyard_path": "static image", "hero_drag_attempts": 3, "shapegrid_canvas_css_attributes_px": [1353, 936], "sticker_total_document_canvas_counts_on_selected_path": [2, 3, 2], "sticker_slots_stable_on_theme_snapshot": true, "sticker_composition_changed_on_reload": true, "webgl_context_count": null},
+  "cache": {"cold_browser_cache_controlled": false, "same_tab_reload": true, "browser_transfer_bytes": null, "separate_http_head_status": 200, "separate_http_head_cdn_cache": "HIT"},
+  "target_viewports_pending": [[1920,1080],[1440,900],[1366,768],[768,1024],[430,932],[390,844],[360,800],[320,568]],
+  "screenshots": ["ZEKKTECH_BASELINE.jpg", "ZEKKTECH_DARK.jpg"]
+}

@@ -9,6 +9,7 @@ import {
 import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { invalidatePublishedContentCache } from "@/lib/content/public-content";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
+import { isLocalCmsOverrideAllowed, writeLocalCmsDoc } from "@/lib/content/local-cms-store";
 
 export async function GET(request: Request) {
   const auth = await verifyAdminRequest(request);
@@ -66,40 +67,47 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json({ error: "Supabase belum terkonfigurasi" }, { status: 503 });
-    }
-
-    const supabase = getServiceRoleClient() || getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: "Klien database tidak tersedia" }, { status: 500 });
-    }
-
     const editor = auth.userEmail || "admin";
     const timestamp = new Date().toISOString();
+    const useLocal =
+      !isSupabaseConfigured() ||
+      process.env.LOCAL_CMS_STORE === "1" ||
+      (!process.env.VERCEL && !getServiceRoleClient());
 
-    // 1. Simpan rekaman revisi rollback
     await recordNewRevision(snapshot, editor, `Dipulihkan dari revisi ${body.revisionId}`);
 
-    // 2. Publikasikan kembali ke 'current'
-    const { error: upsertErr } = await supabase.from("site_config").upsert(
-      {
-        id: "current",
-        config: snapshot,
-        updated_at: timestamp,
-      },
-      { onConflict: "id" }
-    );
-
-    if (upsertErr) {
-      return NextResponse.json({ error: "Gagal memperbarui konfigurasi aktif" }, { status: 500 });
+    if (useLocal && isLocalCmsOverrideAllowed()) {
+      await writeLocalCmsDoc("current", snapshot);
+    } else {
+      const supabase = getServiceRoleClient() || getSupabaseClient();
+      if (!supabase) {
+        return NextResponse.json({ error: "Klien database tidak tersedia" }, { status: 500 });
+      }
+      const { error: upsertErr } = await supabase.from("site_config").upsert(
+        {
+          id: "current",
+          config: snapshot,
+          updated_at: timestamp,
+        },
+        { onConflict: "id" }
+      );
+      if (upsertErr) {
+        if (isLocalCmsOverrideAllowed()) {
+          await writeLocalCmsDoc("current", snapshot);
+        } else {
+          return NextResponse.json({ error: "Gagal memperbarui konfigurasi aktif" }, { status: 500 });
+        }
+      }
     }
 
-    // 3. Invalidate server memory cache & Next.js cache
     invalidatePublishedContentCache();
     try {
+      revalidatePath("/", "layout");
       revalidatePath("/");
       revalidatePath("/admin");
+      revalidatePath("/admin/preview");
+      revalidatePath("/sitemap.xml");
+      revalidatePath("/robots.txt");
     } catch {
       // ignore
     }

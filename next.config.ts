@@ -22,8 +22,7 @@ const cspDirectives = [
   ...(isProd ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
-const securityHeaders = [
-  { key: "Content-Security-Policy", value: cspDirectives },
+const baseSecurityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -34,6 +33,8 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=()",
   },
 ];
+
+const cspHeaderEntry = [{ key: "Content-Security-Policy", value: cspDirectives }];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -73,7 +74,12 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:path*",
-        headers: securityHeaders,
+        headers: baseSecurityHeaders,
+      },
+      // Terapkan CSP halaman utama ke semua rute kecuali /api/r2-file (yang menyetel sandbox CSP ketat per tipe berkas)
+      {
+        source: "/((?!api/r2-file).*)",
+        headers: cspHeaderEntry,
       },
       {
         source: "/robots.txt",
@@ -123,6 +129,18 @@ const nextConfig: NextConfig = {
         source: "/cv-page-4.png",
         headers: [
           { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
+        ],
+      },
+      {
+        source: "/card-front-v2.webp",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/card-back-v2.webp",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
       {

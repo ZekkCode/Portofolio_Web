@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { queryBuddyKnowledge } from "@/lib/buddy/buddy-knowledge";
-import { isSupabaseConfigured, getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
-import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
+import { fetchPublishedContent } from "@/lib/content/public-content";
 
 // In-memory sliding rate limiter per IP hash
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -67,25 +66,8 @@ export async function POST(request: Request) {
     const sanitized = message.trim().slice(0, 300);
     const langHint = body?.lang === "en" ? "en" : "id";
 
-    // 4. Query live canonical knowledge base
-    let activeConfig: SiteConfig | undefined = undefined;
-    if (isSupabaseConfigured()) {
-      try {
-        const supabase = getServiceRoleClient() || getSupabaseClient();
-        if (supabase) {
-          const { data } = await supabase
-            .from("site_config")
-            .select("config")
-            .eq("id", "current")
-            .maybeSingle();
-          if (data?.config) {
-            activeConfig = normalizeConfig(data.config);
-          }
-        }
-      } catch {
-        // graceful fallback to local defaults
-      }
-    }
+    // 4. Query live published knowledge base (never leaks drafts)
+    const activeConfig = await fetchPublishedContent();
 
     const result = queryBuddyKnowledge(sanitized, langHint, activeConfig);
 

@@ -1,7 +1,7 @@
 export const profile = {
   name: "Zakaria Mujur Prasetyo",
   nickname: "Zekk",
-  avatar: "/profile.webp",
+  avatar: "/card-front-v2.webp",
   brand: "ZekkTech",
   roles: "UI/UX & Frontend Developer",
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",

@@ -1,11 +1,11 @@
 'use client';
-import { memo, useEffect, useRef, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 8.9 5.2a2 2 0 0 0 2.2 0L22 7"/></svg>;
 type Palette = 'dark' | 'light';
 interface ProfileCardProps {
-  avatarUrl?: string; iconUrl?: string; miniAvatarUrl?: string;
+  avatarUrl?: string; secondaryAvatarUrl?: string; iconUrl?: string; miniAvatarUrl?: string;
   name?: string; title?: string; handle?: string; status?: string;
-  statusColor?: string; contactText?: string; showUserInfo?: boolean;
+  statusColor?: string; contactText?: string; showUserInfo?: boolean; showTileInfo?: boolean;
   onContactClick?: () => void; theme?: Palette; backdropColor?: string;
   radius?: number; holo?: number; glare?: number; enableTilt?: boolean;
   tiltStrength?: number; parallax?: number; enableMobileTilt?: boolean;
@@ -15,8 +15,23 @@ interface ProfileCardProps {
 interface Engine { aim:(nx:number,ny:number,on?:boolean)=>void; release:()=>void; write:()=>void; }
 type OrientationPermission = { requestPermission?: () => Promise<PermissionState> };
 const THEMES: Record<Palette, Record<string, string>> = {
-  dark: { '--pc-frame':'rgba(38,35,46,0.66)','--pc-frame-edge':'rgba(255,255,255,0.08)','--pc-frame-highlight':'rgba(255,255,255,0.07)','--pc-frame-shadow':'0 22px 44px -20px rgba(0,0,0,0.8),0 6px 16px -8px rgba(0,0,0,0.5)','--pc-tile':'linear-gradient(180deg,#3a3644 0%,#27242f 100%)','--pc-tile-edge':'rgba(255,255,255,0.07)','--pc-tile-highlight':'rgba(255,255,255,0.12)','--pc-tile-shadow':'0 4px 10px -4px rgba(0,0,0,0.7)','--pc-ink':'#f4f4f5','--pc-muted':'rgba(244,244,245,0.6)','--pc-hover':'brightness(1.12)','--pc-press':'brightness(0.8)','--pc-shade':'rgba(0,0,0,0.4)' },
-  light: { '--pc-frame':'rgba(240,240,243,0.8)','--pc-frame-edge':'rgba(24,24,27,0.07)','--pc-frame-highlight':'rgba(255,255,255,0.95)','--pc-frame-shadow':'0 22px 44px -22px rgba(24,24,27,0.3),0 6px 16px -10px rgba(24,24,27,0.16)','--pc-tile':'linear-gradient(180deg,#ffffff 0%,#f6f6f8 100%)','--pc-tile-edge':'rgba(24,24,27,0.08)','--pc-tile-highlight':'rgba(255,255,255,1)','--pc-tile-shadow':'0 4px 10px -5px rgba(24,24,27,0.25)','--pc-ink':'#27272a','--pc-muted':'rgba(39,39,42,0.6)','--pc-hover':'brightness(0.97)','--pc-press':'brightness(0.92)','--pc-shade':'rgba(24,24,27,0.14)' }
+  dark: { '--pc-frame':'rgba(38,35,46,0.92)','--pc-frame-edge':'rgba(255,255,255,0.08)','--pc-frame-highlight':'rgba(255,255,255,0.07)','--pc-frame-shadow':'0 22px 44px -20px rgba(0,0,0,0.8),0 6px 16px -8px rgba(0,0,0,0.5)','--pc-tile':'linear-gradient(180deg,#3a3644 0%,#27242f 100%)','--pc-tile-edge':'rgba(255,255,255,0.07)','--pc-tile-highlight':'rgba(255,255,255,0.12)','--pc-tile-shadow':'0 4px 10px -4px rgba(0,0,0,0.7)','--pc-ink':'#f4f4f5','--pc-muted':'rgba(244,244,245,0.6)','--pc-hover':'brightness(1.12)','--pc-press':'brightness(0.8)','--pc-shade':'rgba(0,0,0,0.4)' },
+  light: { '--pc-frame':'rgba(244,244,247,0.94)','--pc-frame-edge':'rgba(24,24,27,0.07)','--pc-frame-highlight':'rgba(255,255,255,0.95)','--pc-frame-shadow':'0 22px 44px -22px rgba(24,24,27,0.3),0 6px 16px -10px rgba(24,24,27,0.16)','--pc-tile':'linear-gradient(180deg,#ffffff 0%,#f6f6f8 100%)','--pc-tile-edge':'rgba(24,24,27,0.08)','--pc-tile-highlight':'rgba(255,255,255,1)','--pc-tile-shadow':'0 4px 10px -5px rgba(24,24,27,0.25)','--pc-ink':'#27272a','--pc-muted':'rgba(39,39,42,0.6)','--pc-hover':'brightness(0.97)','--pc-press':'brightness(0.92)','--pc-shade':'rgba(24,24,27,0.14)' }
+};
+const CARD_BLUE_THEME: Record<string, string> = {
+  '--pc-frame':'linear-gradient(180deg,#063fd1 0%,#032794 100%)',
+  '--pc-frame-edge':'rgba(255,255,255,0.2)',
+  '--pc-frame-highlight':'rgba(255,255,255,0.28)',
+  '--pc-frame-shadow':'0 22px 44px -20px rgba(4,39,148,0.55),0 8px 20px -10px rgba(0,0,0,0.4)',
+  '--pc-tile':'linear-gradient(180deg,#0d4be6 0%,#0533b4 100%)',
+  '--pc-tile-edge':'rgba(255,255,255,0.22)',
+  '--pc-tile-highlight':'rgba(255,255,255,0.3)',
+  '--pc-tile-shadow':'0 4px 12px -4px rgba(2,22,84,0.55)',
+  '--pc-ink':'#ffffff',
+  '--pc-muted':'rgba(255,255,255,0.78)',
+  '--pc-hover':'brightness(1.12)',
+  '--pc-press':'brightness(0.9)',
+  '--pc-shade':'rgba(2,18,72,0.36)',
 };
 const FOILS: Record<Palette, Record<string, string>> = {
   dark: { '--pc-blend':'color-dodge','--pc-holo-filter':'hue-rotate(0deg)','--pc-sheen':'rgba(255,255,255,0.16)' },
@@ -37,9 +52,10 @@ const SCRIM_STYLE:CSSProperties={background:'linear-gradient(to top,rgba(0,0,0,0
 const GLARE_STYLE:CSSProperties={background:'radial-gradient(farthest-corner circle at var(--pc-light-x) var(--pc-light-y),rgba(255,255,255,0.8) 0%,rgba(255,255,255,0.36) 20%,rgba(255,255,255,0) 60%)',opacity:'calc(var(--pc-glare) * var(--pc-active))'};
 const SHADE_STYLE:CSSProperties={background:'radial-gradient(farthest-corner circle at var(--pc-light-x) var(--pc-light-y),transparent 30%,var(--pc-shade) 100%)',opacity:'calc(var(--pc-glare) * var(--pc-tilt))'};
 const LAYER='pointer-events-none absolute inset-0 rounded-[inherit]';
-const ROOT='relative w-full max-w-[340px] touch-pan-y [perspective:1000px] [-webkit-tap-highlight-color:transparent]';
-const BODY='relative flex flex-col gap-[10px] rounded-[calc(var(--pc-radius)+10px)] p-[10px] backdrop-blur-[20px] backdrop-saturate-[1.6] will-change-transform [background:var(--pc-frame)] [box-shadow:var(--pc-frame-shadow)] [transform:rotateX(var(--pc-rotate-x))_rotateY(var(--pc-rotate-y))]';
+const ROOT='relative w-full touch-pan-y [perspective:1000px] [-webkit-tap-highlight-color:transparent]';
+const BODY='relative flex flex-col gap-[10px] rounded-[calc(var(--pc-radius)+10px)] p-[10px] will-change-transform [background:var(--pc-frame)] [box-shadow:var(--pc-frame-shadow)] [transform:rotateX(var(--pc-rotate-x))_rotateY(var(--pc-rotate-y))]';
 const TILE='relative isolate aspect-[4/5] overflow-hidden rounded-[var(--pc-radius)] [background:var(--pc-backdrop)] [box-shadow:var(--pc-tile-shadow)]';
+const TILE_CARD='relative isolate aspect-[1457/2048] overflow-hidden rounded-[var(--pc-radius)] [background:var(--pc-backdrop)] [box-shadow:var(--pc-tile-shadow)]';
 const HOLO=`${LAYER} [mix-blend-mode:var(--pc-blend)]`;
 const HOLO_LAYER='absolute inset-0';
 const INFO='absolute bottom-[18px] left-5 right-5 text-white z-[6]';
@@ -48,7 +64,8 @@ const TITLE='mx-0 mb-0 mt-1 text-[14px] leading-[1.45] text-white/78';
 const TILE_RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight)]`;
 const FOOTER='flex min-w-0 items-center gap-3 px-5 pb-2 pt-1.5';
 const AVATAR="relative h-9 w-9 flex-none overflow-hidden rounded-full [background:var(--pc-tile)] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:[box-shadow:inset_0_0_0_1px_var(--pc-tile-edge)]";
-const AVATAR_IMAGE='block h-full w-full object-cover object-top';
+const AVATAR_IMAGE = 'block h-full w-full object-cover object-[50%_15%]';
+const AVATAR_IMAGE_CARD = 'block h-full w-full object-cover object-[50%_39%] scale-[1.75]';
 const META='flex min-w-0 flex-1 flex-col gap-[3px]';
 const HANDLE='overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-semibold leading-[1.25] text-[var(--pc-ink)]';
 const STATUS="flex items-center gap-1.5 whitespace-nowrap text-[12.5px] leading-[1.25] text-[var(--pc-muted)]";
@@ -58,9 +75,10 @@ const RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-frame-edge),inset_0_1px
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
 const isDark=(color:string):boolean|null=>{const match=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color).trim());if(!match)return null;const hex=match[1].length===3?match[1].replace(/./g,d=>d+d):match[1];const[r,g,b]=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255);return 0.2126*r+0.7152*g+0.0722*b<0.5;};
 
-const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='Javi A. Torres',title='Software Engineer',handle='zekksparow',status='Online',statusColor='#22c55e',contactText='Contact',showUserInfo=true,onContactClick,theme='dark',backdropColor,radius=16,holo=0.8,glare=0.5,enableTilt=true,tiltStrength=12,parallax=8,enableMobileTilt=false,mobileTiltSensitivity=5,intro=true,className=''}:ProfileCardProps)=>{
+const ProfileCard=({avatarUrl='',secondaryAvatarUrl,iconUrl,miniAvatarUrl,imageFit='contain',name='Javi A. Torres',title='Software Engineer',handle='zekksparow',status='Online',statusColor='#22c55e',contactText='Contact',showUserInfo=true,showTileInfo,onContactClick,theme='dark',backdropColor,radius=16,holo=0.8,glare=0.5,enableTilt=true,tiltStrength=12,parallax=8,enableMobileTilt=false,mobileTiltSensitivity=5,intro=true,className=''}:ProfileCardProps)=>{
   const rootRef=useRef<HTMLDivElement>(null);
   const engineRef=useRef<Engine|null>(null);
+  const [showSecondary, setShowSecondary] = useState(false);
   const settings = { enableTilt, tiltStrength, parallax, mobileTiltSensitivity, intro };
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -90,6 +108,7 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
       style.setProperty('--pc-active',light.p.toFixed(4));
     };
     const frame=(now:number)=>{
+      if(!visible){raf=0;return;}
       const rawDt = last ? (now - last) / 1000 : 0.016;
       last = now;
       const dt = clamp(rawDt, 0.001, 0.05);
@@ -107,9 +126,10 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
       light.p=clamp(light.p+(light.target-light.p)*(1-Math.exp(-dt/tau)),0,1);
       write();
       const moving=Math.abs(x.target-x.p)>0.0005||Math.abs(y.target-y.p)>0.0005||Math.abs(x.v)>0.0005||Math.abs(y.v)>0.0005||Math.abs(light.target-light.p)>0.002;
-      if(moving){raf=requestAnimationFrame(frame);}else{x.p=x.target;y.p=y.target;light.p=light.target;write();raf=0;}
+      if(moving&&visible){raf=requestAnimationFrame(frame);}else{if(!moving){x.p=x.target;y.p=y.target;light.p=light.target;write();}raf=0;}
     };
-    const wake=()=>{if(raf)return;last=0;raf=requestAnimationFrame(frame);};
+    let visible = true;
+    const wake=()=>{if(raf||!visible)return;last=0;raf=requestAnimationFrame(frame);};
     const aim=(nx:number,ny:number,on=true)=>{x.target=clamp(nx,-1,1);y.target=clamp(ny,-1,1);light.target=on?1:0;slowUntil=0;wake();};
     const aimAt=(event:PointerEvent)=>{const rect=root.getBoundingClientRect();if(!rect.width||!rect.height)return;aim(((event.clientX-rect.left)/rect.width)*2-1,((event.clientY-rect.top)/rect.height)*2-1);};
     const release=()=>aim(0,0,false);
@@ -121,10 +141,12 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
     root.addEventListener('pointerenter',onEnter);root.addEventListener('pointermove',onMove);
     root.addEventListener('pointerleave',onLeave);root.addEventListener('pointerdown',onDown);
     root.addEventListener('pointerup',onUp);root.addEventListener('pointercancel',onUp);
+    const visObserver=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;if(visible){if(Math.abs(x.target-x.p)>0.0005||Math.abs(y.target-y.p)>0.0005||Math.abs(light.target-light.p)>0.002)wake();}else if(raf){cancelAnimationFrame(raf);raf=0;}},{rootMargin:'150px 0px'});
+    visObserver.observe(root);
     const observer=new ResizeObserver(()=>{size.width=root.offsetWidth;size.height=root.offsetHeight;write();});
     observer.observe(root);engineRef.current={aim,release,write};
     if(settingsRef.current.intro&&!reduced){x.p=0.62;y.p=-0.55;light.p=1;slowUntil=performance.now()+1400;write();wake();}else{write();}
-    return()=>{cancelAnimationFrame(raf);observer.disconnect();root.removeEventListener('pointerenter',onEnter);root.removeEventListener('pointermove',onMove);root.removeEventListener('pointerleave',onLeave);root.removeEventListener('pointerdown',onDown);root.removeEventListener('pointerup',onUp);root.removeEventListener('pointercancel',onUp);engineRef.current=null;};
+    return()=>{cancelAnimationFrame(raf);visObserver.disconnect();observer.disconnect();root.removeEventListener('pointerenter',onEnter);root.removeEventListener('pointermove',onMove);root.removeEventListener('pointerleave',onLeave);root.removeEventListener('pointerdown',onDown);root.removeEventListener('pointerup',onUp);root.removeEventListener('pointercancel',onUp);engineRef.current=null;};
   },[]);
   useEffect(()=>{engineRef.current?.write();},[enableTilt,tiltStrength,parallax]);
   useEffect(()=>{
@@ -136,32 +158,43 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
     root.addEventListener('click',onClick);
     return()=>{root.removeEventListener('click',onClick);window.removeEventListener('deviceorientation',onOrientation);};
   },[enableMobileTilt]);
+  const canToggle = Boolean(secondaryAvatarUrl && secondaryAvatarUrl !== avatarUrl);
+  const activeAvatar = canToggle && showSecondary ? secondaryAvatarUrl! : avatarUrl;
+  const activeMiniAvatar =
+    miniAvatarUrl && miniAvatarUrl !== avatarUrl
+      ? miniAvatarUrl
+      : activeAvatar || miniAvatarUrl;
+  const isBakedCard = /card-(front|back)-v\d+\.webp/i.test(activeAvatar || '') || canToggle;
+  const shouldShowTileInfo = showTileInfo ?? !isBakedCard;
   const palette:Palette=theme==='light'?'light':'dark';
-  const foil:Palette=backdropColor?((isDark(backdropColor)??palette==='dark')?'dark':'light'):palette;
-  const backdrop=backdropColor?`linear-gradient(180deg,color-mix(in srgb,${backdropColor},#ffffff 12%) 0%,color-mix(in srgb,${backdropColor},#000000 18%) 100%)`:'var(--pc-tile)';
+  const foil:Palette=backdropColor?((isDark(backdropColor)??palette==='dark')?'dark':'light'):isBakedCard?'dark':palette;
+  const themeVars=isBakedCard&&!backdropColor?CARD_BLUE_THEME:THEMES[palette];
+  const backdrop=backdropColor?`linear-gradient(180deg,color-mix(in srgb,${backdropColor},#ffffff 12%) 0%,color-mix(in srgb,${backdropColor},#000000 18%) 100%)`:isBakedCard?'#0439c4':'var(--pc-tile)';
   return (
-    <div ref={rootRef} className={`${ROOT} ${className}`.trim()} style={{...ROOT_VARS,...THEMES[palette],...FOILS[foil],'--pc-radius':`${Math.max(0,radius)}px`,'--pc-backdrop':backdrop,'--pc-holo':clamp(holo,0,1),'--pc-glare':clamp(glare,0,1),'--pc-parallax':`${Math.max(0,parallax)}px`,'--pc-status':statusColor,'--pc-grain':GRAIN,'--pc-pattern':iconUrl?`url("${iconUrl}")`:'linear-gradient(#000,#000)','--pc-pattern-size':iconUrl?'180% auto':'100% 100%','--pc-holo-gain':iconUrl?1.25:0.75,'--pc-holo-detail':iconUrl&&foil==='dark'?1:0} as CSSProperties}>
+    <div ref={rootRef} className={`${ROOT} ${isBakedCard ? 'max-w-[334px]' : 'max-w-[340px]'} ${className}`.trim()} style={{...ROOT_VARS,...themeVars,...FOILS[foil],'--pc-radius':`${Math.max(0,isBakedCard ? Math.min(radius, 12) : radius)}px`,'--pc-backdrop':backdrop,'--pc-holo':clamp(holo,0,1),'--pc-glare':clamp(glare,0,1),'--pc-parallax':`${Math.max(0,parallax)}px`,'--pc-status':statusColor,'--pc-grain':GRAIN,'--pc-pattern':iconUrl?`url("${iconUrl}")`:'linear-gradient(#000,#000)','--pc-pattern-size':iconUrl?'180% auto':'100% 100%','--pc-holo-gain':iconUrl?1.25:0.75,'--pc-holo-detail':iconUrl&&foil==='dark'?1:0} as CSSProperties}>
       <div className={BODY}>
-        <div className={TILE}>
+        <div className={isBakedCard ? TILE_CARD : TILE}>
           <span className={LAYER} style={SHEEN_STYLE}/>
           <span className={HOLO} style={HOLO_STYLE}><span className={HOLO_LAYER} style={GLOW_STYLE}/><span className={HOLO_LAYER} style={SHIFT_STYLE}/></span>
-          {avatarUrl ? (
+          {activeAvatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              className={`pointer-events-none absolute select-none ${
-                imageFit === 'contain'
+              className={`pointer-events-none absolute max-w-none max-h-none select-none ${
+                isBakedCard
+                  ? 'inset-0 h-full w-full object-contain object-center'
+                  : imageFit === 'contain'
                   ? 'h-full w-full object-contain object-center p-3'
-                  : 'h-full w-full object-cover object-top'
+                  : 'h-full w-full object-cover object-[50%_15%]'
               }`}
-              style={PHOTO_STYLE}
-              src={avatarUrl}
+              style={isBakedCard ? undefined : PHOTO_STYLE}
+              src={activeAvatar}
               alt={name||''}
-              loading="lazy"
+              decoding="async"
               draggable={false}
             />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center select-none z-[5]">
-              <div className="flex size-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md shadow-inner text-2xl font-black tracking-widest text-white shadow-2xs">
+              <div className="flex size-20 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-inner text-2xl font-black tracking-widest text-white shadow-2xs">
                 {name ? name.split(' ').map((n) => n[0]).slice(0, 2).join('') : 'ZK'}
               </div>
               <p className="mt-3 font-mono text-[11px] font-bold tracking-wider uppercase text-white/70">
@@ -169,15 +202,29 @@ const ProfileCard=({avatarUrl='',iconUrl,miniAvatarUrl,imageFit='contain',name='
               </p>
             </div>
           )}
-          {(name||title)&&(<><span className={LAYER} style={SCRIM_STYLE}/><div className={INFO}>{name&&<h3 className={NAME}>{name}</h3>}{title&&<p className={TITLE}>{title}</p>}</div></>)}
+          {canToggle && (
+            <button
+              type="button"
+              onClick={() => setShowSecondary((prev) => !prev)}
+              aria-pressed={showSecondary}
+              aria-label={
+                showSecondary
+                  ? 'Kartu profil Graphic Designer aktif. Klik untuk beralih ke UI/UX & Frontend Dev.'
+                  : 'Kartu profil UI/UX & Frontend Dev aktif. Klik untuk beralih ke Graphic Designer.'
+              }
+              title="Klik untuk ganti kartu"
+              className="absolute inset-0 z-[7] cursor-pointer bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            />
+          )}
+          {shouldShowTileInfo&&(name||title)&&(<><span className={LAYER} style={SCRIM_STYLE}/><div className={INFO}>{name&&<h3 className={NAME}>{name}</h3>}{title&&<p className={TITLE}>{title}</p>}</div></>)}
           <span className={TILE_RIM}/>
         </div>
         {showUserInfo&&(
           <div className={FOOTER}>
-            {miniAvatarUrl ? (
+            {activeMiniAvatar ? (
               <span className={AVATAR}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className={AVATAR_IMAGE} src={miniAvatarUrl} alt="" loading="lazy" draggable={false}/>
+                <img className={isBakedCard && activeMiniAvatar === activeAvatar ? AVATAR_IMAGE_CARD : AVATAR_IMAGE} src={activeMiniAvatar} alt="" decoding="async" draggable={false}/>
               </span>
             ) : (
               <span className="relative flex size-9 flex-none items-center justify-center rounded-full bg-brand/20 border border-brand/40 text-xs font-bold text-brand dark:text-blue-400">

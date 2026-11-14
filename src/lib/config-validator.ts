@@ -32,6 +32,7 @@ function isSafeUrl(url?: string): boolean {
   }
   if (
     trimmed.startsWith("/") ||
+    trimmed.startsWith("#") ||
     trimmed.startsWith("https://") ||
     trimmed.startsWith("http://localhost") ||
     trimmed.startsWith("mailto:") ||
@@ -39,8 +40,12 @@ function isSafeUrl(url?: string): boolean {
   ) {
     return true;
   }
-  if (trimmed.startsWith("data:image/")) {
+  if (trimmed.startsWith("data:image/") && !trimmed.startsWith("data:image/svg+xml;")) {
     return true;
+  }
+  // Allow clean base64 SVG only without active scripts/event handlers
+  if (trimmed.startsWith("data:image/svg+xml")) {
+    return !trimmed.includes("<script") && !trimmed.includes("onload=") && !trimmed.includes("onerror=");
   }
   return false;
 }
@@ -52,10 +57,10 @@ export function validateSiteConfigPayload(raw: unknown): ValidationResult {
     return { isValid: false, errors: ["Payload konfigurasi harus berupa objek JSON valid"] };
   }
 
-  // Cek ukuran payload serialisasi (maks 1 MB)
+  // Cek ukuran payload serialisasi (maks 2 MB)
   const jsonStr = JSON.stringify(raw);
-  if (jsonStr.length > 1024 * 1024) {
-    return { isValid: false, errors: ["Ukuran payload konfigurasi melebihi batas 1 MB"] };
+  if (jsonStr.length > 2 * 1024 * 1024) {
+    return { isValid: false, errors: ["Ukuran payload konfigurasi melebihi batas 2 MB"] };
   }
 
   const obj = raw as Record<string, unknown>;
@@ -333,12 +338,41 @@ export function validateSiteConfigPayload(raw: unknown): ValidationResult {
       if (blog.feedUrl && !isSafeUrl(blog.feedUrl)) {
         errors.push("URL feed blog menggunakan protokol tidak aman");
       }
+      if (blog.portalUrl && !isSafeUrl(blog.portalUrl)) {
+        errors.push("URL portal blog menggunakan protokol tidak aman");
+      }
+      if (Array.isArray(blog.manualPosts)) {
+        for (const post of blog.manualPosts) {
+          if (post?.url && !isSafeUrl(post.url)) {
+            errors.push(`URL artikel blog '${post.title || ""}' tidak aman`);
+          }
+          if (post?.coverImage && !isSafeUrl(post.coverImage)) {
+            errors.push(`URL gambar cover blog '${post.title || ""}' tidak aman`);
+          }
+        }
+      }
     }
   }
 
-  // 13. Validasi headerLogoUrl
+  // 13. Validasi headerLogoUrl, navigation, contactSection & seo
   if (obj.headerLogoUrl && typeof obj.headerLogoUrl === "string" && !isSafeUrl(obj.headerLogoUrl)) {
     errors.push("URL logo header menggunakan protokol tidak aman");
+  }
+  if (Array.isArray(obj.navigation)) {
+    for (const nav of obj.navigation as Array<{ labelId?: string; href?: string }>) {
+      if (nav?.href && !isSafeUrl(nav.href)) {
+        errors.push(`Target navigasi '${nav.labelId || nav.href}' tidak aman`);
+      }
+    }
+  }
+  if (obj.seo && typeof obj.seo === "object") {
+    const seo = obj.seo as { ogImage?: string; canonicalUrl?: string };
+    if (seo.ogImage && !isSafeUrl(seo.ogImage)) {
+      errors.push("URL OG image SEO menggunakan protokol tidak aman");
+    }
+    if (seo.canonicalUrl && !isSafeUrl(seo.canonicalUrl)) {
+      errors.push("URL kanonikal SEO menggunakan protokol tidak aman");
+    }
   }
 
   if (errors.length > 0) {

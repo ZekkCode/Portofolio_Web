@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { SiteConfig } from "@/lib/site-config";
 import type { ContentHealthReport } from "@/lib/content/types";
+import { computeAutoStatsBreakdown, isSectionVisible } from "@/lib/content/selectors";
 import {
   FolderGit2,
   Award,
@@ -15,9 +16,11 @@ import {
   Download,
   PlusCircle,
   CheckCircle2,
+  EyeOff,
   ExternalLink,
   Layers,
   ArrowRight,
+  BarChart3,
 } from "lucide-react";
 import type { AdminTabKey } from "../admin-client";
 
@@ -37,10 +40,10 @@ export function TabOverview({
   onOpenRevisionsModal,
 }: TabOverviewProps) {
   const projects = config.projects || [];
-  const publishedProjects = projects.filter((p) => p.published !== false);
+  const publishedProjects = projects.filter((p) => p.published !== false && p.visible !== false);
 
   const certs = config.certificates || [];
-  const verifiedCerts = certs.filter((c) => Boolean(c.credentialUrl || c.credentialPdf));
+  const publishedCerts = certs.filter((c) => c.published !== false && c.visible !== false);
 
   const education = config.education || [];
   const experience = config.experience || [];
@@ -49,20 +52,38 @@ export function TabOverview({
   const totalTools = techStack.length;
   const categoriesCount = new Set(techStack.map((s) => s.category)).size;
 
+  const autoStats = computeAutoStatsBreakdown(config);
+  const statsMode = config.stats?.mode || "auto";
+
+  const sectionReadiness = [
+    { key: "hero" as const, label: "Hero & Lanyard 3D" },
+    { key: "about" as const, label: "Tentang & Statistik" },
+    { key: "services" as const, label: "4 Pilar Layanan" },
+    { key: "cv" as const, label: "Folder Berkas CV" },
+    { key: "journey" as const, label: "Akademik & Karier" },
+    { key: "achievements" as const, label: "Prestasi & Rekognisi" },
+    { key: "certificates" as const, label: "Sertifikasi Terverifikasi" },
+    { key: "stack" as const, label: "Tech Stack & Marquee" },
+    { key: "projects" as const, label: "Proyek & Studi Kasus" },
+    { key: "blog" as const, label: "Blog & Writing" },
+    { key: "faq" as const, label: "FAQ Accordion" },
+    { key: "contact" as const, label: "Kontak & Hologram Card" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* 1. Top Hero Summary & Health Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-surface/80 via-surface/40 to-brand/5 p-6 backdrop-blur-sm dark:border-line/40 dark:from-slate-900/80 dark:to-brand/10">
+      <div className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-surface/80 via-surface/40 to-brand/5 p-6 dark:border-line/40 dark:from-slate-900/80 dark:to-brand/10">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <span className="block text-[11px] font-semibold text-muted">
-              Ringkasan & Status Konfigurasi
+              Ringkasan & Status Konfigurasi (Skema v{config.version || 2})
             </span>
             <h2 className="text-xl font-bold tracking-tight text-ink md:text-2xl">
               Pusat Kendali Portofolio
             </h2>
             <p className="text-xs text-muted">
-              Kelola seluruh konten, linimasa karier, proyek, dan aset media ZekkTech secara terpusat.
+              Kelola seluruh konten, linimasa karier, proyek, blog, SEO, navigasi, dan aset media secara terpusat.
             </p>
           </div>
 
@@ -70,7 +91,7 @@ export function TabOverview({
             <button
               type="button"
               onClick={onOpenHealthModal}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
                 healthReport.canPublish
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
                   : "border-rose-500/40 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 dark:text-rose-300"
@@ -89,7 +110,7 @@ export function TabOverview({
               href="/admin/preview"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs font-semibold text-body shadow-sm transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/90"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs font-semibold text-body transition-colors hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/90"
             >
               <Eye className="size-3.5 text-brand" />
               <span>Pratinjau Draf</span>
@@ -101,7 +122,6 @@ export function TabOverview({
 
       {/* 2. Key Metrics Grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {/* Proyek */}
         <button
           type="button"
           onClick={() => onNavigateTab("works")}
@@ -110,14 +130,13 @@ export function TabOverview({
           <div className="flex items-center justify-between text-muted group-hover:text-brand">
             <FolderGit2 className="size-4" />
             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {publishedProjects.length} Terbit
+              {publishedProjects.length} Publik
             </span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{projects.length}</div>
           <div className="text-[11px] font-medium text-muted">Total Proyek</div>
         </button>
 
-        {/* Sertifikasi */}
         <button
           type="button"
           onClick={() => onNavigateTab("credentials")}
@@ -126,14 +145,13 @@ export function TabOverview({
           <div className="flex items-center justify-between text-muted group-hover:text-brand">
             <Award className="size-4" />
             <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-              {verifiedCerts.length} Terverifikasi
+              {publishedCerts.length} Publik
             </span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{certs.length}</div>
           <div className="text-[11px] font-medium text-muted">Sertifikat</div>
         </button>
 
-        {/* Pendidikan */}
         <button
           type="button"
           onClick={() => onNavigateTab("journey")}
@@ -147,7 +165,6 @@ export function TabOverview({
           <div className="text-[11px] font-medium text-muted">Institusi</div>
         </button>
 
-        {/* Pengalaman Karier */}
         <button
           type="button"
           onClick={() => onNavigateTab("journey")}
@@ -155,13 +172,14 @@ export function TabOverview({
         >
           <div className="flex items-center justify-between text-muted group-hover:text-brand">
             <Briefcase className="size-4" />
-            <span className="text-[10px] font-semibold text-muted">Karier</span>
+            <span className="text-[10px] font-semibold text-muted">
+              {autoStats.organizationsCount} Organisasi Unik
+            </span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{experience.length}</div>
-          <div className="text-[11px] font-medium text-muted">Pengalaman</div>
+          <div className="text-[11px] font-medium text-muted">Peran Karier</div>
         </button>
 
-        {/* Layanan */}
         <button
           type="button"
           onClick={() => onNavigateTab("expertise")}
@@ -172,10 +190,9 @@ export function TabOverview({
             <span className="text-[10px] font-semibold text-muted">Pilar</span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{services.length}</div>
-          <div className="text-[11px] font-medium text-muted">Layanan Desain/IT</div>
+          <div className="text-[11px] font-medium text-muted">Layanan</div>
         </button>
 
-        {/* Tech Stack */}
         <button
           type="button"
           onClick={() => onNavigateTab("expertise")}
@@ -186,13 +203,60 @@ export function TabOverview({
             <span className="text-[10px] font-semibold text-muted">{categoriesCount} Kategori</span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{totalTools}</div>
-          <div className="text-[11px] font-medium text-muted">Total Alat/Bahasa</div>
+          <div className="text-[11px] font-medium text-muted">Alat / Bahasa</div>
         </button>
+      </div>
+
+      {/* Auto-Computed Stats Breakdown Card */}
+      <div className="rounded-2xl border border-line bg-white/80 p-5 dark:border-line/40 dark:bg-slate-900/40">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/60 pb-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="size-4 text-brand" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+              Kalkulasi Statistik Halaman Tentang ({statsMode === "auto" ? "Mode Otomatis" : "Mode Override Manual"})
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab("general")}
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            Ubah Mode di Profil -&gt;
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl border border-line/60 bg-surface/50 p-3 dark:border-line/30 dark:bg-slate-950/60">
+            <div className="text-[11px] text-muted">Proyek Terhitung</div>
+            <div className="mt-1 font-mono text-xl font-bold text-ink">
+              {statsMode === "manual" ? config.stats.projectsCount : autoStats.projectsCount}
+            </div>
+          </div>
+          <div className="rounded-xl border border-line/60 bg-surface/50 p-3 dark:border-line/30 dark:bg-slate-950/60">
+            <div className="text-[11px] text-muted">Sertifikat Terhitung</div>
+            <div className="mt-1 font-mono text-xl font-bold text-ink">
+              {statsMode === "manual" ? config.stats.certificatesCount : autoStats.certificatesCount}
+            </div>
+          </div>
+          <div className="rounded-xl border border-line/60 bg-surface/50 p-3 dark:border-line/30 dark:bg-slate-950/60">
+            <div className="text-[11px] text-muted">
+              Pengalaman ({autoStats.experienceMonths} bln net)
+            </div>
+            <div className="mt-1 font-mono text-xl font-bold text-ink">
+              {statsMode === "manual" ? config.stats.experienceYears : autoStats.experienceYears}
+            </div>
+          </div>
+          <div className="rounded-xl border border-line/60 bg-surface/50 p-3 dark:border-line/30 dark:bg-slate-950/60">
+            <div className="text-[11px] text-muted">Organisasi Unik</div>
+            <div className="mt-1 font-mono text-xl font-bold text-ink">
+              {statsMode === "manual" ? config.stats.organizationsCount : autoStats.organizationsCount}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 3. Quick Actions & Maintenance Shortcuts */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* Kolom 1: Pintasan Konten */}
         <div className="rounded-2xl border border-line bg-surface/30 p-5 dark:border-line/30 dark:bg-slate-900/30">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Aksi Cepat Konten</h3>
           <div className="mt-3 space-y-2">
@@ -222,19 +286,18 @@ export function TabOverview({
 
             <button
               type="button"
-              onClick={() => onNavigateTab("journey")}
+              onClick={() => onNavigateTab("content")}
               className="flex w-full items-center justify-between rounded-xl border border-line/60 bg-white/70 px-3.5 py-2.5 text-xs font-semibold text-ink transition hover:border-brand hover:bg-surface dark:border-line/40 dark:bg-slate-900/60"
             >
               <span className="flex items-center gap-2">
-                <GraduationCap className="size-4 text-brand" />
-                <span>Perbarui Linimasa Akademik / Karier</span>
+                <Layers className="size-4 text-brand" />
+                <span>Kelola Blog, Navigasi & Seksi</span>
               </span>
               <ArrowRight className="size-3.5 text-muted" />
             </button>
           </div>
         </div>
 
-        {/* Kolom 2: Integritas & Audit */}
         <div className="rounded-2xl border border-line bg-surface/30 p-5 dark:border-line/30 dark:bg-slate-900/30">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Audit & Kesehatan Data</h3>
           <div className="mt-3 space-y-2.5">
@@ -271,7 +334,6 @@ export function TabOverview({
           </div>
         </div>
 
-        {/* Kolom 3: Backup & Pemeliharaan */}
         <div className="rounded-2xl border border-line bg-surface/30 p-5 dark:border-line/30 dark:bg-slate-900/30">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Cadangan & Ekspor</h3>
           <div className="mt-3 space-y-2">
@@ -302,54 +364,43 @@ export function TabOverview({
         </div>
       </div>
 
-      {/* 4. Section Completion Checklist */}
+      {/* 4. Live Section Visibility Checklist */}
       <div className="rounded-2xl border border-line bg-surface/20 p-5 dark:border-line/30 dark:bg-slate-900/20">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
-          Pemeriksaan Kesiapan Seksi Portofolio
-        </h3>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5 text-xs">
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Hero & Profil</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Tentang & Statistik</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Linimasa Akademik</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Linimasa Karier</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Lanyard 3D & Hologram</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Folder Berkas CV</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">4 Pilar Layanan</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Sertifikasi & Kredensial</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">Tech Stack & Tools</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40">
-            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">FAQ & Kontak Form</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+            Status Visibilitas Seksi Halaman Utama
+          </h3>
+          <button
+            type="button"
+            onClick={() => onNavigateTab("content")}
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            Atur Seksi &amp; Urutan -&gt;
+          </button>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 text-xs">
+          {sectionReadiness.map((sec) => {
+            const active = isSectionVisible(config, sec.key);
+            return (
+              <div
+                key={sec.key}
+                className="flex items-center gap-2 rounded-xl border border-line/40 bg-surface/60 p-2.5 dark:bg-slate-900/40"
+              >
+                {active ? (
+                  <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <EyeOff className="size-4 text-muted shrink-0" />
+                )}
+                <span className={`font-medium ${active ? "text-ink" : "text-muted line-through"}`}>
+                  {sec.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
+
+export default TabOverview;

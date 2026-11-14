@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
 import { useLenis } from "lenis/react";
 import { useSiteConfig } from "@/lib/site-store";
+import { getPublishedCvDocs, getPublishedCvSettings } from "@/lib/content/selectors";
 import type { PaperCrumpleProps } from "@/components/paper-crumple";
 
 const PaperCrumple = dynamic<PaperCrumpleProps>(
@@ -13,9 +15,9 @@ const PaperCrumple = dynamic<PaperCrumpleProps>(
   { ssr: false }
 );
 
-export type RoleKey = "all" | "graphic" | "uiux" | "frontend" | "itsupport";
+export type RoleKey = string;
 
-export const ROLE_TO_PAGE_INDEX: Record<RoleKey, number> = {
+export const ROLE_TO_PAGE_INDEX: Record<string, number> = {
   all: 0,
   graphic: 0,
   uiux: 1,
@@ -23,7 +25,7 @@ export const ROLE_TO_PAGE_INDEX: Record<RoleKey, number> = {
   itsupport: 3,
 };
 
-export const PAGE_INDEX_TO_ROLE: Record<number, Exclude<RoleKey, "all">> = {
+export const PAGE_INDEX_TO_ROLE: Record<number, string> = {
   0: "graphic",
   1: "uiux",
   2: "frontend",
@@ -46,7 +48,7 @@ export interface RoleDetail {
   keyProjects: { name: string; desc: string; url?: string }[];
 }
 
-export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
+export const ROLE_DETAILS: Record<string, RoleDetail> = {
   graphic: {
     key: "graphic",
     title: "Desainer Grafis",
@@ -59,16 +61,8 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     desc: "Berpengalaman merancang identitas visual, branding UMKM, materi publikasi sosial media, infografis, dan aset multimedia kreatif.",
     skills: ["Branding & Logo Design", "Digital Illustration", "Social Media Content", "Print & Poster Design", "Typography & Color Theory", "Video Editing Basics"],
     tools: ["Adobe Photoshop", "Adobe Illustrator", "Figma", "CorelDRAW", "CapCut", "Filmora"],
-    responsibilities: [
-      "Merancang konsep visual kreatif dan konsisten untuk kebutuhan organisasi dan klien.",
-      "Mengelola produksi media publikasi digital untuk event kampus dan komunitas.",
-      "Menyusun pedoman identitas brand (color palette, typography, visual assets).",
-    ],
-    keyProjects: [
-      { name: "Visual Identity HIMATIF UTM", desc: "Perancangan grafis event seminar, workshop, dan konten media sosial." },
-      { name: "Infografis KOALISI Linux", desc: "Materi visual edukasi open source dan kesadaran keamanan digital." },
-      { name: "Branding GDGoC UTM", desc: "Aset kreatif promosi kegiatan komunitas developer kampus." },
-    ],
+    responsibilities: [],
+    keyProjects: [],
   },
   uiux: {
     key: "uiux",
@@ -79,19 +73,11 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-sky-600",
     bgLight: "bg-sky-500/10",
     borderColor: "border-sky-500/30",
-    desc: "Mendesain antarmuka produk digital (web & mobile) yang berpusat pada pengguna, mulai dari user journey, design system, hingga interactive prototype.",
-    skills: ["User Journey & Flow", "Wireframing & Lo-Fi", "High-Fidelity Prototyping", "Design System & Tokens", "Usability Heuristics", "Responsive Layout"],
+    desc: "Mendesain antarmuka produk digital (web & mobile) yang berpusat pada pengguna.",
+    skills: ["User Journey & Flow", "Wireframing & Lo-Fi", "High-Fidelity Prototyping", "Design System & Tokens"],
     tools: ["Figma", "Adobe XD", "FigJam", "Whimsical", "Component Libraries"],
-    responsibilities: [
-      "Melakukan riset kebutuhan pengguna dan menerjemahkannya ke dalam user flow terstruktur.",
-      "Membangun komponen UI yang konsisten dan reusable dengan auto-layout Figma.",
-      "Menghubungkan desainer dengan developer agar implementasi kode selaras dengan desain.",
-    ],
-    keyProjects: [
-      { name: "Trevio Hotel Booking System", desc: "UI aplikasi pemesanan kamar hotel multi-properti dengan verifikasi pembayaran.", url: "https://github.com/Buthzz/trevio-project" },
-      { name: "SIGAP-Pangan", desc: "Antarmuka platform pelaporan dan peringatan rantai logistik pangan.", url: "https://github.com/ZekkCode/SIGAP-Pangan" },
-      { name: "TOEL Online Test", desc: "UI simulasi ujian TOEFL web untuk mahasiswa dengan navigasi soal adaptif.", url: "https://github.com/ZekkCode/OnlineTest-TOEFL_DPW" },
-    ],
+    responsibilities: [],
+    keyProjects: [],
   },
   frontend: {
     key: "frontend",
@@ -102,19 +88,11 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-brand",
     bgLight: "bg-brand/10",
     borderColor: "border-brand/30",
-    desc: "Mengembangkan aplikasi web modern yang cepat, interaktif, responsif, dan aksesibel dengan Next.js App Router, React, TypeScript, dan Three.js.",
-    skills: ["Next.js (App Router, Turbopack)", "React 19 & Hooks", "TypeScript Strict Mode", "Tailwind CSS v4", "Three.js & WebGL Shaders", "State Management & Sync"],
+    desc: "Mengembangkan aplikasi web modern yang cepat, interaktif, responsif, dan aksesibel.",
+    skills: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Three.js & WebGL"],
     tools: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Three.js", "VS Code", "GitHub"],
-    responsibilities: [
-      "Mengembangkan antarmuka web modular berbasis komponen yang mudah dirawat.",
-      "Mengoptimalkan aksesibilitas, responsivitas tampilan, dan efisiensi aset web.",
-      "Mengintegrasikan interaksi visual interaktif menggunakan Next.js dan Three.js.",
-    ],
-    keyProjects: [
-      { name: "ZekkTech Portfolio 3D", desc: "Portofolio modern Next.js 16 + Tailwind v4 + Three.js Lanyard + React Bits Folder.", url: "https://github.com/ZekkCode" },
-      { name: "Mesin Pencari TP/TF-IDF", desc: "Aplikasi Information Retrieval kalkulasi Cosine Similarity & TF-IDF.", url: "https://github.com/ZekkCode/information-retrieval" },
-      { name: "ZEDD Download Manager", desc: "Alat utilitas download sinkronisasi eksternal.", url: "https://github.com/ZekkCode/ZEDD-Zekk-External-Downloader-Drive" },
-    ],
+    responsibilities: [],
+    keyProjects: [],
   },
   itsupport: {
     key: "itsupport",
@@ -125,19 +103,11 @@ export const ROLE_DETAILS: Record<Exclude<RoleKey, "all">, RoleDetail> = {
     textColor: "text-amber-600",
     bgLight: "bg-amber-500/10",
     borderColor: "border-amber-500/30",
-    desc: "Memiliki keahlian di bidang perakitan hardware PC, instalasi dan administrasi sistem operasi Linux, troubleshooting jaringan, serta otomasi bot.",
-    skills: ["Hardware Assembly & Rakit PC", "OS Maintenance (Linux & Windows)", "Network Basics (LAN, IP, DNS)", "Telegram Bot API Automation", "CLI Scripting & yt-dlp", "Troubleshooting Perangkat Lab"],
-    tools: ["Ubuntu / Debian Linux", "Windows OS", "Python", "Bash", "yt-dlp", "Hardware Diagnostic Tools"],
-    responsibilities: [
-      "Merakit dan menganalisis kompatibilitas spesifikasi PC sesuai kebutuhan komputasi.",
-      "Melakukan diagnosis serta pemecahan masalah hardware, peripheral, dan jaringan.",
-      "Mengembangkan skrip otomatisasi bot untuk mempercepat alur kerja digital.",
-    ],
-    keyProjects: [
-      { name: "ZekkStore Telegram Bot", desc: "Bot otomatis transaksi produk digital berbasis Python & Telegram Bot API.", url: "https://github.com/ZekkCode/BotZekkStoreTelegram" },
-      { name: "Network Capture Downloader", desc: "Tutorial dan skrip ekstraksi video streaming HLS (.m3u8) dengan yt-dlp.", url: "https://github.com/ZekkCode/Download-Video-Lewat-Network-Capture" },
-      { name: "Linux Workstation Lab Setup", desc: "Konfigurasi lingkungan distro Linux open source untuk komunitas KOALISI." },
-    ],
+    desc: "Memiliki keahlian perakitan hardware PC, Linux OS, jaringan dasar, dan otomasi bot.",
+    skills: ["Hardware Assembly", "Linux & Windows", "Network Basics", "Automation Scripting"],
+    tools: ["Ubuntu / Debian Linux", "Windows OS", "Python", "Bash"],
+    responsibilities: [],
+    keyProjects: [],
   },
 };
 
@@ -148,12 +118,39 @@ interface CvPreviewModalProps {
 }
 
 export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPreviewModalProps) {
-  const { cvDocs } = useSiteConfig();
+  const { i18n } = useTranslation();
+  const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
+  const config = useSiteConfig();
   const lenis = useLenis();
-  const [activeRole, setActiveRole] = useState<RoleKey>(initialRole);
+
+  const docs = useMemo(() => getPublishedCvDocs(config, locale), [config, locale]);
+  const cvSettings = useMemo(() => getPublishedCvSettings(config, locale), [config, locale]);
+
+  const resolveInitialState = useCallback(
+    (role: RoleKey) => {
+      if (docs.length === 0) return { docKey: "frontend", pageIdx: 0 };
+      const targetDoc =
+        role === "all"
+          ? docs[0]
+          : docs.find((d) => d.roleKey === role) || docs[0];
+      const pages =
+        targetDoc.pages && targetDoc.pages.length > 0
+          ? targetDoc.pages
+          : [targetDoc.thumbnailUrl || "/cv-page-1.png"];
+      let initialPage = 0;
+      if (role !== "all" && targetDoc.thumbnailUrl) {
+        const matchIdx = pages.indexOf(targetDoc.thumbnailUrl);
+        if (matchIdx >= 0) initialPage = matchIdx;
+      }
+      return { docKey: targetDoc.roleKey, pageIdx: initialPage };
+    },
+    [docs]
+  );
+
+  const [activeRole, setActiveRole] = useState<RoleKey>(() => resolveInitialState(initialRole).docKey);
   const [prevInitialRole, setPrevInitialRole] = useState<RoleKey>(initialRole);
   const [prevIsOpen, setPrevIsOpen] = useState<boolean>(isOpen);
-  const [currentPage, setCurrentPage] = useState(() => ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
+  const [currentPage, setCurrentPage] = useState(() => resolveInitialState(initialRole).pageIdx);
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [viewport, setViewport] = useState({ w: 1200, h: 800 });
@@ -181,17 +178,13 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Deteksi ukuran viewport
   useEffect(() => {
-    const update = () => {
-      setViewport({ w: window.innerWidth, h: window.innerHeight });
-    };
+    const update = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Preferensi reduced-motion listener
   useEffect(() => {
     if (typeof window !== "undefined" && window.matchMedia) {
       const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -201,7 +194,6 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     }
   }, []);
 
-  // Simpan elemen yang membuka modal untuk pengembalian fokus keyboard
   useEffect(() => {
     if (isOpen) {
       openerRef.current = (document.activeElement as HTMLElement) || null;
@@ -209,7 +201,6 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     }
   }, [isOpen]);
 
-  // Sinkronisasi Lenis: Hentikan momentum scroll background saat modal aktif
   useEffect(() => {
     if (!isOpen) return;
     lenis?.stop();
@@ -218,12 +209,12 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     };
   }, [isOpen, lenis]);
 
-  // Sinkronisasi saat modal dibuka atau initialRole berubah dari luar (pola resmi React render-time adjustment)
   if (isOpen && (!prevIsOpen || initialRole !== prevInitialRole)) {
+    const next = resolveInitialState(initialRole);
     setPrevIsOpen(isOpen);
     setPrevInitialRole(initialRole);
-    setActiveRole(initialRole);
-    setCurrentPage(ROLE_TO_PAGE_INDEX[initialRole] ?? 0);
+    setActiveRole(next.docKey);
+    setCurrentPage(next.pageIdx);
   } else if (!isOpen && prevIsOpen) {
     setPrevIsOpen(false);
   }
@@ -235,36 +226,41 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
     }
   }, [onClose]);
 
-  // Resolusi data halaman dan dokumen aktif
-  const pageRole = PAGE_INDEX_TO_ROLE[currentPage] || "frontend";
-  const effectiveKey: Exclude<RoleKey, "all"> = activeRole === "all" ? pageRole : activeRole;
-  const currentDoc = cvDocs.find((d) => d.roleKey === effectiveKey);
-  const currentDetail = ROLE_DETAILS[effectiveKey];
+  const currentDoc =
+    docs.find((d) => d.roleKey === activeRole) ||
+    docs[0] ||
+    null;
 
-  const pagesList =
-    currentDoc?.pages && currentDoc.pages.length > 0
-      ? currentDoc.pages
-      : ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
+  const fallbackDetail = ROLE_DETAILS[activeRole] || ROLE_DETAILS.frontend;
+
+  const pagesList = useMemo(() => {
+    if (currentDoc?.pages && currentDoc.pages.length > 0) return currentDoc.pages;
+    if (currentDoc?.thumbnailUrl) return [currentDoc.thumbnailUrl];
+    return ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
+  }, [currentDoc]);
 
   const totalPages = pagesList.length;
+  const safePageIdx = Math.min(Math.max(currentPage, 0), Math.max(0, totalPages - 1));
+
+  const switchRole = (roleKey: string) => {
+    setActiveRole(roleKey);
+    const target = docs.find((d) => d.roleKey === roleKey);
+    if (target?.thumbnailUrl && target.pages?.length) {
+      const thumbPos = target.pages.indexOf(target.thumbnailUrl);
+      setCurrentPage(thumbPos >= 0 ? thumbPos : 0);
+    } else {
+      setCurrentPage(0);
+    }
+  };
 
   const prevPage = useCallback(() => {
-    setCurrentPage((p) => {
-      const next = Math.max(0, p - 1);
-      setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
-      return next;
-    });
+    setCurrentPage((p) => Math.max(0, p - 1));
   }, []);
 
   const nextPage = useCallback(() => {
-    setCurrentPage((p) => {
-      const next = Math.min(totalPages - 1, p + 1);
-      setActiveRole(PAGE_INDEX_TO_ROLE[next] || "frontend");
-      return next;
-    });
+    setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
   }, [totalPages]);
 
-  // Keyboard navigation, Escape & Focus Trap
   useEffect(() => {
     if (!isOpen) return;
 
@@ -316,25 +312,26 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
 
   if (!isOpen || !mounted) return null;
 
-  // Ukuran kertas responsif sesuai viewport (rasio A4 = 1 : 1.414)
   const isMobile = viewport.w < 640;
   const maxW = isMobile ? Math.min(viewport.w - 32, 330) : 400;
   const maxH = isMobile ? Math.min(viewport.h - 160, 480) : Math.min(viewport.h - 140, 580);
   const paperWidth = Math.round(Math.min(maxW, maxH / 1.414));
   const paperHeight = Math.round(paperWidth * 1.414);
 
-  // URL PDF yang tersimpan di admin/backend atau Cloudflare R2
+  const effectiveKey = currentDoc?.roleKey || activeRole || "frontend";
   const storedPdfUrl = currentDoc?.pdfUrl?.trim() || "";
   const isDirectHttpR2 =
     /^https?:\/\//i.test(storedPdfUrl) &&
-    !storedPdfUrl.includes(".r2.cloudflarestorage.com");
+    !storedPdfUrl.includes(".r2.cloudflarestorage.com") &&
+    !storedPdfUrl.startsWith("/api/r2-file");
 
-  // Jika URL berupa domain R2 publik langsung, gunakan langsung; jika private/relatif, rute via /api/cv-pdf untuk signed URL aman
   const pdfHref = isDirectHttpR2
     ? storedPdfUrl
-    : `/api/cv-pdf?role=${effectiveKey}`;
+    : `/api/cv-pdf?role=${encodeURIComponent(effectiveKey)}`;
 
-  const currentTitle = currentDoc?.title || currentDetail.title;
+  const currentTitle = currentDoc?.title || fallbackDetail.title;
+  const canDownload = currentDoc ? currentDoc.allowDownload !== false : cvSettings.allowDownload !== false;
+
   return createPortal(
     <div
       ref={dialogRef}
@@ -343,40 +340,69 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
       aria-label="Tampilan Lembar CV Interaktif"
       className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden"
     >
-      {/* Backdrop transparan lembut: meredupkan latar belakang tanpa kotak kartu */}
       <div
         onClick={handleClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-sm transition-opacity duration-300"
         aria-hidden="true"
       />
 
-      {/* Kontrol Atas Melayang (Transparan, Menghilang Saat Drag) */}
+      {/* Top Floating Bar */}
       <div
-        className={`fixed top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-30 flex items-center justify-between pointer-events-none transition-opacity duration-200 ${
+        className={`fixed top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none transition-opacity duration-200 ${
           isDragging ? "opacity-0" : "opacity-100"
         }`}
       >
-        {/* Indikator Spesialisasi & Judul Dokumen Ringkas */}
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md text-white text-xs font-semibold select-none">
-          <span
-            className="size-2 rounded-full shrink-0"
-            style={{ backgroundColor: currentDoc?.color || currentDetail.color }}
-          />
-          <span className="truncate max-w-[220px] sm:max-w-none">
-            {currentTitle}
-          </span>
+        {/* Role Switcher Pills / Title */}
+        <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-black/55 p-1 backdrop-blur-md shadow-md">
+          {docs.length > 1 ? (
+            docs.map((doc) => {
+              const selected = doc.roleKey === currentDoc?.roleKey;
+              return (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => switchRole(doc.roleKey)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    selected
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span
+                    className="size-2 rounded-full shrink-0"
+                    style={{ backgroundColor: doc.color || "#1b45c4" }}
+                  />
+                  <span className="truncate max-w-[130px] sm:max-w-none">{doc.title}</span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1 text-white text-xs font-semibold">
+              <span
+                className="size-2 rounded-full shrink-0"
+                style={{ backgroundColor: currentDoc?.color || fallbackDetail.color }}
+              />
+              <span>{currentTitle}</span>
+            </div>
+          )}
+
+          {(currentDoc?.versionLabel || currentDoc?.updatedAt) && (
+            <span className="hidden md:inline-flex items-center px-2 font-mono text-[10px] text-white/70">
+              {[currentDoc.versionLabel, currentDoc.updatedAt].filter(Boolean).join(" · ")}
+            </span>
+          )}
         </div>
 
-        {/* Aksi Cepat: Ratakan & Tutup */}
+        {/* Actions: Flatten & Close */}
         <div className="pointer-events-auto flex items-center gap-2">
           <button
             type="button"
             onClick={() => setCrumpleResetKey((k) => k + 1)}
             className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-            title="Ratakan Lembar Kertas"
+            title={locale === "en" ? "Flatten Paper" : "Ratakan Lembar Kertas"}
           >
             <RotateCcw className="size-3.5" />
-            <span className="hidden sm:inline">Ratakan</span>
+            <span className="hidden sm:inline">{locale === "en" ? "Flatten" : "Ratakan"}</span>
           </button>
 
           <button
@@ -384,20 +410,20 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             type="button"
             onClick={handleClose}
             className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-            aria-label="Tutup pratinjau CV"
+            aria-label={locale === "en" ? "Close CV preview" : "Tutup pratinjau CV"}
           >
             <X className="size-4.5" />
           </button>
         </div>
       </div>
 
-      {/* Area Tengah: Lembar Kertas Asli Mengambang Bebas (Tanpa Container Box / Border) */}
+      {/* Center Interactive Paper */}
       <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
         {hasWebGL && !reducedMotion ? (
           <PaperCrumple
             className="pointer-events-auto h-full w-full"
-            src={pagesList[currentPage]}
-            alt={`Curriculum Vitae Zakaria Mujur P. Halaman ${currentPage + 1}`}
+            src={pagesList[safePageIdx]}
+            alt={`Curriculum Vitae ${currentTitle} Halaman ${safePageIdx + 1}`}
             width={paperWidth}
             height={paperHeight}
             releaseBehavior="restore"
@@ -420,12 +446,11 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             }}
           />
         ) : (
-          /* Fallback Statis saat WebGL tidak tersedia atau pengguna memilih Reduced Motion */
           <div className="relative flex items-center justify-center p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={pagesList[currentPage]}
-              alt={`Curriculum Vitae Halaman ${currentPage + 1}`}
+              src={pagesList[safePageIdx]}
+              alt={`Curriculum Vitae ${currentTitle} Halaman ${safePageIdx + 1}`}
               style={{ width: paperWidth, height: paperHeight }}
               className="rounded-lg shadow-2xl object-contain bg-white pointer-events-none"
             />
@@ -433,35 +458,34 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
         )}
       </div>
 
-      {/* Kontrol Bawah Melayang: Navigasi Halaman Ringkas & Tombol "Buka PDF" */}
+      {/* Bottom Floating Controls */}
       <div
         className={`fixed bottom-5 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 z-30 pointer-events-none flex flex-wrap items-center justify-between gap-3 max-w-2xl mx-auto transition-opacity duration-200 ${
           isDragging ? "opacity-0" : "opacity-100"
         }`}
       >
-        {/* Navigasi Halaman Ringkas (Hanya Muncul Jika Lebih dari 1 Halaman) */}
         {totalPages > 1 ? (
           <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-2.5 py-1.5 backdrop-blur-md text-white select-none">
             <button
               type="button"
               onClick={prevPage}
-              disabled={currentPage === 0}
+              disabled={safePageIdx === 0}
               className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-white/80 transition-all duration-150 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label="Halaman sebelumnya"
-              title="Halaman Sebelumnya"
+              aria-label={locale === "en" ? "Previous page" : "Halaman sebelumnya"}
+              title={locale === "en" ? "Previous Page" : "Halaman Sebelumnya"}
             >
               <ChevronLeft className="size-4" />
             </button>
             <span className="font-mono text-xs font-bold px-2 tracking-wider">
-              Hal {currentPage + 1} dari {totalPages}
+              Hal {safePageIdx + 1} {locale === "en" ? "of" : "dari"} {totalPages}
             </span>
             <button
               type="button"
               onClick={nextPage}
-              disabled={currentPage >= totalPages - 1}
+              disabled={safePageIdx >= totalPages - 1}
               className="flex min-h-[44px] min-w-[44px] size-11 items-center justify-center rounded-xl text-white/80 transition-all duration-150 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label="Halaman berikutnya"
-              title="Halaman Berikutnya"
+              aria-label={locale === "en" ? "Next page" : "Halaman berikutnya"}
+              title={locale === "en" ? "Next Page" : "Halaman Berikutnya"}
             >
               <ChevronRight className="size-4" />
             </button>
@@ -470,17 +494,19 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           <div />
         )}
 
-        {/* Tombol Mengambang "Buka PDF" — Tautan Asli ke R2 / Dokumen Cloud */}
-        <a
-          href={pdfHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pointer-events-auto inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-        >
-          <FileText className="size-4 text-sky-200" />
-          <span>Buka PDF</span>
-          <ArrowUpRight className="size-3.5 text-white/80" />
-        </a>
+        {canDownload && (
+          <a
+            href={pdfHref}
+            download={currentDoc?.downloadFilename || undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pointer-events-auto inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            <FileText className="size-4 text-sky-200" />
+            <span>{cvSettings.downloadLabel || "Buka PDF"}</span>
+            <ArrowUpRight className="size-3.5 text-white/80" />
+          </a>
+        )}
       </div>
     </div>,
     document.body

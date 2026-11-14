@@ -288,7 +288,42 @@ export function auditContentHealth(config: Partial<SiteConfig>): ContentHealthRe
     }
   });
 
-  // ===================== 10. SEO & APPEARANCE =====================
+  // ===================== 10. BLOG, NAVIGASI & SEO =====================
+  if (config.blog?.visible !== false) {
+    if (config.blog?.sourceMode !== "manual" && config.blog?.feedUrl && !isSafeUrl(config.blog.feedUrl)) {
+      issues.push({
+        id: "blog-feed-url-unsafe",
+        field: "blog.feedUrl",
+        section: "Blog",
+        severity: "error",
+        message: "URL Feed Blog tidak menggunakan protokol aman.",
+      });
+    }
+    (config.blog?.manualPosts || []).forEach((post, idx) => {
+      if (!post.title?.trim() || !isSafeUrl(post.url)) {
+        issues.push({
+          id: `blog-post-invalid-${idx}`,
+          field: `blog.manualPosts[${idx}]`,
+          section: "Blog",
+          severity: "error",
+          message: `Artikel manual #${idx + 1} belum memiliki judul atau URL tidak valid.`,
+        });
+      }
+    });
+  }
+
+  (config.navigation || []).forEach((nav, idx) => {
+    if (!nav.href?.trim() || !isSafeUrl(nav.href)) {
+      issues.push({
+        id: `nav-href-invalid-${idx}`,
+        field: `navigation[${idx}].href`,
+        section: "Navigasi",
+        severity: "error",
+        message: `Target navigasi '${nav.labelId || idx + 1}' tidak valid.`,
+      });
+    }
+  });
+
   if (config.seo) {
     if (!config.seo.metaTitle || !config.seo.metaTitle.trim()) {
       issues.push({

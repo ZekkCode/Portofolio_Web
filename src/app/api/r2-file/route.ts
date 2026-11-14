@@ -16,7 +16,16 @@ const ALLOWED_FOLDERS = new Set([
   "certificates",
   "cv",
   "avatar",
+  "profile",
   "lanyard",
+  "education",
+  "logos",
+  "experience",
+  "achievements",
+  "blog",
+  "seo",
+  "services",
+  "misc",
 ]);
 
 /**
@@ -133,12 +142,25 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const isSvg =
+      object.contentType.toLowerCase().includes("svg") ||
+      filename.toLowerCase().endsWith(".svg");
+
     const headers: Record<string, string> = {
-      "Content-Type": object.contentType,
+      "Content-Type": isSvg ? "image/svg+xml; charset=utf-8" : object.contentType,
       "Cache-Control": cacheControl,
       "X-Content-Type-Options": "nosniff",
       "Accept-Ranges": "bytes",
     };
+
+    if (isSvg) {
+      // Paksa sandbox SVG agar skrip inline apa pun tidak dapat dieksekusi oleh browser
+      headers["Content-Security-Policy"] =
+        "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'";
+    } else {
+      headers["Content-Security-Policy"] =
+        "default-src 'none'; object-src 'self'; frame-ancestors 'self'";
+    }
 
     if (object.contentLength !== undefined) {
       headers["Content-Length"] = String(object.contentLength);

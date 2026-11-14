@@ -2241,7 +2241,29 @@ const Folder = ({
 
   useEffect(() => {
     engineRef.current?.wake();
-  });
+  }, [
+    isOpen,
+    open,
+    count,
+    layout,
+    openOn,
+    peek,
+    intro,
+    draggable,
+    zoomOnClick,
+    closeOnOutsideClick,
+    tilt,
+    bounce,
+    speed,
+    frost,
+    glass,
+    theme,
+    color,
+    paperColor,
+    mode,
+    size,
+    tabPosition
+  ]);
 
   const toggle = () => {
     if (engineRef.current?.blur()) return;

@@ -39,30 +39,39 @@ const DOWNGRADE_COOLDOWN_MS = 10000;
 const SLOW_FRAME_THRESHOLD_MS = 45; // ~22 FPS threshold
 const SLOW_FRAME_STRIKES_REQUIRED = 15;
 
+let cachedWebGLSupport: boolean | null = null;
+
 /**
- * Defensively probes whether WebGL/WebGL2 is available and functional.
- * Fails gracefully without throwing or leaving uncollected contexts.
+ * Defensively probes whether a real WebGL/WebGL2 context can be created.
+ * Cached module-wide and immediately releases the transient probe context.
  */
 export function probeWebGLSupport(): boolean {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return true; // Conservative SSR assumption
+  if (typeof window === "undefined") {
+    return true;
+  }
+  if (cachedWebGLSupport !== null) {
+    return cachedWebGLSupport;
+  }
+  if (!("WebGL2RenderingContext" in window || "WebGLRenderingContext" in window)) {
+    cachedWebGLSupport = false;
+    return false;
   }
   try {
     const canvas = document.createElement("canvas");
-    canvas.setAttribute("data-transient-gl", "true");
     canvas.width = 1;
     canvas.height = 1;
+    canvas.setAttribute("data-transient-gl", "true");
+    const opts: WebGLContextAttributes = { failIfMajorPerformanceCaveat: false };
     const gl =
-      canvas.getContext("webgl2", { powerPreference: "low-power" }) ||
-      canvas.getContext("webgl", { powerPreference: "low-power" }) ||
-      canvas.getContext("experimental-webgl");
-    if (!gl) return false;
-    const loseExt = (gl as WebGLRenderingContext).getExtension("WEBGL_lose_context");
-    if (loseExt) {
-      loseExt.loseContext();
+      (canvas.getContext("webgl2", opts) as WebGL2RenderingContext | null) ||
+      (canvas.getContext("webgl", opts) as WebGLRenderingContext | null);
+    cachedWebGLSupport = Boolean(gl);
+    if (gl) {
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
-    return true;
+    return cachedWebGLSupport;
   } catch {
+    cachedWebGLSupport = false;
     return false;
   }
 }
@@ -170,7 +179,7 @@ export function AdaptivePerformanceProvider({
   // Conservative initialization via state initializer avoids cascading renders in effect
   const [initialSnapshot] = useState(calculateInitialTier);
   const [tier, setTier] = useState<QualityTier>(initialSnapshot.tier);
-  const [hasWebGL, setHasWebGL] = useState(initialSnapshot.hasWebGL);
+  const [hasWebGL] = useState(initialSnapshot.hasWebGL);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(initialSnapshot.prefersReducedMotion);
   const [deviceMemory] = useState<number | undefined>(initialSnapshot.deviceMemory);
   const [hardwareConcurrency] = useState<number | undefined>(initialSnapshot.hardwareConcurrency);
@@ -242,24 +251,17 @@ export function AdaptivePerformanceProvider({
     };
     motionQuery.addEventListener?.("change", onMotionChange);
 
-    // WebGL Context Loss Listener
+    // WebGL Context Loss Listener (strictly scoped to the primary Lanyard canvas)
     const onContextLost = (e: Event) => {
-      // Ignore normal lifecycle cleanup of background stickers or temporary probe canvases
       const target = e.target as HTMLElement | null;
-      if (
-        target?.hasAttribute?.("data-sticker-canvas") ||
-        target?.hasAttribute?.("data-transient-gl") ||
-        target?.dataset?.stickerCanvas ||
-        target?.dataset?.transientGl
-      ) {
+      if (!target?.hasAttribute?.("data-lanyard-canvas")) {
         return;
       }
       e.preventDefault();
-      setHasWebGL(false);
       tierRef.current = "lite";
       setTier("lite");
       if (process.env.NODE_ENV !== "production") {
-        console.warn("[AdaptivePerformance] WebGL context lost on primary canvas, switching to LITE fallback");
+        console.warn("[AdaptivePerformance] WebGL context lost on Lanyard canvas, throttling quality tier to LITE");
       }
     };
     window.addEventListener("webglcontextlost", onContextLost, true);

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { profile } from "@/lib/profile";
 import { useSiteConfig, type ExperienceItem } from "@/lib/site-store";
-import { Briefcase, MapPin, Calendar } from "lucide-react";
+import { getPublishedExperience } from "@/lib/content/selectors";
+import { Briefcase, MapPin, Calendar, ExternalLink, ChevronDown } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -15,15 +15,28 @@ if (typeof window !== "undefined") {
 export function ExperienceTimeline() {
   const { t, i18n } = useTranslation();
   const isEn = (i18n.language || "id") === "en";
-  const { experience } = useSiteConfig();
+  const locale = isEn ? "en" : "id";
+  const config = useSiteConfig();
 
-  const items = useMemo(() => {
-    const raw =
-      experience && experience.length > 0
-        ? experience
-        : (profile.experience as unknown as ExperienceItem[]);
-    return raw.filter((item) => item.published !== false);
-  }, [experience]);
+  const items = useMemo(
+    () => getPublishedExperience(config, locale),
+    [config, locale]
+  );
+
+  // Hitung berapa banyak posisi terkait untuk institusi yang sama (orgGroup / org)
+  const orgCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of items) {
+      const key = (item.orgGroup || item.org || "").trim().toLowerCase();
+      if (key) map.set(key, (map.get(key) || 0) + 1);
+    }
+    return map;
+  }, [items]);
+
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const toggleCardDetail = (id: string) => {
+    setExpandedCards((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
@@ -79,6 +92,7 @@ export function ExperienceTimeline() {
     ro?.observe(container);
 
     const ctx = gsap.context(() => {
+      let lastAppliedLeft = -1;
       ScrollTrigger.create({
         trigger: timeline,
         start: "top 68%",
@@ -104,34 +118,14 @@ export function ExperienceTimeline() {
 
           const maxScroll = maxScrollRef.current;
           if (maxScroll > 0) {
-            container.scrollLeft = maxScroll * p;
+            const targetLeft = maxScroll * p;
+            if (Math.abs(targetLeft - lastAppliedLeft) >= 1) {
+              lastAppliedLeft = targetLeft;
+              container.scrollLeft = targetLeft;
+            }
           }
         },
       });
-
-      const validCards = cardRefs.current.filter((c): c is HTMLDivElement => Boolean(c));
-      if (validCards.length > 0) {
-        gsap.fromTo(
-          validCards,
-          {
-            x: (i: number) => i * 22,
-            opacity: 0.78,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            ease: "power1.out",
-            force3D: true,
-            scrollTrigger: {
-              trigger: timeline,
-              start: "top 68%",
-              end: "bottom 20%",
-              scrub: 0.7,
-              invalidateOnRefresh: true,
-            },
-          }
-        );
-      }
     }, timelineRef);
 
     return () => {
@@ -279,10 +273,16 @@ export function ExperienceTimeline() {
         className="flex gap-4 sm:gap-5 overflow-x-auto pt-1 pb-4 px-1 scroll-px-2 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl"
         style={{ scrollbarWidth: "none" }}
       >
-        {items.map((item, idx) => {
+        {items.map((item: ExperienceItem, idx: number) => {
           const isActive = idx === activeIndex;
-          const roleText = isEn && item.roleEn ? item.roleEn : item.role;
-          const descText = isEn && item.descEn ? item.descEn : item.desc;
+          const groupKey = (item.orgGroup || item.org || "").trim().toLowerCase();
+          const groupCount = groupKey ? orgCounts.get(groupKey) || 1 : 1;
+          const hasExtraDetails = Boolean(
+            (item.responsibilities && item.responsibilities.length > 0) ||
+              (item.achievements && item.achievements.length > 0) ||
+              (item.media && item.media.length > 0)
+          );
+          const isExpanded = Boolean(expandedCards[item.id]);
 
           return (
             <div
@@ -290,34 +290,144 @@ export function ExperienceTimeline() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow] duration-300 dark:bg-[#111422] ${
+              className={`shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 transition-colors duration-150 dark:bg-[#111422] ${
                 isActive
-                  ? "border-brand shadow-md ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
-                  : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"
+                  ? "border-brand dark:border-blue-500/80"
+                  : "border-line/80 hover:border-brand/40 dark:border-line/50"
               }`}
             >
-              <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted">
+              <div className="flex items-start gap-3">
+                {item.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.logo}
+                    alt={item.org}
+                    className="size-9 shrink-0 rounded-lg border border-line/60 object-contain bg-white p-1 dark:bg-slate-900"
+                    loading="lazy"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-display text-sm sm:text-base font-bold text-ink tracking-tight">
+                    {item.role}
+                  </h4>
+
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    {item.orgUrl ? (
+                      <a
+                        href={item.orgUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline dark:text-blue-400"
+                      >
+                        <span>{item.org}</span>
+                        <ExternalLink className="size-3" />
+                      </a>
+                    ) : (
+                      <p className="text-xs font-semibold text-brand dark:text-blue-400">
+                        {item.org}
+                      </p>
+                    )}
+                    {groupCount > 1 && (
+                      <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand dark:bg-blue-500/15 dark:text-blue-400">
+                        {item.orgGroup || item.org} · {groupCount} {isEn ? "roles" : "peran"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted">
                 <span className="inline-flex items-center gap-1 font-mono text-[11px]">
                   <Calendar className="size-3 text-muted/70" />
                   <span>{item.period}</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px]">
-                  <MapPin className="size-3 text-muted/70" />
-                  <span>{item.place}</span>
-                </span>
+                {item.place && (
+                  <span className="inline-flex items-center gap-1 text-[11px]">
+                    <MapPin className="size-3 text-muted/70" />
+                    <span>{item.place}</span>
+                  </span>
+                )}
+                {item.type && (
+                  <span className="rounded border border-line/70 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted">
+                    {item.type}
+                  </span>
+                )}
               </div>
 
-              <h4 className="mt-2.5 font-display text-sm sm:text-base font-bold text-ink tracking-tight">
-                {roleText}
-              </h4>
-
-              <p className="mt-0.5 text-xs font-semibold text-brand dark:text-blue-400">
-                {item.org}
+              <p className="mt-2.5 text-xs leading-relaxed text-body line-clamp-3">
+                {item.desc}
               </p>
 
-              <p className="mt-2 text-xs leading-relaxed text-body line-clamp-3">
-                {descText}
-              </p>
+              {hasExtraDetails && (
+                <div className="mt-3 pt-2.5 border-t border-line/50 dark:border-line/30">
+                  <button
+                    type="button"
+                    onClick={() => toggleCardDetail(item.id)}
+                    aria-expanded={isExpanded}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline dark:text-blue-400"
+                  >
+                    <span>
+                      {isExpanded
+                        ? isEn
+                          ? "Hide details"
+                          : "Tutup rincian"
+                        : isEn
+                        ? "Responsibilities & media"
+                        : "Rincian & lampiran"}
+                    </span>
+                    <ChevronDown
+                      className={`size-3 transition-transform ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-2.5 space-y-2 text-[11px] text-body">
+                      {item.responsibilities && item.responsibilities.length > 0 && (
+                        <div>
+                          <span className="font-semibold text-ink">
+                            {isEn ? "Responsibilities:" : "Tanggung jawab:"}
+                          </span>
+                          <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                            {item.responsibilities.map((r, rIdx) => (
+                              <li key={rIdx}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {item.achievements && item.achievements.length > 0 && (
+                        <div>
+                          <span className="font-semibold text-ink">
+                            {isEn ? "Key Impact:" : "Pencapaian:"}
+                          </span>
+                          <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                            {item.achievements.map((a, aIdx) => (
+                              <li key={aIdx}>{a}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {item.media && item.media.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {item.media.map((m, mIdx) => (
+                            <a
+                              key={mIdx}
+                              href={m.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded border border-line/70 px-2 py-0.5 font-medium text-brand hover:underline dark:text-blue-400"
+                            >
+                              <span>{m.caption || `Lampiran #${mIdx + 1}`}</span>
+                              <ExternalLink className="size-2.5" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Lock, Mail, ArrowRight, ShieldAlert, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("zakariamujur6@gmail.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,9 +29,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Berhasil login, arahkan ke dashboard
-      router.push("/admin");
-      router.refresh();
+      // Berhasil login, arahkan ke dashboard dengan full navigation agar cookie SSR terbaca bersih
+      window.location.assign("/admin");
     } catch {
       setError("Tidak dapat terhubung ke server autentikasi.");
       setLoading(false);

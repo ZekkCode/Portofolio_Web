@@ -5,9 +5,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { profile } from "@/lib/profile";
-import { translations } from "@/lib/translations";
 import { fetchPublishedContent } from "@/lib/content/public-content";
+import {
+  getPublishedFAQ,
+  getPublishedProfile,
+  getPublishedSeo,
+} from "@/lib/content/selectors";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 const fontDisplay = Space_Grotesk({
   subsets: ["latin"],
@@ -44,16 +50,16 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await fetchPublishedContent();
-  const name = config.generalProfile?.name || profile.name;
-  const brand = config.generalProfile?.brand || profile.brand;
-  const roles = config.generalProfile?.roles || "UI/UX Designer & Frontend Developer";
-  const siteUrl = config.generalProfile?.site || profile.site;
-  const metaTitle = config.seo?.metaTitle || `${name} | ${roles}`;
-  const metaDesc =
-    config.seo?.metaDesc ||
-    config.generalProfile?.heroDesc ||
-    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Mojokerto, Jawa Timur. Eksplorasi berkas CV interaktif, proyek Next.js, dan desain antarmuka.";
-  const ogImage = config.seo?.ogImage || "/opengraph-image";
+  const pub = getPublishedProfile(config, "id");
+  const seo = getPublishedSeo(config, "id");
+  const name = pub.name;
+  const brand = pub.brand;
+  const siteUrl = seo.canonicalUrl || pub.site || profile.site;
+  const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
+  const metaDesc = seo.metaDesc || pub.heroDesc;
+  const ogImage = seo.ogImage || "/opengraph-image";
+  const ogAlt = seo.ogImageAlt || `${name} - ${brand}`;
+  const allowIndex = seo.robotsIndex !== false;
 
   return {
     metadataBase: new URL(siteUrl),
@@ -123,7 +129,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${name} - ${brand}`,
+          alt: ogAlt,
           type: "image/png",
         },
       ],
@@ -137,12 +143,12 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [ogImage],
     },
     robots: {
-      index: true,
-      follow: true,
-      nocache: false,
+      index: allowIndex,
+      follow: allowIndex,
+      nocache: !allowIndex,
       googleBot: {
-        index: true,
-        follow: true,
+        index: allowIndex,
+        follow: allowIndex,
         noimageindex: false,
         "max-video-preview": -1,
         "max-image-preview": "large",
@@ -166,12 +172,15 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const config = await fetchPublishedContent();
-  const name = config.generalProfile?.name || profile.name;
-  const brand = config.generalProfile?.brand || profile.brand;
-  const siteUrl = config.generalProfile?.site || profile.site;
-  const email = config.generalProfile?.email || profile.contact.email;
-  const phone = config.generalProfile?.phone || profile.contact.phone;
-  const bioIntro = config.generalProfile?.heroDesc || profile.bio[0];
+  const pub = getPublishedProfile(config, "id");
+  const seo = getPublishedSeo(config, "id");
+  const pubFaq = getPublishedFAQ(config, "id");
+  const name = pub.name;
+  const brand = pub.brand;
+  const siteUrl = seo.canonicalUrl || pub.site || profile.site;
+  const email = pub.email;
+  const phone = pub.phone;
+  const bioIntro = pub.heroDesc;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -181,7 +190,7 @@ export default async function RootLayout({
         "@id": `${siteUrl}/#website`,
         url: siteUrl,
         name: brand,
-        description: `Portfolio resmi ${name} (${brand})`,
+        description: seo.metaDesc || `Portfolio resmi ${name} (${brand})`,
         inLanguage: ["id-ID", "en-US"],
         publisher: {
           "@id": `${siteUrl}/#person`,
@@ -191,15 +200,10 @@ export default async function RootLayout({
         "@type": "Person",
         "@id": `${siteUrl}/#person`,
         name,
-        alternateName: [profile.nickname, brand, "zekksparow"],
+        alternateName: [pub.nickname, brand, config.profileCard?.handle || "zekksparow"],
         url: siteUrl,
-        image: `${siteUrl}/opengraph-image`,
-        jobTitle: [
-          "UI/UX Designer",
-          "Frontend Developer",
-          "Graphic Designer",
-          "IT Support",
-        ],
+        image: seo.ogImage || `${siteUrl}/opengraph-image`,
+        jobTitle: seo.personJobTitle || pub.roles,
         description: bioIntro,
         gender: "Male",
         email,
@@ -207,11 +211,10 @@ export default async function RootLayout({
         knowsLanguage: ["id", "en"],
         address: {
           "@type": "PostalAddress",
-          addressLocality: "Mojokerto",
-          addressRegion: "Jawa Timur",
+          addressLocality: pub.location,
           addressCountry: "ID",
         },
-        sameAs: (config.generalProfile?.socials || [])
+        sameAs: pub.socials
           .filter((s) => s.href?.startsWith("http"))
           .map((s) => s.href),
       },
@@ -229,30 +232,24 @@ export default async function RootLayout({
         mainEntity: {
           "@id": `${siteUrl}/#person`,
         },
-        primaryImageOfPage: `${siteUrl}/opengraph-image`,
+        primaryImageOfPage: seo.ogImage || `${siteUrl}/opengraph-image`,
       },
-      {
-        "@type": "FAQPage",
-        "@id": `${siteUrl}/#faq`,
-        mainEntity:
-          config.faq && config.faq.length > 0
-            ? config.faq.map((item) => ({
+      ...(pubFaq.length > 0
+        ? [
+            {
+              "@type": "FAQPage",
+              "@id": `${siteUrl}/#faq`,
+              mainEntity: pubFaq.map((item) => ({
                 "@type": "Question",
-                name: item.questionId,
+                name: item.question,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: item.answerId,
-                },
-              }))
-            : ([1, 2, 3, 4, 5] as const).map((i) => ({
-                "@type": "Question",
-                name: translations.id.faq[`q${i}`],
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: translations.id.faq[`a${i}`],
+                  text: item.answer,
                 },
               })),
-      },
+            },
+          ]
+        : []),
     ],
   };
 
@@ -264,7 +261,7 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AdaptivePerformanceProvider>
             <SmoothScroll>
               {children}

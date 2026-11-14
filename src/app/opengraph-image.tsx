@@ -1,8 +1,10 @@
 import { ImageResponse } from "next/og";
-import { profile } from "@/lib/profile";
+import { fetchPublishedContent } from "@/lib/content/public-content";
+import { getPublishedProfile } from "@/lib/content/selectors";
 
 export const runtime = "nodejs";
-export const alt = `${profile.name} - ${profile.brand} Portfolio`;
+export const dynamic = "force-dynamic";
+export const alt = "Zakaria Mujur Prasetyo - ZekkTech Portfolio";
 export const size = {
   width: 1200,
   height: 630,
@@ -10,6 +12,11 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
+  const config = await fetchPublishedContent();
+  const pub = getPublishedProfile(config, "id");
+  const siteHost = (pub.site || "https://zakariamp.vercel.app").replace(/^https?:\/\//, "");
+  const accent = config.lanyard?.cardColor || "#1b45c4";
+
   return new ImageResponse(
     (
       <div
@@ -21,8 +28,7 @@ export default async function Image() {
           alignItems: "flex-start",
           justifyContent: "space-between",
           backgroundColor: "#0a0a14",
-          backgroundImage:
-            "radial-gradient(circle at 25% 25%, #1b45c4 0%, transparent 45%), radial-gradient(circle at 85% 75%, #0b2a8a 0%, transparent 50%)",
+          backgroundImage: `radial-gradient(circle at 25% 25%, ${accent} 0%, transparent 45%), radial-gradient(circle at 85% 75%, #0b2a8a 0%, transparent 50%)`,
           padding: "80px",
           color: "#ffffff",
           fontFamily: "sans-serif",
@@ -38,7 +44,7 @@ export default async function Image() {
             }}
           />
           <span style={{ fontSize: "28px", fontWeight: 800, letterSpacing: "-0.02em" }}>
-            {profile.brand}
+            {pub.brand}
           </span>
         </div>
 
@@ -52,7 +58,7 @@ export default async function Image() {
               margin: 0,
             }}
           >
-            {profile.name}
+            {pub.name}
           </h1>
           <p
             style={{
@@ -62,7 +68,7 @@ export default async function Image() {
               margin: 0,
             }}
           >
-            {profile.roles} • {profile.location}
+            {pub.roles} • {pub.location}
           </p>
         </div>
 
@@ -78,8 +84,8 @@ export default async function Image() {
             color: "#cbd5e1",
           }}
         >
-          <span>{profile.site.replace("https://", "")}</span>
-          <span>Freelance sejak {profile.since}</span>
+          <span>{siteHost}</span>
+          <span>Aktif sejak {pub.since}</span>
         </div>
       </div>
     ),

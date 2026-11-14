@@ -15,6 +15,12 @@ import type {
   SocialLinkItem,
   LanyardConfig,
   ProfileCardConfig,
+  SectionKey,
+  SectionConfigItem,
+  NavMenuItemConfig,
+  FooterConfig,
+  ContactConfig,
+  SeoConfig,
 } from "@/lib/site-config";
 
 export type ContentStatus = "draft" | "published" | "archived";
@@ -32,6 +38,7 @@ export interface PublicationMetadata {
 export interface SectionVisibilityConfig {
   hero?: boolean;
   about?: boolean;
+  journey?: boolean;
   education?: boolean;
   achievements?: boolean;
   services?: boolean;
@@ -72,6 +79,15 @@ export interface ContentHealthReport {
   infosCount: number;
   issues: ContentHealthIssue[];
   auditedAt: string;
+}
+
+export interface RevisionsIndexItem {
+  revisionId: string;
+  version: number;
+  timestamp: string;
+  editor: string;
+  summary: string;
+  changesCount: number;
 }
 
 export type {

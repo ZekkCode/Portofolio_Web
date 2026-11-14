@@ -4,10 +4,14 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getSupabaseClient } from "@/lib/supabase";
-import { defaultCvDocs, defaultProjects } from "@/lib/site-config";
+import { fetchPublishedContent } from "@/lib/content/public-content";
+import { defaultCvDocs } from "@/lib/site-config";
+import { extractR2Key } from "@/lib/content/r2-key";
+
+export { extractR2Key };
 
 export interface R2Config {
   accountId: string;
@@ -77,43 +81,6 @@ export function getR2Client(): S3Client {
  * 2. URL proxy backend: "/api/r2-file?key=projects%2F123-image.webp"
  * 3. URL domain publik: "https://pub-xxx.r2.dev/projects/123-image.webp"
  */
-export function extractR2Key(keyOrUrl: string, bucketName?: string): string {
-  if (!keyOrUrl) return "";
-  let path = keyOrUrl.trim();
-
-  // 1. Cek format URL proxy lokal
-  if (path.startsWith("/api/r2-file")) {
-    try {
-      const u = new URL(path, "http://localhost");
-      if (u.searchParams.has("key")) {
-        return u.searchParams.get("key") || "";
-      }
-    } catch {
-      // fallback
-    }
-  }
-
-  // 2. Cek format absolute HTTP(S) URL
-  if (/^https?:\/\//i.test(path)) {
-    try {
-      const u = new URL(path);
-      if (u.pathname === "/api/r2-file" && u.searchParams.has("key")) {
-        return u.searchParams.get("key") || "";
-      }
-      path = u.pathname;
-    } catch {
-      // fallback
-    }
-  }
-
-  // 3. Bersihkan leading slash dan bucket name
-  path = path.replace(/^\/+/, "");
-  if (bucketName && path.startsWith(`${bucketName}/`)) {
-    path = path.slice(bucketName.length + 1);
-  }
-  return path;
-}
-
 /**
  * Menghasilkan Presigned URL S3 untuk akses aman ke objek privat R2.
  */
@@ -256,32 +223,29 @@ export async function getR2Object(keyOrUrl: string): Promise<{
 }
 
 /**
- * Validasi publikasi aset untuk membedakan berkas Publik vs Privat.
- * 
- * - Publik:
- *   Folder 'avatar', 'projects', 'certificates', 'lanyard' (media portofolio).
- *   Berkas di 'cv/' yang sesuai allowlist CV yang dipublikasikan.
- *   Berkas di 'uploads/' yang terikat ke entri konfigurasi site_config aktif.
- * 
- * - Privat:
- *   Berkas 'uploads/' yang belum dipublikasikan (file sementara, draft).
- *   Berkas internal/admin yang belum disematkan ke portofolio.
+ * Menentukan apakah suatu R2 key diizinkan diakses secara publik:
+ * Hanya objek yang direferensikan oleh konfigurasi terpublikasi (`current`)
+ * atau allowlist dokumen CV aktif. Draf yang belum dipublikasikan ditolak (`false`).
  */
 export async function isAssetPubliclyPublished(key: string): Promise<boolean> {
   if (!key || typeof key !== "string") return false;
 
   const parts = key.split("/");
   const folder = parts[0]?.toLowerCase();
+  if (!folder) return false;
 
-  // 1. Folder media portofolio publik terbuka
-  if (["avatar", "projects", "certificates", "lanyard"].includes(folder)) {
-    return true;
+  try {
+    const publishedConfig = await fetchPublishedContent();
+    const configJson = JSON.stringify(publishedConfig);
+    if (configJson.includes(key) || configJson.includes(encodeURIComponent(key))) {
+      return true;
+    }
+  } catch {
+    // Fallback check below
   }
 
-  // 2. Berkas dokumen CV yang sah
   if (folder === "cv") {
     const filename = parts.slice(1).join("/").toLowerCase();
-    // Allowlist dokumen CV default
     if (
       filename.includes("cv-ats") ||
       filename.includes("cv-uiux") ||
@@ -295,35 +259,60 @@ export async function isAssetPubliclyPublished(key: string): Promise<boolean> {
     }
   }
 
-  // 3. Berkas di folder 'uploads' atau 'cv': periksa keterikatan di database site_config
-  if (folder === "uploads" || folder === "cv") {
-    // Cek di default fallback projects
-    if (defaultProjects.some((p) => p.image?.includes(key))) {
-      return true;
-    }
-
-    try {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data } = await supabase
-          .from("site_config")
-          .select("config")
-          .eq("id", "current")
-          .maybeSingle();
-
-        if (data?.config) {
-          const configJson = JSON.stringify(data.config);
-          if (configJson.includes(key)) {
-            return true;
-          }
-        }
-      }
-    } catch {
-      // Fallback aman ke false jika database tidak dapat dijangkau
-    }
-  }
-
   return false;
+}
+
+export interface R2StoredObjectInfo {
+  key: string;
+  url: string;
+  folder: string;
+  size: number;
+  lastModified?: string;
+}
+
+/**
+ * Mencantumkan daftar objek yang tersimpan di bucket Cloudflare R2 (khusus admin terotentikasi).
+ */
+export async function listR2Objects(
+  prefix?: string,
+  maxKeys = 250
+): Promise<R2StoredObjectInfo[]> {
+  const config = getR2Config();
+  if (!config) return [];
+
+  const client = getR2Client();
+  try {
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: config.bucketName,
+        Prefix: prefix || undefined,
+        MaxKeys: maxKeys,
+      })
+    );
+
+    const contents = response.Contents || [];
+    return contents
+      .filter((item): item is typeof item & { Key: string } => Boolean(item.Key))
+      .map((item) => {
+        const key = item.Key;
+        const folder = key.split("/")[0] || "misc";
+        const url = config.publicDomain
+          ? `${config.publicDomain}/${key}`
+          : `/api/r2-file?key=${encodeURIComponent(key)}`;
+        return {
+          key,
+          url,
+          folder,
+          size: item.Size ?? 0,
+          lastModified: item.LastModified?.toISOString(),
+        };
+      })
+      .sort((a, b) =>
+        (b.lastModified || "").localeCompare(a.lastModified || "")
+      );
+  } catch {
+    return [];
+  }
 }
 
 /**

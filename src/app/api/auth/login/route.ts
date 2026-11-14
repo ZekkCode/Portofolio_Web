@@ -48,6 +48,7 @@ export async function POST(request: Request) {
 
     const adminEmail = (process.env.ADMIN_EMAIL || "zakariamujur6@gmail.com").toLowerCase().trim();
     const adminPassword = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET;
+    const isSecureCookie = Boolean(process.env.VERCEL) || request.url.startsWith("https://");
 
     // A. Percobaan login via Supabase Auth jika URL & Key tersedia
     const hasSupabaseUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
               path: "/",
               httpOnly: true,
               sameSite: "strict",
-              secure: process.env.NODE_ENV === "production",
+              secure: isSecureCookie,
               maxAge: SESSION_DURATION_SECONDS,
             });
 
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
           path: "/",
           httpOnly: true,
           sameSite: "strict",
-          secure: process.env.NODE_ENV === "production",
+          secure: isSecureCookie,
           maxAge: SESSION_DURATION_SECONDS,
         });
 

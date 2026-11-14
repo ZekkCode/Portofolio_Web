@@ -68,6 +68,7 @@ interface Engine {
   blur: () => void;
   press: (event?: ReactPointerEvent) => void;
   release: () => void;
+  select: () => void;
   refresh: () => void;
 }
 
@@ -158,7 +159,7 @@ const MARK =
   'grid h-[var(--pn-inner)] w-[var(--pn-inner)] place-items-center group-data-[layout=split]/nav:h-[var(--pn-mark)] group-data-[layout=split]/nav:w-[var(--pn-mark)] [&_img]:block [&_img]:h-full [&_img]:w-full [&_img]:object-contain [&_svg]:block [&_svg]:h-full [&_svg]:w-full';
 const BAR =
   'relative z-[1] box-border flex h-[var(--pn-h)] shrink-0 min-w-max items-center rounded-full px-1.5 py-[var(--pn-pad)] overflow-hidden group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:p-0';
-const TRACK = 'relative h-full overflow-hidden rounded-full';
+const TRACK = 'relative h-full overflow-hidden rounded-full [contain:layout_style]';
 const LIST = 'm-0 flex h-full list-none items-stretch gap-[var(--pn-item-gap,2px)] p-0';
 const SLOT = 'group/slot flex';
 const ITEM =
@@ -170,7 +171,7 @@ const FACE_ALT =
 const FILL =
   'pointer-events-none absolute left-1/2 top-full z-[-1] h-[var(--pn-fill,200%)] w-[var(--pn-fill,200%)] scale-0 rounded-full [background:var(--pn-pill)] [margin:calc(var(--pn-fill,200%)/-2)_0_0_calc(var(--pn-fill,200%)/-2)] transition-transform duration-[360ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-data-[on]/slot:scale-100 group-data-[on]/slot:duration-[550ms] group-data-[on]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[hover]/slot:scale-100 group-data-[hover]/slot:duration-[550ms] group-data-[hover]/slot:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
 const GLIDE =
-  'pointer-events-none absolute inset-y-0 left-0 w-0 origin-center rounded-full opacity-0 [background:var(--pn-pill)] [box-shadow:var(--pn-pill-shadow)] will-change-[transform,width,opacity] group-data-[focus]/nav:[box-shadow:var(--pn-pill-shadow),0_0_0_2px_var(--pn-ring)] max-w-full';
+  'pointer-events-none absolute inset-0 rounded-full opacity-0 [background:var(--pn-pill)] [box-shadow:var(--pn-pill-shadow)] will-change-[clip-path,opacity] group-data-[focus]/nav:[box-shadow:var(--pn-pill-shadow),0_0_0_2px_var(--pn-ring)]';
 const INK =
   'pointer-events-none absolute inset-0 flex items-stretch gap-[var(--pn-item-gap,2px)] text-[var(--pn-pill-ink)] [clip-path:inset(0_100%_0_0)]';
 const INK_ITEM =
@@ -412,18 +413,19 @@ export const PillNav = ({
       const target = rects[glideIndex()];
       const squash = target ? 1 - clamp((width / Math.max(target.width, 1) - 1) * 0.3, 0, 0.14) : 1;
       const safeX0 = clamp(state.x0, -20, maxTrackW + 20);
+      const alpha = clamp(state.alpha, 0, 1);
+      const half = (width * scale) / 2;
+      const center = (safeX0 + safeX0 + width) / 2;
+      const inset = (trackHeight * (1 - scale * squash)) / 2;
+      const pillClip = `inset(${inset}px ${Math.max(0, maxTrackW - center - half)}px ${inset}px ${Math.max(0, center - half)}px round ${trackHeight / 2}px)`;
 
       if (glideEl) {
-        glideEl.style.width = `${width}px`;
-        glideEl.style.transform = `translate3d(${safeX0}px, 0, 0) scale(${scale}, ${scale * squash})`;
-        glideEl.style.opacity = `${clamp(state.alpha, 0, 1)}`;
+        glideEl.style.clipPath = pillClip;
+        glideEl.style.opacity = `${alpha}`;
       }
       if (ink) {
-        const half = (width * scale) / 2;
-        const center = (safeX0 + safeX0 + width) / 2;
-        const inset = (trackHeight * (1 - scale * squash)) / 2;
-        ink.style.clipPath = `inset(${inset}px ${Math.max(0, maxTrackW - center - half)}px ${inset}px ${Math.max(0, center - half)}px round ${trackHeight / 2}px)`;
-        ink.style.opacity = `${clamp(state.alpha, 0, 1)}`;
+        ink.style.clipPath = pillClip;
+        ink.style.opacity = `${alpha}`;
       }
       if (dot) {
         const pull = clamp(Math.abs(state.dotVelocity) / 700, 0, 2.2);
@@ -593,6 +595,10 @@ export const PillNav = ({
         state.pressing = false;
         wake();
       },
+      select: () => {
+        sync();
+        wake();
+      },
       refresh: () => {
         measure();
         sync();
@@ -644,8 +650,12 @@ export const PillNav = ({
   }, [collapsed, items.length]);
 
   useEffect(() => {
+    engineRef.current?.select();
+  }, [activeIndex]);
+
+  useEffect(() => {
     engineRef.current?.refresh();
-  }, [activeIndex, items.length]);
+  }, [items.length]);
 
 
   useIsomorphicLayoutEffect(() => {

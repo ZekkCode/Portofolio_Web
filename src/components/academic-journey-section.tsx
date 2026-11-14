@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SectionTitle } from "@/components/section-title";
 import { ScrollReveal } from "@/components/parallax";
-import { useSiteConfig, defaultEducation, type EducationItem } from "@/lib/site-store";
+import { useSiteConfig, type EducationItem } from "@/lib/site-store";
+import { getPublishedEducation, getPublishedSectionMeta } from "@/lib/content/selectors";
 import {
   MapPin,
   Calendar,
@@ -13,6 +14,7 @@ import {
   ArrowUpRight,
   ChevronDown,
   ExternalLink,
+  Award,
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -23,19 +25,23 @@ if (typeof window !== "undefined") {
 
 export function AcademicJourneySection() {
   const { t, i18n } = useTranslation();
-  const currentLang = i18n.language || "id";
-  const { education } = useSiteConfig();
+  const currentLang = (i18n.language || "id").startsWith("en") ? "en" : "id";
+  const config = useSiteConfig();
+  const sectionMeta = getPublishedSectionMeta(config, "journey", currentLang);
 
-  // Use configured education or fallback to authentic default records (sorted chronologically ascending for left-to-right flow)
+  // Published and visible education entries only (sorted chronologically ascending for left-to-right flow)
   const items: EducationItem[] = useMemo(() => {
-    const list = education && education.length > 0 ? [...education] : [...defaultEducation];
-    return list.sort((a, b) => (a.startYear || 0) - (b.startYear || 0));
-  }, [education]);
+    const list = getPublishedEducation(config, currentLang);
+    return [...list].sort((a, b) => (a.startYear || 0) - (b.startYear || 0));
+  }, [config, currentLang]);
 
   // Dynamic years range based on education start/end years and current year
   const { years, yearMilestones } = useMemo(() => {
+    if (items.length === 0) {
+      return { years: [] as number[], yearMilestones: {} as Record<number, EducationItem[]> };
+    }
     const currentYear = new Date().getFullYear();
-    const startYears = items.map((e) => e.startYear || currentYear);
+    const startYears = items.map((e) => e.timelineYear || e.startYear || currentYear);
     const endYears = items.map((e) =>
       typeof e.endYear === "number" ? e.endYear : currentYear
     );
@@ -49,7 +55,8 @@ export function AcademicJourneySection() {
     // Map which years have milestone education entries
     const milestones: Record<number, EducationItem[]> = {};
     for (const item of items) {
-      const y = item.startYear || currentYear;
+      if (item.showInTimeline === false) continue;
+      const y = item.timelineYear || item.startYear || currentYear;
       if (!milestones[y]) milestones[y] = [];
       milestones[y].push(item);
     }
@@ -112,6 +119,7 @@ export function AcademicJourneySection() {
     ro?.observe(container);
 
     const ctx = gsap.context(() => {
+      let lastAppliedLeft = -1;
       ScrollTrigger.create({
         trigger: section,
         start: "top 82%",
@@ -137,34 +145,14 @@ export function AcademicJourneySection() {
 
           const maxScroll = maxScrollRef.current;
           if (maxScroll > 0) {
-            container.scrollLeft = maxScroll * p;
+            const targetLeft = maxScroll * p;
+            if (Math.abs(targetLeft - lastAppliedLeft) >= 1) {
+              lastAppliedLeft = targetLeft;
+              container.scrollLeft = targetLeft;
+            }
           }
         },
       });
-
-      const validCards = cardRefs.current.filter((c): c is HTMLDivElement => Boolean(c));
-      if (validCards.length > 0) {
-        gsap.fromTo(
-          validCards,
-          {
-            x: (i: number) => (i + 1) * -42,
-            opacity: 0.72,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            ease: "power1.out",
-            force3D: true,
-            scrollTrigger: {
-              trigger: section,
-              start: "top 86%",
-              end: "bottom 38%",
-              scrub: 0.7,
-              invalidateOnRefresh: true,
-            },
-          }
-        );
-      }
     }, sectionRef);
 
     return () => {
@@ -176,7 +164,7 @@ export function AcademicJourneySection() {
   // Click on year jump
   const handleYearClick = useCallback(
     (year: number) => {
-      const itemIndex = items.findIndex((e) => e.startYear === year);
+      const itemIndex = items.findIndex((e) => (e.timelineYear || e.startYear) === year);
       const container = scrollContainerRef.current;
       if (itemIndex !== -1) {
         manualOverrideUntilRef.current = performance.now() + 2600;
@@ -224,26 +212,33 @@ export function AcademicJourneySection() {
   );
 
   const activeEdu = items[activeIndex] || items[0];
-  const activeYear = activeEdu?.startYear || new Date().getFullYear();
+  const activeYear = activeEdu?.timelineYear || activeEdu?.startYear || new Date().getFullYear();
+
+  const headingTitle = sectionMeta.title || t("academic.title", "Jejak Akademik");
+  const headingDesc =
+    sectionMeta.desc ||
+    t(
+      "academic.desc",
+      "Latar belakang pendidikan formal dan bidang keilmuan yang menjadi fondasi rekayasa digital."
+    );
 
   return (
     <section
       ref={sectionRef}
       id="akademik"
       className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20 overflow-hidden"
-      aria-label={t("academic.title", "Jejak Akademik")}
+      aria-label={headingTitle}
     >
       {/* Anchor aliases for friendly URL navigation */}
       <div id="academic" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div id="pendidikan" className="absolute top-0 -mt-24" aria-hidden="true" />
+      <div id="journey" className="absolute top-0 -mt-24" aria-hidden="true" />
 
       <ScrollReveal y={24}>
         <SectionTitle
-          title={t("academic.title", "Jejak Akademik")}
-          desc={t(
-            "academic.desc",
-            "Latar belakang pendidikan formal dan bidang keilmuan yang menjadi fondasi rekayasa digital."
-          )}
+          eyebrow={sectionMeta.eyebrow || undefined}
+          title={headingTitle}
+          desc={headingDesc}
         />
       </ScrollReveal>
 
@@ -383,38 +378,36 @@ export function AcademicJourneySection() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow] duration-300 dark:bg-[#111422] ${
+              className={`shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 transition-colors duration-150 dark:bg-[#111422] ${
                 isActive
-                  ? "border-brand shadow-lg ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
+                  ? "border-brand dark:border-blue-500/80 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-85 hover:opacity-100 dark:border-line/50"
               }`}
             >
-              {/* Card Header: Institution First, Logo & Understated Status */}
+              {/* Card Header: Institution First, Clean Logo & Understated Status */}
               <div className="flex items-start gap-3.5">
-                <div className="relative size-11 rounded-xl border border-line/60 bg-slate-50/90 dark:border-line/40 dark:bg-[#181d30]/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
-                  {edu.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={edu.logo}
-                      alt={`Logo ${edu.institution}`}
-                      className="size-full object-contain transition-transform duration-300"
-                      style={{
-                        transform: `scale(${logoScale})`,
-                      }}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <span
-                      className="font-mono text-[11px] font-bold tracking-tight text-brand dark:text-blue-400 transition-transform duration-300 select-none"
-                      style={{
-                        transform: `scale(${logoScale})`,
-                      }}
-                    >
-                      {initials}
-                    </span>
-                  )}
-                </div>
+                {edu.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={edu.logo}
+                    alt={`Logo ${edu.institution}`}
+                    className="size-10 shrink-0 object-contain transition-transform duration-300"
+                    style={{
+                      transform: `scale(${logoScale})`,
+                    }}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-line/60 font-mono text-[11px] font-bold tracking-tight text-muted transition-transform duration-300 select-none dark:border-line/40"
+                    style={{
+                      transform: `scale(${logoScale})`,
+                    }}
+                  >
+                    {initials}
+                  </span>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
@@ -532,6 +525,25 @@ export function AcademicJourneySection() {
                     </div>
                   )}
 
+                  {/* Activities / Organizations */}
+                  {edu.activities && edu.activities.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 font-semibold text-ink mb-1.5">
+                        <Award className="size-3.5 text-brand" />
+                        <span>
+                          {currentLang === "en"
+                            ? "Activities & Organizations"
+                            : "Aktivitas & Organisasi Kampus/Sekolah"}
+                        </span>
+                      </div>
+                      <ul className="space-y-1 text-[11px] text-body list-disc pl-4">
+                        {edu.activities.map((act) => (
+                          <li key={act}>{act}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Academic Projects */}
                   {edu.projects && edu.projects.length > 0 && (
                     <div>
@@ -553,17 +565,30 @@ export function AcademicJourneySection() {
                               <span className="font-semibold text-ink truncate">
                                 {proj.title}
                               </span>
-                              {proj.repo && (
-                                <a
-                                  href={proj.repo}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline shrink-0"
-                                >
-                                  <span>Repo</span>
-                                  <ArrowUpRight className="size-3" />
-                                </a>
-                              )}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {proj.url && (
+                                  <a
+                                    href={proj.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline"
+                                  >
+                                    <span>{currentLang === "en" ? "Live" : "Tautan"}</span>
+                                    <ArrowUpRight className="size-3" />
+                                  </a>
+                                )}
+                                {proj.repo && (
+                                  <a
+                                    href={proj.repo}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:underline"
+                                  >
+                                    <span>Repo</span>
+                                    <ArrowUpRight className="size-3" />
+                                  </a>
+                                )}
+                              </div>
                             </div>
                             {proj.desc && (
                               <p className="mt-0.5 text-[11px] text-body leading-relaxed">

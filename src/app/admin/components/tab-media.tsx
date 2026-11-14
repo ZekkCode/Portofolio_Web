@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { SiteConfig } from "@/lib/site-store";
+import { scanReferencedMedia, type MediaCatalogItem } from "@/lib/content/media-catalog";
+import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import {
   Upload,
   Copy,
@@ -11,6 +13,9 @@ import {
   FileText,
   Search,
   Sparkles,
+  Trash2,
+  RefreshCw,
+  HardDrive,
 } from "lucide-react";
 
 interface TabMediaProps {
@@ -26,12 +31,14 @@ interface TabMediaProps {
   inputClass: string;
 }
 
-type MediaItem = {
+interface R2ListedObject {
+  key: string;
   url: string;
-  source: string;
-  type: "image" | "pdf" | "vector" | "other";
-  category: "identity" | "projects" | "certificates" | "cv" | "appearance" | "stack";
-};
+  size: number;
+  lastModified?: string;
+  isReferenced: boolean;
+  usedIn: string[];
+}
 
 export function TabMedia({
   config,
@@ -42,69 +49,108 @@ export function TabMedia({
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<string>("projects");
   const [lastUploadedUrl, setLastUploadedUrl] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<"all" | "referenced" | "orphan">("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Scan and aggregate all active media references across config
-  const mediaItems: MediaItem[] = [];
+  const [r2Configured, setR2Configured] = useState<boolean>(false);
+  const [r2Objects, setR2Objects] = useState<R2ListedObject[]>([]);
+  const [loadingStorage, setLoadingStorage] = useState<boolean>(false);
+  const [pendingDelete, setPendingDelete] = useState<DeleteImpactItem | null>(null);
 
-  const addMedia = (url: string | undefined, source: string, category: MediaItem["category"]) => {
-    if (!url || typeof url !== "string" || !url.trim()) return;
-    const cleanUrl = url.trim();
-    if (mediaItems.some((m) => m.url === cleanUrl && m.source === source)) return;
+  const loadR2Inventory = useCallback(async () => {
+    setLoadingStorage(true);
+    try {
+      const res = await fetch("/api/upload?action=list", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setR2Configured(Boolean(data.configured));
+      if (Array.isArray(data.items)) {
+        setR2Objects(data.items);
+      }
+    } catch {
+      // Offline / local mode fallback cleanly renders config-referenced items only
+    } finally {
+      setLoadingStorage(false);
+    }
+  }, []);
 
-    let type: MediaItem["type"] = "image";
-    if (cleanUrl.endsWith(".pdf")) type = "pdf";
-    else if (cleanUrl.endsWith(".svg")) type = "vector";
+  useEffect(() => {
+    void loadR2Inventory();
+  }, [loadR2Inventory]);
 
-    mediaItems.push({
-      url: cleanUrl,
-      source,
-      type,
-      category,
-    });
-  };
+  const referencedItems: MediaCatalogItem[] = useMemo(
+    () => scanReferencedMedia(config),
+    [config]
+  );
 
-  // 1. Identity & Header
-  if (config.headerLogoUrl) addMedia(config.headerLogoUrl, "Header Brand Logo", "identity");
-  if (config.generalProfile?.avatarUrl) addMedia(config.generalProfile.avatarUrl, "Foto Avatar Profil", "identity");
+  // Merge live R2 storage objects + referenced items so orphans become visible & manageable
+  const combinedItems = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        id: string;
+        url: string;
+        key?: string;
+        source: string;
+        category: string;
+        type: string;
+        isReferenced: boolean;
+        size?: number;
+        usedIn: string[];
+      }
+    >();
 
-  // 2. Appearance (Lanyard & Profile Card)
-  if (config.lanyard?.frontImage) addMedia(config.lanyard.frontImage, "Lanyard Depan", "appearance");
-  if (config.lanyard?.backImage) addMedia(config.lanyard.backImage, "Lanyard Belakang", "appearance");
-  if (config.lanyard?.strapImage) addMedia(config.lanyard.strapImage, "Lanyard Tali", "appearance");
-  if (config.profileCard?.avatarUrl) addMedia(config.profileCard.avatarUrl, "Profile Card Avatar", "appearance");
-  if (config.profileCard?.iconUrl) addMedia(config.profileCard.iconUrl, "Profile Card Badge Icon", "appearance");
-  if (config.profileCard?.miniAvatarUrl) addMedia(config.profileCard.miniAvatarUrl, "Profile Card Mini Avatar", "appearance");
+    for (const item of referencedItems) {
+      map.set(item.url, {
+        id: item.id,
+        url: item.url,
+        key: item.key,
+        source: item.source,
+        category: item.category,
+        type: item.type,
+        isReferenced: true,
+        usedIn: item.sources,
+      });
+    }
 
-  // 3. Projects
-  (config.projects || []).forEach((p) => {
-    if (p.image) addMedia(p.image, `Cover: ${p.title}`, "projects");
-    (p.galleryImages || []).forEach((g, i) => addMedia(g, `Galeri #${i + 1}: ${p.title}`, "projects"));
-  });
+    for (const obj of r2Objects) {
+      const existing = map.get(obj.url);
+      if (existing) {
+        existing.key = obj.key;
+        existing.size = obj.size;
+        if (obj.usedIn.length > 0) {
+          existing.usedIn = Array.from(new Set([...existing.usedIn, ...obj.usedIn]));
+        }
+      } else {
+        const lower = obj.key.toLowerCase();
+        const type = lower.endsWith(".pdf")
+          ? "pdf"
+          : lower.endsWith(".svg")
+          ? "vector"
+          : "image";
+        const folder = obj.key.split("/")[0] || "storage";
+        map.set(obj.url, {
+          id: `r2-${obj.key}`,
+          url: obj.url,
+          key: obj.key,
+          source: obj.isReferenced ? obj.usedIn.join(" • ") : "Berkas R2 Tidak Terpakai (Orphan)",
+          category: folder,
+          type,
+          isReferenced: obj.isReferenced,
+          size: obj.size,
+          usedIn: obj.usedIn,
+        });
+      }
+    }
 
-  // 4. Certificates & Achievements
-  (config.certificates || []).forEach((c) => {
-    if (c.image) addMedia(c.image, `Sertifikat: ${c.title}`, "certificates");
-    if (c.credentialPdf) addMedia(c.credentialPdf, `PDF Kredensial: ${c.title}`, "certificates");
-  });
-  (config.achievements || []).forEach((a) => {
-    if (a.image) addMedia(a.image, `Prestasi: ${a.title}`, "certificates");
-  });
+    return Array.from(map.values());
+  }, [referencedItems, r2Objects]);
 
-  // 5. CV Docs
-  (config.cvDocs || []).forEach((doc) => {
-    if (doc.pdfUrl) addMedia(doc.pdfUrl, `Berkas PDF CV (${doc.roleKey})`, "cv");
-    (doc.pages || []).forEach((pg, i) => addMedia(pg, `Halaman ${i + 1} CV (${doc.roleKey})`, "cv"));
-  });
-
-  // 6. Experience & Stack
-  (config.experience || []).forEach((exp) => {
-    if (exp.logo) addMedia(exp.logo, `Logo Organisasi: ${exp.org}`, "identity");
-  });
-  (config.techStack || []).forEach((stk) => {
-    if (stk.icon) addMedia(stk.icon, `Ikon Tech Stack: ${stk.name}`, "stack");
-  });
+  const orphanCount = useMemo(
+    () => combinedItems.filter((i) => !i.isReferenced && i.key).length,
+    [combinedItems]
+  );
 
   const handleCopy = (url: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -118,35 +164,84 @@ export function TabMedia({
   const handleDirectUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    uploadAndSet(
+    void uploadAndSet(
       file,
       selectedFolder,
       (url) => {
         setLastUploadedUrl(url);
         setStatus(`Berkas berhasil diunggah ke folder '${selectedFolder}'!`);
+        void loadR2Inventory();
       },
       "media_quick_upload"
     );
   };
 
-  const filteredMedia = mediaItems.filter((m) => {
+  const requestDeleteR2Object = (item: (typeof combinedItems)[number]) => {
+    setPendingDelete({
+      entityType: "Objek Cloudflare R2",
+      itemName: item.key || item.url,
+      impacts: item.isReferenced
+        ? [
+            `PERHATIAN: Berkas ini masih dipakai di: ${item.usedIn.join(", ")}. Server akan menolak penghapusan sebelum referensi dilepas dan dipublikasikan.`,
+          ]
+        : [
+            "Berkas tidak terpakai pada versi Draft maupun Publik.",
+            "Menghapus objek dari bucket Cloudflare R2 bersifat permanen dan menghemat ruang storage.",
+          ],
+      onConfirm: async () => {
+        try {
+          const res = await fetch("/api/upload", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: item.key, url: item.url }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setStatus(`Ditolak server: ${data.error || "Gagal menghapus berkas"}`);
+          } else {
+            setStatus("Berkas berhasil dihapus permanen dari Cloudflare R2");
+            void loadR2Inventory();
+          }
+        } catch {
+          setStatus("Gagal menghubungi endpoint DELETE /api/upload");
+        } finally {
+          setPendingDelete(null);
+        }
+      },
+    });
+  };
+
+  const filteredMedia = combinedItems.filter((m) => {
+    if (filterMode === "referenced" && !m.isReferenced) return false;
+    if (filterMode === "orphan" && m.isReferenced) return false;
     const matchesCat = filterCategory === "all" || m.category === filterCategory;
     const matchesQuery =
       !searchQuery.trim() ||
       m.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.url.toLowerCase().includes(searchQuery.toLowerCase());
+      m.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.key || "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesQuery;
   });
 
+  const seo = config.seo;
+  const profile = config.generalProfile;
+  const displaySeoTitle =
+    seo?.metaTitle || `${profile?.name || "Zakaria Mujur Prasetyo"} | ${profile?.roles || "Portfolio"}`;
+  const displaySeoDesc = seo?.metaDesc || profile?.heroDesc || "";
+
   return (
     <div className="space-y-8">
+      <ConfirmImpactModal pendingDelete={pendingDelete} onCancel={() => setPendingDelete(null)} />
+
       {/* Quick Upload Box */}
       <div className="rounded-2xl border border-line/70 bg-surface/50 p-6 dark:border-line/40 dark:bg-slate-900/40">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h3 className="text-sm font-bold text-ink">Unggah Cepat Media & Konversi WebP Otomatis</h3>
+            <h3 className="text-sm font-bold text-ink">
+              Unggah Cepat Media (WebP Otomatis + Sanitasi SVG + PDF)
+            </h3>
             <p className="text-xs text-muted">
-              Format PNG/JPG otomatis dikonversi ke WebP di browser sebelum diunggah ke Cloudflare R2 / Supabase Storage.
+              PNG/JPG dikonversi ke WebP; SVG disanitasi otomatis dari script/XSS sebelum masuk storage R2.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -160,6 +255,15 @@ export function TabMedia({
               <option value="certificates">certificates/</option>
               <option value="cv">cv/</option>
               <option value="avatar">avatar/</option>
+              <option value="profile">profile/</option>
+              <option value="lanyard">lanyard/</option>
+              <option value="education">education/</option>
+              <option value="experience">experience/</option>
+              <option value="achievements">achievements/</option>
+              <option value="logos">logos/</option>
+              <option value="services">services/</option>
+              <option value="blog">blog/</option>
+              <option value="seo">seo/</option>
               <option value="misc">misc/</option>
             </select>
           </div>
@@ -168,10 +272,14 @@ export function TabMedia({
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand/90">
             <Upload className="size-4" />
-            {uploadingImage === "media_quick_upload" ? "Memproses & Mengunggah..." : "Pilih Berkas untuk Diunggah"}
+            <span>
+              {uploadingImage === "media_quick_upload"
+                ? "Memproses & Mengunggah..."
+                : "Pilih Berkas (Img / SVG / PDF)"}
+            </span>
             <input
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,.svg,application/pdf"
               className="hidden"
               disabled={uploadingImage === "media_quick_upload"}
               onChange={handleDirectUpload}
@@ -198,28 +306,62 @@ export function TabMedia({
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-ink">
-              Pustaka Media Terpakai ({mediaItems.length} Berkas Aktif)
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-ink">
+                Pustaka Media & Storage ({combinedItems.length} Aset)
+              </h3>
+              {r2Configured ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                  <HardDrive className="size-3" /> R2 Live ({r2Objects.length} objek)
+                </span>
+              ) : (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+                  Katalog Referensi Lokal
+                </span>
+              )}
+              {orphanCount > 0 && (
+                <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                  {orphanCount} Orphan
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted">
-              Daftar seluruh berkas visual dan dokumen yang saat ini ditautkan dalam portofolio Anda.
+              Aset yang tidak terpakai di Draft maupun Publik ditandai Orphan dan dapat dihapus dengan aman.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
+            <button
+              type="button"
+              onClick={loadR2Inventory}
+              disabled={loadingStorage}
+              className="inline-flex items-center gap-1 rounded-xl border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-surface dark:border-line/60 dark:bg-slate-900"
+            >
+              <RefreshCw className={`size-3.5 ${loadingStorage ? "animate-spin" : ""}`} />
+              <span>Muat Ulang R2</span>
+            </button>
+
             <div className="relative">
               <Search className="absolute left-2.5 top-2 size-3.5 text-muted" />
               <input
                 type="text"
-                placeholder="Cari aset..."
+                placeholder="Cari aset / key..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-40 rounded-xl border border-line bg-white/80 py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-muted focus:border-brand focus:outline-none dark:border-line/60 dark:bg-slate-900/80"
               />
             </div>
 
-            {/* Filter Category */}
+            <select
+              value={filterMode}
+              onChange={(e) => setFilterMode(e.target.value as "all" | "referenced" | "orphan")}
+              className="rounded-xl border border-line bg-white/80 px-2.5 py-1.5 text-xs text-ink focus:border-brand focus:outline-none dark:border-line/60 dark:bg-slate-900/80"
+            >
+              <option value="all">Semua Status</option>
+              <option value="referenced">Terpakai Saja</option>
+              <option value="orphan">Orphan (Tidak Terpakai)</option>
+            </select>
+
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -228,10 +370,16 @@ export function TabMedia({
               <option value="all">Semua Kategori</option>
               <option value="identity">Identitas & Profil</option>
               <option value="projects">Proyek</option>
-              <option value="certificates">Sertifikat & Prestasi</option>
+              <option value="education">Pendidikan</option>
+              <option value="experience">Pengalaman</option>
+              <option value="certificates">Sertifikat</option>
+              <option value="achievements">Prestasi</option>
               <option value="cv">Dokumen CV</option>
               <option value="appearance">Lanyard & 3D</option>
               <option value="stack">Tech Stack</option>
+              <option value="services">Layanan</option>
+              <option value="blog">Blog</option>
+              <option value="seo">SEO / OG</option>
             </select>
           </div>
         </div>
@@ -243,9 +391,9 @@ export function TabMedia({
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredMedia.map((item, idx) => (
+            {filteredMedia.map((item) => (
               <div
-                key={`${item.url}-${idx}`}
+                key={item.id}
                 className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/70 bg-white/80 p-3 shadow-sm transition hover:border-brand/40 hover:shadow-md dark:border-line/40 dark:bg-slate-900/60"
               >
                 <div>
@@ -269,6 +417,11 @@ export function TabMedia({
                     <span className="absolute right-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
                       {item.type}
                     </span>
+                    {!item.isReferenced && (
+                      <span className="absolute left-2 top-2 rounded-md bg-rose-600 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                        Orphan
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-2.5">
@@ -276,8 +429,13 @@ export function TabMedia({
                       {item.source}
                     </p>
                     <p className="mt-0.5 truncate font-mono text-[10px] text-muted" title={item.url}>
-                      {item.url}
+                      {item.key || item.url}
                     </p>
+                    {typeof item.size === "number" && (
+                      <p className="mt-0.5 font-mono text-[10px] text-muted">
+                        {(item.size / 1024).toFixed(1)} KB
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -311,6 +469,16 @@ export function TabMedia({
                     >
                       <ExternalLink className="size-3" />
                     </a>
+                    {item.key && r2Configured && (
+                      <button
+                        type="button"
+                        onClick={() => requestDeleteR2Object(item)}
+                        className="rounded-lg p-1 text-rose-500 transition hover:bg-rose-500/10"
+                        title="Hapus Objek R2"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -326,25 +494,26 @@ export function TabMedia({
             <Sparkles className="size-4 text-brand" />
             <h3 className="text-sm font-bold text-ink">Pratinjau Hasil Pencarian Google (SERP Preview)</h3>
           </div>
-          <span className="text-[11px] text-muted">Data dinamis dari profil aktif</span>
+          <span className="text-[11px] text-muted">Atur detail lengkap pada tab Tampilan -&gt; SEO &amp; OpenGraph</span>
         </div>
 
         <div className="max-w-2xl rounded-xl border border-line/50 bg-slate-50 p-4 font-sans dark:border-slate-800 dark:bg-slate-950/80">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {config.generalProfile?.name || "Zakaria Mujur Prasetyo"}
+              {profile?.name || "Zakaria Mujur Prasetyo"}
             </span>
-            <span>https://zekktech.biz.id</span>
+            <span>{seo?.canonicalUrl || profile?.site || "https://zakariamp.vercel.app"}</span>
           </div>
           <h4 className="mt-1 text-base font-medium text-blue-700 hover:underline dark:text-blue-400">
-            {config.generalProfile?.name || "Zakaria Mujur Prasetyo"} | {config.generalProfile?.roles || "UI/UX Designer & Frontend Developer"}
+            {displaySeoTitle}
           </h4>
           <p className="mt-1 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">
-            {config.generalProfile?.heroDesc ||
-              "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech). UI/UX Designer, Frontend Developer, dan Graphic Designer asal Mojokerto, Jawa Timur."}
+            {displaySeoDesc}
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+export default TabMedia;

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { createServerClient } from "@supabase/ssr";
-import { defaultCvDocs, normalizeConfig, type CvDocConfig } from "@/lib/site-config";
+import { defaultCvDocs, type CvDocConfig, type CvSettingsConfig } from "@/lib/site-config";
+import { fetchPublishedContent } from "@/lib/content/public-content";
 import { createPresignedUrl, isR2Configured, getR2Config, extractR2Key } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
@@ -98,60 +98,23 @@ function isAllowedR2Url(url: string): boolean {
   return false;
 }
 
-/**
- * Membaca konfigurasi cvDocs dari Supabase atau fallback lokal.
- * Standarisasi: Query ID "current" terlebih dahulu, lalu fallback ke "main".
- */
-async function getStoredCvDoc(identifier?: string | null): Promise<CvDocConfig> {
-  let cvDocs: CvDocConfig[] = defaultCvDocs;
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (supabaseUrl && anonKey) {
-    try {
-      const supabase = createServerClient(supabaseUrl, anonKey, {
-        cookies: {
-          getAll: () => [],
-          setAll: () => {},
-        },
-      });
-
-      // 1. Coba baca ID "current"
-      let { data } = await supabase
-        .from("site_config")
-        .select("config")
-        .eq("id", "current")
-        .maybeSingle();
-
-      // 2. Fallback baca ID "main" jika "current" belum ada
-      if (!data?.config) {
-        const { data: mainData } = await supabase
-          .from("site_config")
-          .select("config")
-          .eq("id", "main")
-          .maybeSingle();
-        data = mainData;
-      }
-
-      if (data?.config) {
-        const normalized = normalizeConfig(data.config);
-        if (normalized.cvDocs && normalized.cvDocs.length > 0) {
-          cvDocs = normalized.cvDocs;
-        }
-      }
-    } catch {
-      // Fallback ke defaultCvDocs jika Supabase offline/belum diset
-    }
-  }
+async function getStoredCvState(identifier?: string | null): Promise<{
+  doc: CvDocConfig;
+  cvSettings?: CvSettingsConfig;
+}> {
+  const config = await fetchPublishedContent();
+  const visibleDocs = (config.cvDocs && config.cvDocs.length > 0 ? config.cvDocs : defaultCvDocs).filter(
+    (d) => d.published !== false && d.visible !== false
+  );
+  const pool = visibleDocs.length > 0 ? visibleDocs : defaultCvDocs;
 
   if (identifier) {
     const cleanId = identifier.toLowerCase().trim();
-    const match = cvDocs.find((d) => d.roleKey === cleanId || d.id === cleanId);
-    if (match) return match;
+    const match = pool.find((d) => d.roleKey.toLowerCase() === cleanId || d.id.toLowerCase() === cleanId);
+    if (match) return { doc: match, cvSettings: config.cvSettings };
   }
 
-  return cvDocs[0];
+  return { doc: pool[0], cvSettings: config.cvSettings };
 }
 
 export async function OPTIONS() {
@@ -169,27 +132,30 @@ export async function HEAD(request: NextRequest) {
   });
 }
 
-/**
- * Endpoint Terverifikasi Pengambilan CV
- * 
- * Keamanan Ketat:
- * 1. Tidak menerima parameter 'url' sembarang dari user untuk mencegah Open Redirect / Arbitrary Presigning.
- * 2. Hanya menerima identifier dokumen terverifikasi ('role' atau 'docId') yang dipetakan oleh server.
- * 3. Presigned URL menggunakan kedaluwarsa singkat (900 detik / 15 menit).
- */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  // Hanya baca identifier terotorisasi ('role' atau 'docId' / 'id')
   const identifier = searchParams.get("role") || searchParams.get("docId") || searchParams.get("id");
   const wantsDownload = searchParams.get("download") === "1";
   const wantsJson =
     request.headers.get("accept")?.includes("application/json") ||
     searchParams.get("format") === "json";
 
-  // Resolusi dokumen hanya melalui konfigurasi server terpercaya
-  const doc = await getStoredCvDoc(identifier);
+  const { doc, cvSettings } = await getStoredCvState(identifier);
+
+  // Respect CMS download lock setting when download=1 is requested
+  const allowDownload =
+    cvSettings?.allowDownload !== false && doc?.allowDownload !== false;
+  if (wantsDownload && !allowDownload) {
+    return NextResponse.json(
+      { error: "Unduhan dokumen CV saat ini dinonaktifkan oleh administrator." },
+      { status: 403, headers: CORS_HEADERS }
+    );
+  }
+
   const targetPdf = (doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
-  const safeFilename = doc?.title
+  const safeFilename = doc?.downloadFilename
+    ? doc.downloadFilename.replace(/[^a-zA-Z0-9._-]/g, "_")
+    : doc?.title
     ? `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`
     : "CV-ATS-ZakariaMP-2025.pdf";
 

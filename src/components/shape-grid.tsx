@@ -34,7 +34,7 @@ interface Layout { stepX: number; stepY: number; radius?: number; side?: number;
 interface View { x0: number; y0: number; width: number; height: number; inverse: number[] | null; transform: string; mist: number[] | null; far: number; reach: number; }
 interface Settings { shape: string; cellSize: number; lineWidth: number; direction: string; speed: number; lineColor: string; hoverColor: string; hoverFillColor: string; fillOpacity: number; rainbow: boolean; tone: number; tiltX: number; tiltY: number; radius: number; trail: number; glow: number; twinkle: number; clickCascade: boolean; intro: boolean; paused: boolean; dpr?: number; }
 interface Cascade { x: number; y: number; time: number; power: number; reach: number; hue: number; }
-interface Engine { redraw: () => void; }
+interface Engine { redraw: () => void; relayout: () => void; }
 
 const SHAPES = ['square', 'tile', 'hexagon', 'triangle', 'diamond', 'circle', 'cross', 'dot'];
 const DIRECTIONS: Record<string, number[]> = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1], diagonal: [Math.SQRT1_2, -Math.SQRT1_2], none: [0, 0] };
@@ -272,6 +272,8 @@ export default function ShapeGrid({
       view: flatView(1, 1),
       offsetX: 0,
       offsetY: 0,
+      bounds: { left: 0, top: 0, width: 1, height: 1 },
+      lastDrawAt: 0,
       started: false,
       startedAt: 0,
       inside: false,
@@ -290,8 +292,15 @@ export default function ShapeGrid({
 
     const resize = () => {
       const s = settingsRef.current;
-      const width = Math.max(1, container.clientWidth);
-      const height = Math.max(1, container.clientHeight);
+      const rect = container.getBoundingClientRect();
+      state.bounds = {
+        left: rect.left,
+        top: rect.top,
+        width: Math.max(1, rect.width || container.clientWidth),
+        height: Math.max(1, rect.height || container.clientHeight),
+      };
+      const width = state.bounds.width;
+      const height = state.bounds.height;
       const view = viewFor(s.tiltX, s.tiltY, width, height, s.cellSize);
       let ratio = s.dpr ?? Math.min(window.devicePixelRatio || 1, 1.5);
       const pixels = view.width * view.height * ratio * ratio;
@@ -585,7 +594,16 @@ export default function ShapeGrid({
         illuminate(s, layoutFor(s.shape, s.cellSize), dt);
         state.cascades = state.cascades.filter(cascade => state.time - cascade.time < cascade.reach * 0.055 + 0.4);
       }
-      draw();
+      const hasInteractive =
+        state.inside ||
+        state.lit.size > 0 ||
+        state.cascades.length > 0 ||
+        state.spotPower > 0.01;
+      const minDrawInterval = hasInteractive ? 0 : 40;
+      if (minDrawInterval === 0 || now - state.lastDrawAt >= minDrawInterval || state.lastDrawAt === 0) {
+        state.lastDrawAt = now;
+        draw();
+      }
       const settled =
         s.paused ||
         (s.speed === 0 || s.direction === 'none' || reduce
@@ -604,10 +622,10 @@ export default function ShapeGrid({
     };
 
     const pointFrom = (event: PointerEvent) => {
-      const rect = container.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+      const { left, top, width, height } = state.bounds;
+      const x = event.clientX - left;
+      const y = event.clientY - top;
+      if (x < 0 || y < 0 || x > width || y > height) return null;
       return toPlane(x, y);
     };
 
@@ -685,19 +703,39 @@ export default function ShapeGrid({
     document.documentElement.addEventListener('pointerleave', onLeave);
     window.addEventListener('blur', onLeave);
 
-    engineRef.current = {
-      redraw: () => {
-        resize();
+    let redrawRaf = 0;
+    let pendingRelayout = false;
+    const scheduleSync = (needsRelayout: boolean) => {
+      if (needsRelayout) pendingRelayout = true;
+      if (redrawRaf) return;
+      redrawRaf = requestAnimationFrame(() => {
+        redrawRaf = 0;
+        if (!state.alive) return;
+        if (pendingRelayout) {
+          pendingRelayout = false;
+          resize();
+        }
+        state.lastDrawAt = performance.now();
         draw();
         wake();
-      }
+      });
     };
 
-    resize();
-    wake();
+    engineRef.current = {
+      redraw: () => scheduleSync(false),
+      relayout: () => scheduleSync(true),
+    };
+
+    state.raf = requestAnimationFrame(() => {
+      state.raf = 0;
+      if (!state.alive) return;
+      resize();
+      wake();
+    });
 
     return () => {
       state.alive = false;
+      cancelAnimationFrame(redrawRaf);
       cancelAnimationFrame(state.raf);
       resizeObserver.disconnect();
       visibility.disconnect();
@@ -710,9 +748,45 @@ export default function ShapeGrid({
     };
   }, []);
 
+  const hasMountedRef = useRef(false);
+  const prevLayoutSigRef = useRef('');
+
   useEffect(() => {
-    engineRef.current?.redraw();
-  });
+    const nextLayoutSig = `${shape}|${cellSize}|${tiltX}|${tiltY}|${dpr ?? ''}`;
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      prevLayoutSigRef.current = nextLayoutSig;
+      return;
+    }
+    if (prevLayoutSigRef.current !== nextLayoutSig) {
+      prevLayoutSigRef.current = nextLayoutSig;
+      engineRef.current?.relayout();
+    } else {
+      engineRef.current?.redraw();
+    }
+  }, [
+    shape,
+    cellSize,
+    lineWidth,
+    direction,
+    speed,
+    lineColor,
+    hoverColor,
+    hoverFillColor,
+    fillOpacity,
+    rainbow,
+    tiltX,
+    tiltY,
+    radius,
+    trail,
+    glow,
+    twinkle,
+    fade,
+    clickCascade,
+    intro,
+    paused,
+    dpr,
+  ]);
 
   const mask = fadeMask(clamp(fade, 0, 1));
 

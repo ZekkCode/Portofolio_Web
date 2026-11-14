@@ -97,7 +97,7 @@ export const BuddySprite = forwardRef<HTMLButtonElement, BuddySpriteProps>(
           aria-hidden="true"
           className="absolute -top-1 -right-1 flex size-2.5 items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
         >
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-blue-400 opacity-75" />
+          <span className="absolute inline-flex size-full rounded-full bg-blue-400 opacity-75 group-hover:animate-ping" />
           <span className="relative inline-flex size-2 rounded-full bg-brand" />
         </span>
       </button>

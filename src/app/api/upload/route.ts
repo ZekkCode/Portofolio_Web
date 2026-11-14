@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { isR2Configured, uploadFileToR2, deleteR2Object } from "@/lib/r2";
+import { isR2Configured, uploadFileToR2, deleteR2Object, listR2Objects } from "@/lib/r2";
 import { isSupabaseConfigured, getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
-import { isMediaReferenced } from "@/lib/content/media-catalog";
+import { getMediaUsageSources, isMediaReferenced } from "@/lib/content/media-catalog";
+import { fetchDraftOrPublishedContent, fetchPublishedContent } from "@/lib/content/public-content";
+import { sanitizeSvgContent } from "@/lib/svg-sanitizer";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_FOLDERS = new Set(["uploads", "projects", "certificates", "cv", "avatar", "lanyard", "education", "logos"]);
+const ALLOWED_FOLDERS = new Set([
+  "uploads",
+  "projects",
+  "certificates",
+  "cv",
+  "avatar",
+  "profile",
+  "lanyard",
+  "education",
+  "logos",
+  "experience",
+  "achievements",
+  "blog",
+  "seo",
+  "services",
+  "misc",
+]);
 
 /**
  * Validasi Magic Number / File Signature biner.
@@ -72,13 +90,63 @@ function detectSafeFileType(buffer: Buffer): { ext: string; mime: string } | nul
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+
+  if (action === "list") {
+    const auth = await verifyAdminRequest(request);
+    if (!auth.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Akses ditolak: Daftar objek storage hanya untuk admin terotentikasi." },
+        { status: 401 }
+      );
+    }
+
+    if (!isR2Configured()) {
+      return NextResponse.json({
+        configured: false,
+        items: [],
+      });
+    }
+
+    const prefix = searchParams.get("prefix") || undefined;
+    const objects = await listR2Objects(prefix);
+    const published = await fetchPublishedContent();
+    const draftState = await fetchDraftOrPublishedContent();
+
+    const items = objects.map((obj) => {
+      const pubSources = getMediaUsageSources(obj.url, published);
+      const draftSources = draftState.isDraft
+        ? getMediaUsageSources(obj.url, draftState.config)
+        : [];
+      const usedIn = Array.from(new Set([...pubSources, ...draftSources]));
+      return {
+        ...obj,
+        isReferenced: usedIn.length > 0,
+        usedIn,
+      };
+    });
+
+    return NextResponse.json({
+      configured: true,
+      items,
+    });
+  }
+
   return NextResponse.json({
     r2: isR2Configured(),
     supabase: isSupabaseConfigured(),
     maxSizeMb: 10,
-    allowedTypes: ["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf"],
-    svgSupported: false, // SVG ditolak demi mencegah serangan script XSS tersimpan
+    allowedTypes: [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+      "application/pdf",
+    ],
+    svgSupported: true,
   });
 }
 
@@ -132,26 +200,35 @@ export async function POST(request: Request) {
     }
 
     const declaredType = (file.type || "").toLowerCase().trim();
-    if (declaredType === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
-      return NextResponse.json(
-        {
-          error:
-            "Format SVG ditolak demi pencegahan keamanan XSS. Harap gunakan format gambar raster (WebP, PNG, JPEG) atau dokumen PDF.",
-        },
-        { status: 415 }
-      );
+    const arrayBuffer = await file.arrayBuffer();
+    let buffer: Buffer<ArrayBufferLike> = Buffer.from(arrayBuffer);
+    let verifiedType: { ext: string; mime: string } | null = null;
+
+    const looksLikeSvg =
+      declaredType === "image/svg+xml" ||
+      file.name.toLowerCase().endsWith(".svg") ||
+      buffer.subarray(0, 256).toString("utf8").trimStart().toLowerCase().startsWith("<svg") ||
+      buffer.subarray(0, 256).toString("utf8").toLowerCase().includes("<svg");
+
+    if (looksLikeSvg && !detectSafeFileType(buffer)) {
+      const svgResult = sanitizeSvgContent(buffer.toString("utf8"));
+      if (!svgResult.ok) {
+        return NextResponse.json(
+          { error: svgResult.error },
+          { status: 400 }
+        );
+      }
+      buffer = Buffer.from(svgResult.sanitized, "utf8");
+      verifiedType = { ext: "svg", mime: "image/svg+xml" };
+    } else {
+      verifiedType = detectSafeFileType(buffer);
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // 4. Verifikasi signature berkas (Magic Number) nyata
-    const verifiedType = detectSafeFileType(buffer);
     if (!verifiedType) {
       return NextResponse.json(
         {
           error:
-            "Format berkas tidak valid atau tidak diizinkan. Sistem hanya menerima berkas asli PNG, JPEG, WebP, GIF, dan PDF terverifikasi.",
+            "Format berkas tidak valid atau tidak diizinkan. Sistem hanya menerima berkas PNG, JPEG, WebP, GIF, SVG aman, dan PDF terverifikasi.",
         },
         { status: 415 }
       );
@@ -174,9 +251,13 @@ export async function POST(request: Request) {
           url: result.url,
           key: result.key,
           provider: "r2",
+          contentType: verifiedType.mime,
         });
       } catch (err) {
-        console.error("[api/upload] Gagal menyimpan berkas ke Cloudflare R2:", err instanceof Error ? err.message : "Unknown error");
+        console.error(
+          "[api/upload] Gagal menyimpan berkas ke Cloudflare R2:",
+          err instanceof Error ? err.message : "Unknown error"
+        );
         return NextResponse.json(
           { error: "Gagal menyimpan berkas ke Cloudflare R2. Periksa konfigurasi storage server." },
           { status: 500 }
@@ -184,7 +265,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Tolak upload jika R2 belum dikonfigurasi (menolak upload semu via fallback data URI)
     return NextResponse.json(
       {
         error:
@@ -218,7 +298,34 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Parameter key atau url diperlukan" }, { status: 400 });
     }
 
-    // Periksa apakah berkas masih aktif ditautkan di portofolio
+    // Periksa keterikatan di published content maupun draft content
+    const publishedConfig = await fetchPublishedContent();
+    const draftState = await fetchDraftOrPublishedContent();
+
+    const pubSources = getMediaUsageSources(keyOrUrl, publishedConfig);
+    const draftSources = draftState.isDraft
+      ? getMediaUsageSources(keyOrUrl, draftState.config)
+      : [];
+    const usedIn = Array.from(new Set([...pubSources, ...draftSources]));
+
+    if (
+      usedIn.length > 0 ||
+      isMediaReferenced(keyOrUrl, publishedConfig) ||
+      (draftState.isDraft && isMediaReferenced(keyOrUrl, draftState.config))
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            usedIn.length > 0
+              ? `Berkas tidak dapat dihapus karena masih digunakan di: ${usedIn.join(", ")}.`
+              : "Berkas tidak dapat dihapus karena masih digunakan di dalam portofolio aktif.",
+          usedIn,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Fallback additional raw check against Supabase current row directly if configured
     const supabase = getServiceRoleClient() || getSupabaseClient();
     if (supabase) {
       const { data } = await supabase
@@ -231,7 +338,7 @@ export async function DELETE(request: Request) {
         const activeConfig = normalizeConfig(data.config as Partial<SiteConfig>);
         if (isMediaReferenced(keyOrUrl, activeConfig)) {
           return NextResponse.json(
-            { error: "Berkas tidak dapat dihapus karena masih digunakan di dalam portofolio aktif." },
+            { error: "Berkas tidak dapat dihapus karena masih digunakan di konfigurasi cloud aktif." },
             { status: 400 }
           );
         }

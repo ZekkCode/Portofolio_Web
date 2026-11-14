@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   normalizeConfig,
   resetConfig,
   saveCloudDraft,
   publishCloudConfig,
+  getServerUpdatedAt,
   useSiteConfig,
   writeConfig,
   type SiteConfig,
@@ -115,7 +115,6 @@ async function convertImageToWebP(file: File, quality = 0.88): Promise<File> {
 }
 
 export default function AdminClient({ userEmail }: { userEmail?: string }) {
-  const router = useRouter();
   const storedConfig = useSiteConfig();
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -129,14 +128,29 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showRevisionsModal, setShowRevisionsModal] = useState(false);
   const [showHealthModal, setShowHealthModal] = useState(false);
+  const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(
+    () => getServerUpdatedAt() ?? null
+  );
+  const [conflictState, setConflictState] = useState<{
+    message: string;
+    serverUpdatedAt?: string | null;
+    serverConfig?: SiteConfig;
+  } | null>(null);
 
   const config = draft ?? storedConfig;
-  const hasUnsavedChanges = draft !== null;
+  const hasUnsavedChanges = useMemo(() => {
+    if (!draft) return false;
+    try {
+      return JSON.stringify(draft) !== JSON.stringify(storedConfig);
+    } catch {
+      return true;
+    }
+  }, [draft, storedConfig]);
 
   // Real-time Health Audit
   const healthReport = useMemo(() => auditContentHealth(config), [config]);
 
-  // Prevent silent data loss: Warning on beforeunload when unsaved changes exist
+  // Warn before closing tab with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -148,19 +162,35 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Fetch initial upload status + server timestamp
   useEffect(() => {
-    fetch("/api/upload")
+    fetch("/api/upload", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setCloudStatus(data))
       .catch(() => setCloudStatus({ r2: false, supabase: false }));
+
+    fetch("/api/config", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.updatedAt) {
+          setServerUpdatedAt(data.updatedAt);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogout = async () => {
+    if (
+      hasUnsavedChanges &&
+      typeof window !== "undefined" &&
+      !window.confirm("Anda memiliki perubahan yang belum dipublikasikan. Tetap keluar dari Admin?")
+    ) {
+      return;
+    }
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
-      router.push("/admin/login");
-      router.refresh();
+      window.location.assign("/admin/login");
     }
   };
 
@@ -175,7 +205,11 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
     try {
       let fileToUpload = file;
-      if (file.type.startsWith("image/") && file.type !== "image/svg+xml" && file.type !== "image/gif") {
+      if (
+        file.type.startsWith("image/") &&
+        file.type !== "image/svg+xml" &&
+        file.type !== "image/gif"
+      ) {
         try {
           fileToUpload = await convertImageToWebP(file);
         } catch (convErr) {
@@ -199,9 +233,9 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
       callback(data.url);
       setStatus(
-        data.source === "r2"
-          ? "Berkas berhasil diunggah permanen ke Cloudflare R2"
-          : "Berkas disimpan lokal (Base64 data URI)"
+        data.provider === "r2" || data.source === "r2"
+          ? "Berkas berhasil diunggah ke Cloudflare R2"
+          : "Berkas disimpan lokal (Base64 / SVG Data URI)"
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Kesalahan unggah";
@@ -217,11 +251,13 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     setIsSavingDraft(true);
     setStatus("Menyimpan draf ke server...");
     try {
-      const res = await saveCloudDraft(config);
+      const res = await saveCloudDraft(config, {
+        expectedUpdatedAt: serverUpdatedAt ?? undefined,
+      });
       if (res.success) {
-        setStatus("Draf berhasil disimpan (belum dipublikasikan)");
+        setStatus("Draf berhasil disimpan (belum dipublikasikan ke pengunjung)");
       } else {
-        setStatus(`Gagal simpan draf: ${res.message || "Kesalahan cloud"}`);
+        setStatus(`Gagal simpan draf: ${res.message || "Kesalahan server"}`);
       }
     } catch {
       setStatus("Gagal menghubungi server draf");
@@ -230,13 +266,31 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     }
   };
 
-  // 2. Publikasikan ke Seluruh Situs (Primary Action, juga digunakan oleh test script 'Simpan')
-  const handlePublish = async () => {
-    // Audit integritas data
+  // Sinkronkan draf terlebih dahulu lalu buka /admin/preview
+  const handleOpenPreview = async () => {
+    setIsSavingDraft(true);
+    setStatus("Menyinkronkan draf untuk pratinjau...");
+    try {
+      await saveCloudDraft(config, {
+        expectedUpdatedAt: serverUpdatedAt ?? undefined,
+      });
+      setStatus("Membuka Pratinjau Draf di tab baru...");
+      window.open("/admin/preview", "_blank", "noopener,noreferrer");
+    } catch {
+      window.open("/admin/preview", "_blank", "noopener,noreferrer");
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  // 2. Publikasikan ke Seluruh Situs (Primary Action, menjaga label 'Simpan' untuk check.mjs)
+  const handlePublish = async (forceOverwrite = false) => {
     if (!healthReport.canPublish) {
       setShowHealthModal(true);
       setValidationErrors(
-        healthReport.issues.filter((i) => i.severity === "error").map((i) => `[${i.section}] ${i.message}`)
+        healthReport.issues
+          .filter((i) => i.severity === "error")
+          .map((i) => `[${i.section}] ${i.message}`)
       );
       setStatus("Publikasi dicegah: Perbaiki kesalahan integritas konten terlebih dahulu.");
       return;
@@ -250,48 +304,75 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     }
 
     setValidationErrors([]);
+    setConflictState(null);
     setIsSaving(true);
-    setStatus("Mempublikasikan konten ke cloud...");
+    setStatus("Mempublikasikan konten...");
 
+    const publishedSnapshot = config;
     try {
-      // Local fallback write
-      writeConfig(config);
+      // Immediate local persistence & cross-tab sync (also required by scripts/check.mjs)
+      writeConfig(publishedSnapshot);
 
-      // Cloud publish with automatic revision snapshot
-      if (cloudStatus?.supabase) {
-        const res = await publishCloudConfig(config);
-        if (res.success) {
-          setStatus("Berhasil dipublikasikan ke seluruh situs publik!");
-          setDraft(null);
-        } else {
-          setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron cloud"})`);
+      const res = await publishCloudConfig(publishedSnapshot, {
+        expectedUpdatedAt: forceOverwrite ? undefined : (serverUpdatedAt ?? undefined),
+        forceOverwrite,
+      });
+
+      if (res.conflict) {
+        setConflictState({
+          message: res.message || "Terdeteksi konflik versi server (409 Conflict).",
+          serverUpdatedAt: res.serverUpdatedAt,
+          serverConfig: res.serverConfig,
+        });
+        setStatus("Konflik versi terdeteksi — pilih Muat Server atau Timpa Paksa.");
+        return;
+      }
+
+      if (res.success) {
+        if (res.updatedAt) {
+          setServerUpdatedAt(res.updatedAt);
         }
+        setDraft((prev) => (prev === publishedSnapshot ? null : prev));
+        setStatus(
+          res.provider === "local-cms-store"
+            ? "Berhasil dipublikasikan ke mode lokal CMS!"
+            : "Berhasil dipublikasikan ke seluruh situs publik!"
+        );
       } else {
-        setStatus("Tersimpan sebagai draf lokal (Supabase belum terkonfigurasi)");
+        setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron server"})`);
       }
     } catch {
-      setStatus("Gagal menghubungi server");
+      setStatus("Tersimpan lokal (gagal menghubungi endpoint publikasi)");
     } finally {
       setIsSaving(false);
     }
   };
 
   const pullFromCloud = async () => {
+    if (
+      hasUnsavedChanges &&
+      typeof window !== "undefined" &&
+      !window.confirm("Menarik data server akan menimpa perubahan draf lokal yang belum disimpan. Lanjutkan?")
+    ) {
+      return;
+    }
     setSyncingCloud(true);
-    setStatus("Mengambil data terbaru dari Supabase Cloud...");
+    setStatus("Mengambil data terbaru dari server...");
     try {
       const res = await fetch("/api/config", { cache: "no-store" });
       const data = await res.json();
-      if (data.configured && data.config) {
+      if (data.config) {
         const normalized = normalizeConfig(data.config);
         setDraft(normalized);
         writeConfig(normalized);
-        setStatus("Konfigurasi Supabase berhasil disinkronkan ke editor");
+        if (data.updatedAt) setServerUpdatedAt(data.updatedAt);
+        setConflictState(null);
+        setStatus("Konfigurasi server berhasil disinkronkan ke editor");
       } else {
-        setStatus(data.message || "Belum ada konfigurasi tersimpan di cloud");
+        setStatus(data.message || "Belum ada konfigurasi tersimpan di server");
       }
     } catch {
-      setStatus("Gagal terhubung ke API cloud");
+      setStatus("Gagal terhubung ke API server");
     } finally {
       setSyncingCloud(false);
     }
@@ -300,17 +381,18 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
   const handleReset = () => {
     if (
       typeof window !== "undefined" &&
-      !window.confirm("Kembalikan seluruh konfigurasi ke nilai bawaan kode? Tindakan ini tidak dapat dibatalkan.")
+      !window.confirm(
+        "Kembalikan seluruh konfigurasi ke nilai bawaan kode? Tindakan ini tidak dapat dibatalkan."
+      )
     ) {
       return;
     }
     resetConfig();
     setDraft(null);
+    setConflictState(null);
     setStatus("Konfigurasi dikembalikan ke default");
   };
 
-  // Tab definition following Phase 34 Information Architecture
-  // 'works' keeps label "Proyek" for test script compatibility (scripts/check.mjs)
   const tabs: { key: AdminTabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { key: "overview", label: "Overview", icon: LayoutDashboard },
     { key: "general", label: "Profil & Kontak", icon: User },
@@ -318,7 +400,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     { key: "works", label: "Proyek", icon: FolderGit2 },
     { key: "expertise", label: "Skill & Layanan", icon: Wrench },
     { key: "credentials", label: "Sertifikasi & CV", icon: Award },
-    { key: "content", label: "FAQ & Teks", icon: HelpCircle },
+    { key: "content", label: "Blog, FAQ & Teks", icon: HelpCircle },
     { key: "media", label: "Pustaka Media", icon: ImageIcon },
     { key: "appearance", label: "Tampilan & SEO", icon: Sparkles },
     { key: "maintenance", label: "Cadangan & Riwayat", icon: ShieldCheck },
@@ -332,6 +414,14 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           <div className="flex items-center gap-3">
             <Link
               href="/"
+              onClick={(e) => {
+                if (
+                  hasUnsavedChanges &&
+                  !window.confirm("Anda memiliki perubahan yang belum dipublikasikan. Yakin kembali ke halaman publik?")
+                ) {
+                  e.preventDefault();
+                }
+              }}
               className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/60 px-3 py-1.5 text-xs font-semibold text-body transition hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/60"
             >
               <ArrowLeft className="size-3.5" />
@@ -341,30 +431,52 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display text-base font-bold text-ink">Panel Admin</span>
-                {hasUnsavedChanges && (
+                {hasUnsavedChanges ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
                     <span className="size-1.5 rounded-full bg-amber-500" />
-                    Draf Belum Disimpan
+                    Belum Disimpan
+                  </span>
+                ) : (
+                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    Tersinkron
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-muted hidden sm:block">
-                {userEmail || "admin"} • Kelola konfigurasi, aset, dan linimasa portofolio
+                {userEmail || "admin"} • Kelola seluruh konten publik, media & SEO tanpa redeploy
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {hasUnsavedChanges && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Batalkan semua perubahan draf di editor saat ini?")) {
+                    setDraft(null);
+                    setConflictState(null);
+                    setStatus("Perubahan editor dibatalkan");
+                  }
+                }}
+                className="hidden xl:inline-flex items-center gap-1 rounded-xl border border-rose-500/25 bg-rose-500/5 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/15 dark:text-rose-400"
+              >
+                <span>Batalkan</span>
+              </button>
+            )}
+
             {/* Pratinjau Draf */}
-            <Link
-              href="/admin/preview"
-              target="_blank"
+            <button
+              type="button"
+              onClick={handleOpenPreview}
+              disabled={isSavingDraft}
               className="hidden lg:inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-500/20 dark:text-amber-300"
-              title="Buka pratinjau draf tanpa mempublikasikan ke publik"
+              title="Simpan draf lalu buka pratinjau tanpa mempublikasikan ke pengunjung"
             >
               <Eye className="size-3.5" />
               <span>Pratinjau Draf</span>
-            </Link>
+            </button>
 
             {/* Riwayat Versi & Rollback */}
             <button
@@ -423,13 +535,13 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
               <span>Reset</span>
             </button>
 
-            {/* Simpan & Publikasikan (Wajib 'Simpan' untuk script test compatibility) */}
+            {/* Simpan & Publikasikan (Wajib teks exact 'Simpan' untuk check.mjs) */}
             <button
               type="button"
-              onClick={handlePublish}
+              onClick={() => handlePublish(false)}
               disabled={isSaving}
               className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-brand/90 disabled:opacity-50"
-              title="Publikasikan draf langsung ke seluruh situs publik"
+              title="Publikasikan perubahan langsung ke seluruh situs publik"
             >
               {isSaving ? (
                 <span className="size-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -449,6 +561,47 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             </button>
           </div>
         </div>
+
+        {/* 409 Optimistic Concurrency Conflict Banner */}
+        {conflictState && (
+          <div className="border-t border-amber-500/30 bg-amber-500/15 px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="size-4 shrink-0 text-amber-600" />
+                <span>
+                  <strong>Konflik Versi (409):</strong> {conflictState.message}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {conflictState.serverConfig && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = normalizeConfig(conflictState.serverConfig);
+                      setDraft(next);
+                      writeConfig(next);
+                      if (conflictState.serverUpdatedAt) {
+                        setServerUpdatedAt(conflictState.serverUpdatedAt);
+                      }
+                      setConflictState(null);
+                      setStatus("Versi terbaru dari server dimuat ke editor.");
+                    }}
+                    className="rounded-lg bg-white px-3 py-1 font-bold text-slate-900 shadow-sm hover:bg-slate-100"
+                  >
+                    Muat Versi Server
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handlePublish(true)}
+                  className="rounded-lg bg-rose-600 px-3 py-1 font-bold text-white shadow-sm hover:bg-rose-700"
+                >
+                  Timpa Paksa Perubahan Saya
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Validation Errors Notice */}
         {validationErrors.length > 0 && (
@@ -577,6 +730,8 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             config={config}
             setDraft={setDraft}
             setStatus={setStatus}
+            uploadAndSet={uploadAndSet}
+            uploadingImage={uploadingImage}
             inputClass={inputClass}
           />
         )}

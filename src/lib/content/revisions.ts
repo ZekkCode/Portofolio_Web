@@ -1,22 +1,35 @@
 import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
+import {
+  isLocalCmsOverrideAllowed,
+  readLocalCmsDoc,
+  writeLocalCmsDoc,
+} from "@/lib/content/local-cms-store";
+
+import type { RevisionsIndexItem } from "./types";
+
+export type { RevisionsIndexItem };
 
 const REVISIONS_INDEX_ID = "revisions_index";
 const MAX_REVISIONS = 25;
 
-export interface RevisionsIndexItem {
-  revisionId: string;
-  version: number;
-  timestamp: string;
-  editor: string;
-  summary: string;
-  changesCount: number;
+function shouldUseLocalRevisions(): boolean {
+  if (!isSupabaseConfigured()) return isLocalCmsOverrideAllowed();
+  if (process.env.LOCAL_CMS_STORE === "1") return isLocalCmsOverrideAllowed();
+  if (!process.env.VERCEL && !getServiceRoleClient()) {
+    return isLocalCmsOverrideAllowed();
+  }
+  return false;
 }
 
-/**
- * Mengambil daftar riwayat revisi yang tersimpan di Supabase
- */
 export async function getRevisionHistory(): Promise<RevisionsIndexItem[]> {
+  if (isLocalCmsOverrideAllowed()) {
+    const localIdx = await readLocalCmsDoc<RevisionsIndexItem[]>(REVISIONS_INDEX_ID);
+    if (localIdx && Array.isArray(localIdx.config)) {
+      return localIdx.config;
+    }
+  }
+
   if (!isSupabaseConfigured()) return [];
 
   try {
@@ -36,10 +49,14 @@ export async function getRevisionHistory(): Promise<RevisionsIndexItem[]> {
   }
 }
 
-/**
- * Mengambil detail snapshot lengkap dari satu revisi tertentu
- */
 export async function getRevisionSnapshot(revisionId: string): Promise<SiteConfig | null> {
+  if (isLocalCmsOverrideAllowed()) {
+    const localSnap = await readLocalCmsDoc<Partial<SiteConfig>>(`rev_${revisionId}`);
+    if (localSnap?.config) {
+      return normalizeConfig(localSnap.config);
+    }
+  }
+
   if (!isSupabaseConfigured()) return null;
 
   try {
@@ -59,23 +76,11 @@ export async function getRevisionSnapshot(revisionId: string): Promise<SiteConfi
   }
 }
 
-/**
- * Menyimpan snapshot revisi baru saat admin melakukan publikasi
- */
 export async function recordNewRevision(
   config: SiteConfig,
   editor: string,
   summary: string
 ): Promise<{ success: boolean; version: number; revisionId: string }> {
-  if (!isSupabaseConfigured()) {
-    return { success: true, version: 1, revisionId: "local-" + Date.now() };
-  }
-
-  const supabase = getServiceRoleClient() || getSupabaseClient();
-  if (!supabase) {
-    return { success: false, version: 1, revisionId: "" };
-  }
-
   const history = await getRevisionHistory();
   const latestVersion = history.length > 0 ? history[0].version : 0;
   const nextVersion = latestVersion + 1;
@@ -93,15 +98,34 @@ export async function recordNewRevision(
 
   const newHistory = [indexItem, ...history].slice(0, MAX_REVISIONS);
 
+  if (shouldUseLocalRevisions()) {
+    await writeLocalCmsDoc(`rev_${revisionId}`, config);
+    await writeLocalCmsDoc(REVISIONS_INDEX_ID, newHistory);
+    return { success: true, version: nextVersion, revisionId };
+  }
+
+  if (!isSupabaseConfigured()) {
+    return { success: true, version: nextVersion, revisionId };
+  }
+
+  const supabase = getServiceRoleClient() || getSupabaseClient();
+  if (!supabase) {
+    return { success: false, version: 1, revisionId: "" };
+  }
+
   try {
-    // 1. Simpan snapshot data lengkap revisi
-    await supabase.from("site_config").upsert({
+    const { error: snapErr } = await supabase.from("site_config").upsert({
       id: `rev_${revisionId}`,
       config,
       updated_at: timestamp,
     });
 
-    // 2. Perbarui indeks daftar riwayat revisi
+    if (snapErr && isLocalCmsOverrideAllowed()) {
+      await writeLocalCmsDoc(`rev_${revisionId}`, config);
+      await writeLocalCmsDoc(REVISIONS_INDEX_ID, newHistory);
+      return { success: true, version: nextVersion, revisionId };
+    }
+
     await supabase.from("site_config").upsert({
       id: REVISIONS_INDEX_ID,
       config: newHistory,

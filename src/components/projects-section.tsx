@@ -1,13 +1,19 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
-import { useSiteConfig, type Project } from "@/lib/site-store";
+import { useSiteConfig, type Project, type TechStackItem } from "@/lib/site-store";
+import {
+  getPublishedProjectCategories,
+  getPublishedProjects,
+  getPublishedSectionMeta,
+  getPublishedProfile,
+} from "@/lib/content/selectors";
 import { usePrefetchOnIntent } from "@/hooks/use-prefetch-on-intent";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen } from "lucide-react";
 
 const RepoPreviewModal = dynamic(
   () => import("@/components/repo-preview-modal").then((m) => m.RepoPreviewModal),
@@ -16,25 +22,42 @@ const RepoPreviewModal = dynamic(
 
 interface ProjectCardProps {
   project: Project;
+  categoryLabel: string;
+  techItems: TechStackItem[];
   onPreview: (project: Project) => void;
   isEn: boolean;
 }
 
-function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
+function ProjectTiltedCard({
+  project,
+  categoryLabel,
+  techItems,
+  onPreview,
+  isEn,
+}: ProjectCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const { t } = useTranslation();
   const { prefetch: prefetchModal } = usePrefetchOnIntent(
     () => import("@/components/repo-preview-modal"),
     { key: "repo-preview-modal" }
   );
 
+  const handlePointerEnter = () => {
+    prefetchModal();
+    if (cardRef.current) {
+      rectRef.current = cardRef.current.getBoundingClientRect();
+    }
+  };
+
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== "mouse") return;
     const card = cardRef.current;
     if (!card) return;
 
-    const rect = card.getBoundingClientRect();
+    const rect = rectRef.current ?? card.getBoundingClientRect();
+    rectRef.current = rect;
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
@@ -55,6 +78,7 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
   };
 
   const handlePointerLeave = () => {
+    rectRef.current = null;
     const card = cardRef.current;
     if (!card) return;
 
@@ -67,31 +91,49 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
     }
   };
 
-  const title = isEn && project.titleEn ? project.titleEn : project.title;
-  const desc = isEn && project.descEn ? project.descEn : project.desc;
   const focusText = isEn && project.problemEn ? project.problemEn : (project.highlight || project.problem);
+  const summaryText = project.summary || project.desc;
+
+  // Combine resolved TechStack names with free-text tags cleanly
+  const displayTags = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of techItems) {
+      if (item.name) names.add(item.name);
+    }
+    for (const tag of project.tags || []) {
+      if (tag) names.add(tag);
+    }
+    return Array.from(names);
+  }, [techItems, project.tags]);
 
   return (
     <div
       ref={cardRef}
+      onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      onMouseEnter={prefetchModal}
       onFocus={prefetchModal}
-      className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-shadow duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
+      className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422]"
       style={{ transformStyle: "preserve-3d" }}
     >
       <div>
         {/* Top Metadata */}
         <div className="flex items-center justify-between gap-2 pb-3 border-b border-line/50 dark:border-line/30">
-          {project.category && (
-            <span className="whitespace-nowrap shrink-0 text-[11px] font-semibold tracking-wide text-brand dark:text-blue-400">
-              {project.category === "both" ? "IT & Design" : project.category.toUpperCase()}
-            </span>
-          )}
-          {project.role && (
+          <div className="flex items-center gap-2 min-w-0">
+            {categoryLabel && (
+              <span className="whitespace-nowrap shrink-0 text-[11px] font-semibold tracking-wide text-brand dark:text-blue-400">
+                {categoryLabel}
+              </span>
+            )}
+            {project.featured && (
+              <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
+                {isEn ? "Featured" : "Unggulan"}
+              </span>
+            )}
+          </div>
+          {(project.role || project.period || project.status) && (
             <span className="text-[11px] font-medium text-muted truncate text-right">
-              {project.role}
+              {project.role || project.period || project.status}
             </span>
           )}
         </div>
@@ -103,13 +145,13 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
               type="button"
               onClick={() => onPreview(project)}
               className="group/preview relative block w-full overflow-hidden rounded-xl border border-line/70 text-start transition hover:border-brand/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label={`${t("projects.previewBtn")}: ${title}`}
+              aria-label={`${t("projects.previewBtn")}: ${project.title}`}
             >
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={project.image}
-                  alt={title}
+                  alt={project.imageAlt || project.title}
                   loading="lazy"
                   decoding="async"
                   className="size-full object-cover transition-transform duration-300 group-hover/preview:scale-105"
@@ -121,16 +163,30 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
 
         {/* Title & Description */}
         <div className="mt-3.5">
-          <button
-            type="button"
-            onClick={() => onPreview(project)}
-            className="text-left font-display text-lg font-bold tracking-tight text-ink hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-          >
-            {title}
-          </button>
-          <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body line-clamp-3">
-            {desc}
-          </p>
+          <div className="flex items-center gap-2.5">
+            {project.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={project.logo}
+                alt={`Logo ${project.title}`}
+                loading="lazy"
+                decoding="async"
+                className="size-7 shrink-0 rounded-lg border border-line/60 bg-white object-contain p-0.5 dark:border-line/40 dark:bg-slate-900"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => onPreview(project)}
+              className="text-left font-display text-lg font-bold tracking-tight text-ink hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+            >
+              {project.title}
+            </button>
+          </div>
+          {summaryText && (
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body line-clamp-3">
+              {summaryText}
+            </p>
+          )}
         </div>
 
         {/* Solution Focus Note */}
@@ -144,38 +200,51 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
 
       {/* Footer with Tags and Action Buttons */}
       <div className="mt-5 border-t border-line/50 pt-3.5 dark:border-line/30">
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {project.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+        {displayTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-[11px] font-mono text-muted">
+            {displayTags.map((tag, idx) => (
+              <span key={tag} className="inline-flex items-center gap-2">
+                {idx > 0 && <span className="text-muted/40" aria-hidden="true">·</span>}
+                <span>{tag}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => onPreview(project)}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line/80 bg-transparent px-4 py-2 text-xs sm:text-sm font-semibold text-body transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-line/80 bg-transparent px-4 py-2 text-xs sm:text-sm font-semibold text-body transition-colors duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
           >
             <span>{t("projects.previewBtn")}</span>
             <ArrowUpRight className="size-3.5" />
           </button>
 
-          {project.repo && (
-            <a
-              href={project.repo}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-[44px] items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              <span>{t("projects.viewRepo")}</span>
-              <ArrowRight className="size-3.5" />
-            </a>
-          )}
+          <div className="flex items-center gap-3">
+            {project.caseStudyUrl && (
+              <a
+                href={project.caseStudyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-muted hover:text-brand transition-colors"
+              >
+                <BookOpen className="size-3.5" />
+                <span>{isEn ? "Case Study" : "Studi Kasus"}</span>
+              </a>
+            )}
+            {project.repo && (
+              <a
+                href={project.repo}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[44px] items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                <span>{t("projects.viewRepo")}</span>
+                <ArrowRight className="size-3.5" />
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -184,26 +253,70 @@ function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
 
 export function ProjectsSection() {
   const { t, i18n } = useTranslation();
-  const currentLang = i18n.language || "id";
-  const isEn = currentLang === "en";
+  const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
+  const isEn = locale === "en";
 
-  const { projects } = useSiteConfig();
-  const [filter, setFilter] = useState<"all" | "it" | "design">("all");
+  const config = useSiteConfig();
+  const sectionMeta = getPublishedSectionMeta(config, "projects", locale);
+  const categories = useMemo(
+    () => getPublishedProjectCategories(config, locale),
+    [config, locale]
+  );
+  const pubProfile = getPublishedProfile(config, locale);
+
+  const [filter, setFilter] = useState<string>("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const publishedProjects = useMemo(() => {
-    return (projects || [])
-      .filter((p) => p.published !== false)
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  }, [projects]);
+  const allPublishedProjects = useMemo(
+    () => getPublishedProjects(config, { locale }),
+    [config, locale]
+  );
 
-  const filteredProjects = useMemo(() => {
-    if (filter === "all") return publishedProjects;
-    return publishedProjects.filter((p) => {
-      const cat = p.category || "both";
-      return cat === "both" || cat === filter;
-    });
-  }, [publishedProjects, filter]);
+  const filteredProjects = useMemo(
+    () => getPublishedProjects(config, { category: filter, locale }),
+    [config, filter, locale]
+  );
+
+  const categoryLabelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of categories) {
+      map[c.key] = c.label;
+    }
+    return map;
+  }, [categories]);
+
+  const techById = useMemo(() => {
+    const map: Record<string, TechStackItem> = {};
+    for (const item of config.techStack || []) {
+      map[item.id] = item;
+    }
+    return map;
+  }, [config.techStack]);
+
+  // Support deep link to project modal via #project-<slug> or ?project=<slug>
+  useEffect(() => {
+    if (typeof window === "undefined" || allPublishedProjects.length === 0) return;
+    const inspectUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const querySlug = params.get("project");
+      const hash = window.location.hash.replace(/^#/, "");
+      const hashSlug = hash.startsWith("project-") ? hash.slice("project-".length) : "";
+      const targetSlug = querySlug || hashSlug;
+      if (!targetSlug) return;
+      const found = allPublishedProjects.find((p) => p.slug === targetSlug || p.id === targetSlug);
+      if (found) setSelectedProject(found);
+    };
+    inspectUrl();
+    window.addEventListener("hashchange", inspectUrl);
+    return () => window.removeEventListener("hashchange", inspectUrl);
+  }, [allPublishedProjects]);
+
+  const activeFilterValid = categories.some((c) => c.key === filter);
+  const effectiveFilter = activeFilterValid ? filter : "all";
+
+  const githubUrl =
+    pubProfile.socials.find((s) => s.platform.toLowerCase() === "github")?.href ||
+    `https://github.com/${pubProfile.githubUsername || "ZekkCode"}`;
 
   return (
     <section id="proyek" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
@@ -213,39 +326,34 @@ export function ProjectsSection() {
       <ScrollReveal y={24}>
         <div className="relative z-[2]">
           <SectionTitle
-            title={t("projects.title")}
-            desc={t("projects.desc")}
+            eyebrow={sectionMeta.eyebrow || undefined}
+            title={sectionMeta.title || t("projects.title")}
+            desc={sectionMeta.desc || t("projects.desc")}
           />
         </div>
       </ScrollReveal>
 
-      {/* Category Filter Tabs */}
-      {publishedProjects.length > 0 && (
+      {/* Dynamic Category Filter Tabs */}
+      {allPublishedProjects.length > 0 && categories.length > 1 && (
         <div
           role="tablist"
-          aria-label={t("projects.title", "Proyek")}
+          aria-label={sectionMeta.title || t("projects.title", "Proyek")}
           className="relative z-[2] mb-8 flex flex-wrap items-center justify-center gap-2"
         >
-          {(
-            [
-              { key: "all", labelId: "Semua Kategori", labelEn: "All Works" },
-              { key: "it", labelId: "Rekayasa IT & Web", labelEn: "IT & Web Engineering" },
-              { key: "design", labelId: "Desain UI/UX & Grafis", labelEn: "UI/UX & Design" },
-            ] as const
-          ).map((tab) => (
+          {categories.map((tab) => (
             <button
               key={tab.key}
               type="button"
               role="tab"
-              aria-selected={filter === tab.key}
+              aria-selected={effectiveFilter === tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none ${
-                filter === tab.key
-                  ? "bg-brand text-white border border-brand/30 shadow-xs"
+              className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none ${
+                effectiveFilter === tab.key
+                  ? "bg-brand text-white border border-brand/30"
                   : "border border-line/80 bg-transparent text-body hover:bg-brand/5 hover:border-brand/40 hover:text-brand dark:border-line/60 dark:text-slate-300 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
               }`}
             >
-              {isEn ? tab.labelEn : tab.labelId}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -255,24 +363,22 @@ export function ProjectsSection() {
         <Parallax speed={0.06}>
           <div
             id="proyek-empty"
-            className="relative z-[2] flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
+            className="relative z-[2] flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center dark:border-line/40 dark:bg-[#111422]/50"
           >
-            <div className="flex size-14 items-center justify-center rounded-xl border border-line/60 bg-surface text-muted shadow-2xs dark:border-line/40 dark:bg-[#151928]">
-              <svg
-                className="size-6 text-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                />
-              </svg>
-            </div>
+            <svg
+              className="size-8 text-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+              />
+            </svg>
             <h3 className="mt-4 font-display text-lg font-bold text-ink">
               {t("projects.emptyTitle", "Belum Ada Proyek yang Ditampilkan")}
             </h3>
@@ -284,12 +390,12 @@ export function ProjectsSection() {
             </p>
             <div className="mt-6 flex items-center gap-3">
               <a
-                href="https://github.com/ZekkCode"
+                href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
+                className="inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
               >
-                <span>Lihat Repositori di GitHub</span>
+                <span>{isEn ? "View Repositories on GitHub" : "Lihat Repositori di GitHub"}</span>
                 <ArrowUpRight className="size-3.5" />
               </a>
             </div>
@@ -306,14 +412,26 @@ export function ProjectsSection() {
                 : "sm:grid-cols-2 lg:grid-cols-3"
             }`}
           >
-            {filteredProjects.map((project) => (
-              <ProjectTiltedCard
-                key={project.id}
-                project={project}
-                onPreview={setSelectedProject}
-                isEn={isEn}
-              />
-            ))}
+            {filteredProjects.map((project) => {
+              const catLabel =
+                (project.category === "both"
+                  ? "IT & Design"
+                  : categoryLabelMap[project.category || ""]) ||
+                (project.category ? project.category.toUpperCase() : "");
+              const linkedTech = (project.techIds || [])
+                .map((id) => techById[id])
+                .filter((item): item is TechStackItem => Boolean(item));
+              return (
+                <ProjectTiltedCard
+                  key={project.id}
+                  project={project}
+                  categoryLabel={catLabel}
+                  techItems={linkedTech}
+                  onPreview={setSelectedProject}
+                  isEn={isEn}
+                />
+              );
+            })}
           </div>
         </Parallax>
       )}

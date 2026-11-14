@@ -181,7 +181,7 @@ export function BuddyClient() {
           onClick={handleShow}
           aria-label="Bangunkan Miss Minute"
           title="Bangunkan Miss Minute (ZekkTech Companion)"
-          className="group flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-2 shadow-md backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-brand/40 hover:bg-white hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-300 dark:hover:bg-[#151928] dark:hover:text-blue-400 touch-manipulation"
+          className="group flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-full border border-line/80 bg-white/95 px-3.5 py-2 shadow-md transition-all duration-300 hover:scale-105 hover:border-brand/40 hover:bg-white hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422]/95 dark:text-slate-300 dark:hover:bg-[#151928] dark:hover:text-blue-400 touch-manipulation"
         >
           <span className="text-base" aria-hidden="true">🕒</span>
           <span className="text-xs font-semibold text-ink group-hover:text-brand dark:group-hover:text-blue-400">

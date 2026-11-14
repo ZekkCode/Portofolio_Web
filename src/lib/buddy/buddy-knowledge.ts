@@ -3,8 +3,15 @@ import {
   getPublishedProfile,
   getPublishedProjects,
   getPublishedEducation,
+  getPublishedExperience,
+  getPublishedAchievements,
   getPublishedCertificates,
   getPublishedTechStack,
+  getPublishedServices,
+  getPublishedCvDocs,
+  getPublishedFAQ,
+  mergeBlogPostsWithOverrides,
+  isSectionVisible,
 } from "@/lib/content/selectors";
 
 export interface KnowledgeMatch {
@@ -22,30 +29,60 @@ export function queryBuddyKnowledge(
 ): KnowledgeMatch {
   const query = rawMessage.trim().toLowerCase();
 
-  // English detection
   const isEn =
     langHint === "en" ||
-    /\b(who|what|where|how|can|show|tell|project|skills|resume|cv|contact|email|hire|work|about|study|university|college|degree)\b/i.test(
+    /\b(who|what|where|how|can|show|tell|project|skills|resume|cv|contact|email|hire|work|about|study|university|college|degree|blog|article|faq)\b/i.test(
       query
     );
+  const locale = isEn ? "en" : "id";
 
-  const pubProfile = getPublishedProfile(config, isEn ? "en" : "id");
-  const pubProjects = getPublishedProjects(config, { locale: isEn ? "en" : "id" });
-  const pubEducation = getPublishedEducation(config, isEn ? "en" : "id");
-  const pubCerts = getPublishedCertificates(config);
-  const pubTechStack = getPublishedTechStack(config);
+  const pubProfile = getPublishedProfile(config, locale);
+  const pubProjects = isSectionVisible(config, "projects")
+    ? getPublishedProjects(config, { locale })
+    : [];
+  const pubEducation = isSectionVisible(config, "journey")
+    ? getPublishedEducation(config, locale)
+    : [];
+  const pubExp = isSectionVisible(config, "about") || isSectionVisible(config, "journey")
+    ? getPublishedExperience(config, locale)
+    : [];
+  const pubAchievements = isSectionVisible(config, "achievements")
+    ? getPublishedAchievements(config, locale)
+    : [];
+  const pubCerts = isSectionVisible(config, "certificates")
+    ? getPublishedCertificates(config, "all", locale)
+    : [];
+  const pubTechStack = isSectionVisible(config, "stack")
+    ? getPublishedTechStack(config, "all", { locale })
+    : [];
+  const pubServices = isSectionVisible(config, "services")
+    ? getPublishedServices(config, locale)
+    : [];
+  const pubCvDocs = isSectionVisible(config, "cv")
+    ? getPublishedCvDocs(config, locale)
+    : [];
+  const pubFaq = isSectionVisible(config, "faq")
+    ? getPublishedFAQ(config, locale)
+    : [];
+  const pubBlogPosts =
+    isSectionVisible(config, "blog") && config?.blog?.visible !== false
+      ? mergeBlogPostsWithOverrides(config, undefined, locale)
+      : [];
 
   const profName = pubProfile.name;
   const profRoles = pubProfile.roles;
   const profEmail = pubProfile.email;
   const profLocation = pubProfile.location;
+  const githubSocial =
+    pubProfile.socials.find((s) => s.platform.toLowerCase() === "github")?.href ||
+    `https://github.com/${pubProfile.githubUsername}`;
 
   // 1. Greetings
   if (/^(halo|hai|hey|hi|hello|pagi|siang|sore|malam|assalamualaikum|tes|test|ping)/.test(query)) {
     return {
       reply: isEn
-        ? `Hi there! I'm Miss Minute, ${pubProfile.nickname}'s AI companion. What would you like to explore about his published projects, education, skills, or CV?`
-        : `Halo! Aku Miss Minute, asisten portofolio ${pubProfile.nickname}. Mau intip proyek terpublikasi, riwayat kuliah, tech stack, atau unduh CV ATS?`,
+        ? `Hi there! I'm Miss Minute, ${pubProfile.nickname}'s portfolio assistant. What would you like to explore about ${pubProfile.nickname}'s published work, credentials, services, or CV?`
+        : `Halo! Aku Miss Minute, asisten portofolio ${pubProfile.nickname}. Mau intip karya terpublikasi, riwayat pendidikan, layanan, atau berkas CV?`,
       action: "greeting",
       quickReplies: isEn
         ? ["Who is Zekk?", "View Projects", "Where did you study?", "Download CV"]
@@ -53,38 +90,52 @@ export function queryBuddyKnowledge(
     };
   }
 
-  // 2. Education / Campus / Kuliah di mana
+  // 2. FAQ matching from live published FAQ entries
+  if (/faq|tanya|question|pertanyaan|biaya|harga|lama pengerjaan|timeline/i.test(query) && pubFaq.length > 0) {
+    const matched =
+      pubFaq.find((f) =>
+        query.split(/\s+/).some((tok) => tok.length > 3 && f.question.toLowerCase().includes(tok))
+      ) || pubFaq[0];
+    return {
+      reply: `${matched.question} — ${matched.answer}`,
+      action: "success",
+      link: "#faq",
+      linkLabel: isEn ? "View FAQ Section" : "Lihat Bagian FAQ",
+      quickReplies: isEn ? ["Services", "Projects", "Contact"] : ["Layanan", "Proyek", "Kontak"],
+    };
+  }
+
+  // 3. Education
   if (
-    /kuliah|kampus|pendidikan|universitas|sekolah|jurusan|study|where did you study|university|college|degree|trunojoyo/i.test(
+    /kuliah|kampus|pendidikan|universitas|sekolah|jurusan|study|where did you study|university|college|degree|akademik/i.test(
       query
     )
   ) {
     if (pubEducation.length > 0) {
-      const primaryEdu = pubEducation[pubEducation.length - 1]; // latest
-      const details = `${primaryEdu.program} di ${primaryEdu.institution} (${primaryEdu.period})`;
+      const latest = pubEducation[0];
+      const names = pubEducation.map((e) => `${e.program} at ${e.institution} (${e.period})`).join("; ");
       return {
         reply: isEn
-          ? `${profName} is studying ${primaryEdu.program} at ${primaryEdu.institution} (${primaryEdu.period}), located in ${primaryEdu.location}.`
-          : `${profName} saat ini menempuh studi ${details}, berlokasi di ${primaryEdu.location}.`,
+          ? `${profName}'s published academic journey: ${names}. Currently based in ${latest.location}.`
+          : `Jejak akademik terpublikasi ${profName}: ${names}. Berlokasi di ${latest.location}.`,
         action: "success",
-        link: "#tentang",
-        linkLabel: isEn ? "View Academic Journey" : "Lihat Riwayat Pendidikan",
+        link: "#journey",
+        linkLabel: isEn ? "View Academic Journey" : "Lihat Jejak Akademik",
         quickReplies: isEn ? ["Featured Projects", "Tech Stack", "Contact"] : ["Proyek Pilihan", "Keahlian", "Kontak"],
       };
     }
 
     return {
       reply: isEn
-        ? `${profName} is an Informatics Engineering undergraduate student at Universitas Trunojoyo Madura.`
-        : `${profName} adalah mahasiswa S1 Teknik Informatika di Universitas Trunojoyo Madura (HIMATIF UTM).`,
-      action: "success",
+        ? `No academic records are currently published on this section.`
+        : `Saat ini belum ada riwayat akademik yang dipublikasikan pada seksi tersebut.`,
+      action: "idle",
       link: "#tentang",
       linkLabel: isEn ? "View About Section" : "Lihat Bagian Tentang",
-      quickReplies: isEn ? ["Projects", "CV ATS", "Contact"] : ["Proyek", "CV ATS", "Kontak"],
     };
   }
 
-  // 3. Who is Zekk / About
+  // 4. Who is Zekk / About
   if (
     /siapa|tentang|about|who is|biodata|profil|profile|latar belakang|asal|lokasi/i.test(
       query
@@ -92,18 +143,18 @@ export function queryBuddyKnowledge(
   ) {
     return {
       reply: isEn
-        ? `${profName} is based in ${profLocation}, working as a ${profRoles}. He focuses on human-centered UI/UX systems and robust Next.js frontend web applications.`
-        : `${profName} berdomisili di ${profLocation}, berfokus sebagai ${profRoles}. Ia merancang antarmuka terstruktur di Figma dan merekayasa web modern dengan Next.js & TypeScript.`,
+        ? `${profName} is based in ${profLocation}, working as ${profRoles}. ${pubProfile.heroDesc}`
+        : `${profName} berdomisili di ${profLocation}, berfokus sebagai ${profRoles}. ${pubProfile.heroDesc}`,
       action: "success",
       link: "#tentang",
       linkLabel: isEn ? "Read Full Bio" : "Buka Bagian Tentang",
-      quickReplies: isEn ? ["Tech Stack", "Featured Projects", "Get in Touch"] : ["Tech Stack", "Proyek Unggulan", "Hubungi Zekk"],
+      quickReplies: isEn ? ["Tech Stack", "Projects", "Get in Touch"] : ["Tech Stack", "Proyek", "Hubungi Zekk"],
     };
   }
 
-  // 4. Projects / Specific Project Categories (Frontend, IT, UI/UX)
+  // 5. Projects
   if (/proyek|project|karya|portfolio|portofolio|bikin apa|hasil|showcase|aplikasi|frontend project|it project|design project/i.test(query)) {
-    const isFrontendFilter = /frontend|web|react|next/i.test(query);
+    const isFrontendFilter = /frontend|web|react|next|\bit\b/i.test(query);
     const isDesignFilter = /design|ui|ux|desain/i.test(query);
 
     let matching = pubProjects;
@@ -114,13 +165,13 @@ export function queryBuddyKnowledge(
     }
 
     const count = matching.length;
-    const names = matching.slice(0, 3).map((p) => p.title).join(", ");
+    const names = matching.slice(0, 4).map((p) => p.title).join(", ");
 
     if (count > 0) {
       return {
         reply: isEn
-          ? `Currently there are ${count} published ${isFrontendFilter ? "Frontend/IT " : isDesignFilter ? "UI/UX " : ""}project(s), including: ${names}. All built with clean architecture and interactive polish.`
-          : `Saat ini terdapat ${count} proyek ${isFrontendFilter ? "Frontend/IT " : isDesignFilter ? "Desain UI/UX " : ""}yang terpublikasi, meliputi: ${names}. Seluruh karya dikembangkan dengan arsitektur bersih dan responsif.`,
+          ? `There are ${count} published ${isFrontendFilter ? "IT/Web " : isDesignFilter ? "UI/UX & Design " : ""}project(s), including: ${names}.`
+          : `Saat ini terdapat ${count} proyek ${isFrontendFilter ? "IT/Web " : isDesignFilter ? "UI/UX & Desain " : ""}terpublikasi, meliputi: ${names}.`,
         action: "success",
         link: "#proyek",
         linkLabel: isEn ? "Explore Projects" : "Lihat Grid Proyek",
@@ -130,109 +181,189 @@ export function queryBuddyKnowledge(
 
     return {
       reply: isEn
-        ? `No projects found in this filter right now. You can check the complete code repositories on GitHub (@ZekkCode)!`
-        : `Belum ada proyek yang ditampilkan pada filter ini. Kamu juga dapat langsung mengeksplorasi kode di GitHub ZekkCode!`,
-      action: "success",
-      link: "https://github.com/ZekkCode",
-      linkLabel: isEn ? "View GitHub Repos" : "Buka GitHub ZekkCode",
+        ? `No published projects are displayed right now. Repositories can also be explored directly via GitHub.`
+        : `Belum ada proyek terpublikasi yang ditampilkan saat ini. Kamu juga dapat melihat repositori langsung di GitHub.`,
+      action: "idle",
+      link: githubSocial,
+      linkLabel: isEn ? "Open GitHub" : "Buka GitHub",
       quickReplies: isEn ? ["Tech Stack", "Download CV", "Contact"] : ["Tech Stack", "Download CV", "Kontak"],
     };
   }
 
-  // 5. Skills / Tech Stack
+  // 6. Skills / Tech Stack
   if (/skill|keahlian|stack|teknologi|tools|bahasa|figma|next|react|typescript|tailwind|flutter/i.test(query)) {
-    const tools = pubTechStack.length > 0
-      ? pubTechStack.slice(0, 8).map((s) => s.name).join(", ")
-      : "Figma, Next.js, React, TypeScript, Tailwind CSS, Flutter, MySQL, GitHub";
+    if (pubTechStack.length > 0) {
+      const tools = pubTechStack.slice(0, 10).map((s) => s.name).join(", ");
+      return {
+        reply: isEn
+          ? `${profName}'s published Tech Stack currently includes ${pubTechStack.length} tool(s): ${tools}.`
+          : `Tech stack terpublikasi milik ${profName} mencakup ${pubTechStack.length} alat/teknologi: ${tools}.`,
+        action: "success",
+        link: "#stack",
+        linkLabel: isEn ? "View Tech Stack" : "Lihat Tech Stack Lengkap",
+        quickReplies: isEn ? ["Certifications", "Projects", "Services"] : ["Sertifikat", "Proyek", "Layanan"],
+      };
+    }
 
     return {
       reply: isEn
-        ? `${profName} specializes in UI/UX research & design in Figma, and engineering production web applications using ${tools}.`
-        : `Keahlian utama ${profName} mencakup perancangan antarmuka & Design System di Figma, serta rekayasa frontend menggunakan ${tools}.`,
-      action: "success",
+        ? `Tech stack tools are currently hidden or empty.`
+        : `Daftar tech stack sedang disembunyikan atau belum terpublikasi.`,
+      action: "idle",
       link: "#stack",
-      linkLabel: isEn ? "View Tech Stack" : "Lihat Tech Stack Lengkap",
-      quickReplies: isEn ? ["Certifications", "Projects", "Services"] : ["Sertifikat", "Proyek", "Layanan"],
+      linkLabel: isEn ? "View Section" : "Lihat Bagian",
     };
   }
 
-  // 6. CV / Resume / Ats
+  // 7. CV / Resume / ATS
   if (/cv|resume|berkas|ats|riwayat|download cv|unduh cv|pdf/i.test(query)) {
+    const roleTitles = pubCvDocs.map((d) => d.title).join(", ");
+    if (pubCvDocs.length > 0) {
+      return {
+        reply: isEn
+          ? `${profName} provides ${pubCvDocs.length} interactive CV dossier(s): ${roleTitles}. Open the Career Folder section to preview pages or download PDF.`
+          : `${profName} menyediakan ${pubCvDocs.length} berkas CV ATS interaktif: ${roleTitles}. Buka folder berkas karir untuk pratinjau halaman maupun unduhan PDF.`,
+        action: "success",
+        link: "#cv",
+        linkLabel: isEn ? "Open CV Folder" : "Buka Folder Berkas CV",
+        quickReplies: isEn ? ["Contact Zekk", "Experience", "Skills"] : ["Kontak Zekk", "Pengalaman", "Keahlian"],
+      };
+    }
+
     return {
       reply: isEn
-        ? `You can inspect ${profName}'s authentic ATS-friendly CV on this page, complete with an interactive 3D WebGL paper simulation and instant PDF download!`
-        : `Kamu bisa melihat berkas CV ATS otentik ${profName} di bagian Berkas Karir, lengkap dengan simulasi interaktif lembaran 3D dan tombol unduh PDF resmi!`,
-      action: "success",
-      link: "#cv",
-      linkLabel: isEn ? "Open CV Folder" : "Buka Folder Berkas CV",
-      quickReplies: isEn ? ["Contact Zekk", "Experience", "Skills"] : ["Kontak Zekk", "Pengalaman", "Keahlian"],
+        ? `The CV dossier section is currently hidden or has no published documents.`
+        : `Berkas CV saat ini sedang disembunyikan atau belum tersedia secara publik.`,
+      action: "idle",
     };
   }
 
-  // 7. Certifications / Berapa sertifikat
-  if (/sertifikat|sertifikasi|certificate|credential|binar|dicoding|bnsp|berapa sertifikat/i.test(query)) {
+  // 8. Certifications & Achievements
+  if (/sertifikat|sertifikasi|certificate|credential|prestasi|achievement|award|juara|penghargaan|berapa sertifikat/i.test(query)) {
     const certsCount = pubCerts.length;
+    const achCount = pubAchievements.length;
+    const sampleCerts = pubCerts.slice(0, 3).map((c) => `${c.title} (${c.issuer})`).join(", ");
+    const sampleAch = pubAchievements.slice(0, 2).map((a) => `${a.title} (${a.organizer})`).join(", ");
+
+    if (certsCount === 0 && achCount === 0) {
+      return {
+        reply: isEn
+          ? `There are no verified certificates or awards currently published.`
+          : `Saat ini belum ada sertifikat atau penghargaan terpublikasi yang ditampilkan.`,
+        action: "idle",
+      };
+    }
+
+    const partsId: string[] = [];
+    const partsEn: string[] = [];
+    if (certsCount > 0) {
+      partsId.push(`${certsCount} sertifikat terpublikasi (${sampleCerts})`);
+      partsEn.push(`${certsCount} published certificate(s) (${sampleCerts})`);
+    }
+    if (achCount > 0) {
+      partsId.push(`${achCount} pencapaian/penghargaan (${sampleAch})`);
+      partsEn.push(`${achCount} achievement(s) (${sampleAch})`);
+    }
 
     return {
       reply: isEn
-        ? `${profName} currently holds ${certsCount} verified credentials with authentic evidence, including Binar Academy UI/UX Research & Design, Dicoding Frontend Web, and BNSP certifications.`
-        : `${profName} memiliki ${certsCount} sertifikat terverifikasi resmi dengan bukti kredensial otentik, antara lain Binar Academy UI/UX Research & Design, Dicoding Indonesia Frontend Web, dan sertifikasi BNSP.`,
+        ? `${profName} currently displays ${partsEn.join(" and ")}.`
+        : `${profName} saat ini menampilkan ${partsId.join(" serta ")}.`,
       action: "success",
-      link: "#certificates",
-      linkLabel: isEn ? "View Certificates" : "Lihat Daftar Sertifikat",
+      link: certsCount > 0 ? "#certificates" : "#achievements",
+      linkLabel: isEn ? "View Credentials" : "Lihat Kredensial",
       quickReplies: isEn ? ["Projects", "Download CV", "Contact"] : ["Proyek", "Unduh CV", "Kontak"],
     };
   }
 
-  // 8. Contact / Hire / Bagaimana menghubungi Zekk
+  // 9. Contact
   if (/kontak|contact|email|hubungi|bagaimana menghubungi|hire|kerja sama|freelance|whatsapp|wa|pesan|jasa/i.test(query)) {
     return {
       reply: isEn
-        ? `You can reach out directly via email at ${profEmail} or via GitHub (@ZekkCode). He is open for UI/UX design and frontend web engineering collaborations!`
-        : `Kamu bisa menghubungi Zekk langsung via email di ${profEmail} atau melalui GitHub (@ZekkCode). Zekk terbuka untuk kerja sama desain UI/UX maupun rekayasa web frontend!`,
+        ? `Reach out directly via email at ${profEmail} (${pubProfile.availability}).`
+        : `Kamu dapat menghubungi ${profName} langsung via email di ${profEmail} (${pubProfile.availability}).`,
       action: "success",
       link: "#kontak",
-      linkLabel: isEn ? "Go to Contact Form" : "Menuju Form Kontak",
-      quickReplies: isEn ? ["Send Email", "View CV", "Back to Top"] : ["Kirim Email", "Buka CV", "Kembali ke Atas"],
+      linkLabel: isEn ? "Go to Contact Section" : "Menuju Bagian Kontak",
+      quickReplies: isEn ? ["Services", "View CV", "Projects"] : ["Layanan", "Buka CV", "Proyek"],
     };
   }
 
-  // 9. Career & Organization Experience
-  if (/pengalaman|karier|career|organisasi|himatif|gdgoc|kerja|experience|riwayat kerja/i.test(query)) {
-    const pubExp = (config?.experience || []).filter((e) => e.published !== false);
-    const expList = pubExp.slice(0, 3).map((e) => `${e.role} (${e.org})`).join(", ");
+  // 10. Career & Experience
+  if (/pengalaman|karier|career|organisasi|kerja|experience|riwayat kerja/i.test(query)) {
+    if (pubExp.length > 0) {
+      const expList = pubExp.slice(0, 4).map((e) => `${e.role} di ${e.org} (${e.period})`).join("; ");
+      return {
+        reply: isEn
+          ? `${profName}'s published experience records include ${pubExp.length} role(s): ${expList}.`
+          : `Rekam jejak terpublikasi ${profName} mencakup ${pubExp.length} posisi: ${expList}.`,
+        action: "success",
+        link: "#tentang",
+        linkLabel: isEn ? "View Career Timeline" : "Lihat Linimasa Karier",
+        quickReplies: isEn ? ["Education", "Projects", "Download CV"] : ["Pendidikan", "Proyek", "Unduh CV"],
+      };
+    }
+
     return {
       reply: isEn
-        ? `${profName} has served in several leadership and technical roles including: ${expList || "Head of Media Creative at HIMATIF UTM and Core Team at GDGoC UTM"}.`
-        : `${profName} memiliki rekam jejak peran dan organisasi: ${expList || "Kepala Divisi Media Creative di HIMATIF UTM dan Core Team di GDGoC UTM"}. Seluruh pengalaman tercatat rapi di linimasa portofolio.`,
-      action: "success",
-      link: "#tentang",
-      linkLabel: isEn ? "View Career Timeline" : "Lihat Linimasa Karier",
-      quickReplies: isEn ? ["Education", "Projects", "Download CV"] : ["Pendidikan", "Proyek", "Unduh CV"],
+        ? `No public experience records are currently displayed.`
+        : `Belum ada catatan pengalaman terpublikasi yang ditampilkan saat ini.`,
+      action: "idle",
     };
   }
 
-  // 9. Services / Layanan
+  // 11. Services
   if (/layanan|services|bisa bantu apa|service|jasa apa/i.test(query)) {
+    if (pubServices.length > 0) {
+      const list = pubServices.map((s) => s.title).join(", ");
+      return {
+        reply: isEn
+          ? `${profName} offers ${pubServices.length} published service pillar(s): ${list}.`
+          : `${profName} menyediakan ${pubServices.length} pilar layanan aktif: ${list}.`,
+        action: "success",
+        link: "#services",
+        linkLabel: isEn ? "View Services" : "Lihat Daftar Layanan",
+        quickReplies: isEn ? ["Tech Stack", "Projects", "Contact"] : ["Tech Stack", "Proyek", "Kontak"],
+      };
+    }
+
     return {
       reply: isEn
-        ? "Zekk provides 4 core pillars of services: UI/UX & Design Systems, Frontend Web Development, Creative Media & Digital Graphics, and IT Support & Systems."
-        : "Zekk menyediakan 4 pilar layanan: UI/UX & Desain Sistem, Frontend Web Development, Identitas Visual & Grafis Kreatif, dan Dukungan IT & Sistem Linux.",
-      action: "success",
-      link: "#services",
-      linkLabel: isEn ? "View Services" : "Lihat 4 Pilar Layanan",
-      quickReplies: isEn ? ["Tech Stack", "Projects", "Hire Zekk"] : ["Tech Stack", "Proyek", "Kerja Sama"],
+        ? `The services section is currently hidden or empty.`
+        : `Daftar layanan saat ini disembunyikan atau belum tersedia.`,
+      action: "idle",
     };
   }
 
-  // 10. Default / Fallback
+  // 12. Blog / Writing
+  if (/blog|artikel|tulisan|writing|article|post/i.test(query)) {
+    if (pubBlogPosts.length > 0) {
+      const titles = pubBlogPosts.slice(0, 3).map((b) => b.title).join(", ");
+      return {
+        reply: isEn
+          ? `Latest published writing includes: ${titles}.`
+          : `Tulisan terbaru yang ditampilkan meliputi: ${titles}.`,
+        action: "success",
+        link: "#blog",
+        linkLabel: isEn ? "View Blog Section" : "Lihat Seksi Blog",
+      };
+    }
+    return {
+      reply: isEn
+        ? `No blog posts are currently published on this portfolio.`
+        : `Saat ini tidak ada artikel blog yang ditampilkan pada portofolio.`,
+      action: "idle",
+    };
+  }
+
+  // 13. Default / Fallback
   return {
     reply: isEn
-      ? `I can guide you through ${profName}'s published projects, education at UTM, tech stack, verified certificates, CV ATS, and contact info. Which one would you like to explore?`
-      : `Aku bisa bantu jelaskan proyek terpublikasi, riwayat kuliah di UTM, tech stack, sertifikat terverifikasi, CV ATS, dan kontak ${profName}. Mau tahu yang mana dulu?`,
+      ? `I can help you explore ${profName}'s published projects (${pubProjects.length}), certificates (${pubCerts.length}), services (${pubServices.length}), education, tech stack, and CV. What would you like to check?`
+      : `Aku bisa bantu jelaskan proyek terpublikasi (${pubProjects.length}), sertifikat (${pubCerts.length}), layanan (${pubServices.length}), riwayat kuliah, tech stack, maupun CV ${profName}. Mau tahu yang mana?`,
     action: "idle",
     quickReplies: isEn
-      ? ["Who is Zekk?", "Show Projects", "Where did you study?", "Get in Touch"]
-      : ["Siapa Zekk?", "Lihat Proyek", "Kuliah di mana?", "Kontak Zekk"],
+      ? ["Who is Zekk?", "Show Projects", "Services", "Get in Touch"]
+      : ["Siapa Zekk?", "Lihat Proyek", "Layanan", "Kontak Zekk"],
   };
 }

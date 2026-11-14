@@ -18,6 +18,7 @@ next-env.d.ts
 
 # Local data cache & temp files
 .views.json
+.local-cms-store/
 _lanyard.json
 _*.png
 _*.log

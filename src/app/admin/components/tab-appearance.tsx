@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Lanyard from "@/components/lanyard";
 import ProfileCard from "@/components/profile-card";
-import type { SiteConfig, LanyardConfig, ProfileCardConfig } from "@/lib/site-store";
-import { Upload, Sparkles, Layers } from "lucide-react";
+import { MediaFieldControl } from "./MediaFieldControl";
+import type { SiteConfig, LanyardConfig, ProfileCardConfig, SeoConfig } from "@/lib/site-store";
+import { Upload, Sparkles, Layers, Search } from "lucide-react";
 
 interface TabAppearanceProps {
   config: SiteConfig;
@@ -104,7 +105,7 @@ export function TabAppearance({
   uploadingImage,
   inputClass,
 }: TabAppearanceProps) {
-  const [subTab, setSubTab] = useState<"lanyard" | "profileCard">("lanyard");
+  const [subTab, setSubTab] = useState<"lanyard" | "profileCard" | "seo">("lanyard");
 
   const updateLanyard = <K extends keyof LanyardConfig>(key: K, value: LanyardConfig[K]) => {
     setDraft({ ...config, lanyard: { ...config.lanyard, [key]: value } });
@@ -115,6 +116,21 @@ export function TabAppearance({
     setDraft({ ...config, profileCard: { ...config.profileCard, [key]: value } });
     setStatus("Draft Profile Card diubah");
   };
+
+  const seo: SeoConfig = config.seo || {};
+  const updateSeo = (updates: Partial<SeoConfig>) => {
+    setDraft({ ...config, seo: { ...seo, ...updates } });
+    setStatus("Pengaturan SEO & Metadata diubah di draft");
+  };
+
+  const serpTitle =
+    seo.metaTitle ||
+    `${config.generalProfile?.name || "Zakaria Mujur Prasetyo"} | ${config.generalProfile?.roles || "UI/UX & Frontend"}`;
+  const serpDesc =
+    seo.metaDesc ||
+    config.generalProfile?.heroDesc ||
+    "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech).";
+  const serpHost = seo.canonicalUrl || config.generalProfile?.site || "https://zakariamp.vercel.app";
 
   return (
     <div className="space-y-6">
@@ -143,6 +159,18 @@ export function TabAppearance({
         >
           <Layers className="size-4" />
           Hologram Profile Card (Kontak)
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("seo")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+            subTab === "seo"
+              ? "bg-brand text-white shadow-sm"
+              : "bg-surface/60 text-muted hover:text-ink dark:bg-slate-900/60"
+          }`}
+        >
+          <Search className="size-4" />
+          SEO, OpenGraph &amp; Schema
         </button>
       </div>
 
@@ -304,39 +332,47 @@ export function TabAppearance({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
           <div className="space-y-5">
             <section className="rounded-2xl border border-line/70 bg-white/70 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Foto & Aset Profile Card</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Foto &amp; Aset Profile Card</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-[11px] font-semibold text-muted">Foto Avatar Profil</label>
-                  <input
-                    type="text"
-                    value={config.profileCard.avatarUrl}
-                    onChange={(e) => updateProfileCard("avatarUrl", e.target.value)}
-                    placeholder="/profile.webp atau URL Cloud"
-                    className={inputClass}
+                  <MediaFieldControl
+                    label="Foto Avatar Profile Card"
+                    value={config.profileCard.avatarUrl || ""}
+                    onChange={(url) => updateProfileCard("avatarUrl", url)}
+                    folder="profile"
+                    fieldKey="avatarUrl"
+                    uploadAndSet={uploadAndSet}
+                    uploadingImage={uploadingImage}
+                    config={config}
+                    accept="image/webp,image/png,image/jpeg"
+                    placeholder="/avatar-portrait.webp atau URL Cloud"
+                    previewShape="portrait"
                   />
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm hover:bg-surface dark:border-line/40 dark:bg-slate-800 transition">
-                      <Upload className="size-3.5 text-brand" />
-                      <span>{uploadingImage === "avatarUrl" ? "Memproses..." : "Unggah Avatar (WebP)"}</span>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            void uploadAndSet(
-                              file,
-                              "profile",
-                              (url) => updateProfileCard("avatarUrl", url),
-                              "avatarUrl"
-                            );
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
+                  {config.profileCard.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateProfileCard("avatarUrl", "")}
+                      className="mt-1 inline-flex items-center rounded-xl border border-line/70 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-ink dark:border-line/40"
+                    >
+                      Kosongkan (Ikuti Foto Profil Utama)
+                    </button>
+                  )}
+                </div>
+
+                <div className="sm:col-span-2">
+                  <MediaFieldControl
+                    label="Foto Avatar Kecil / Footer Card (Kosong = ikut foto utama)"
+                    value={config.profileCard.miniAvatarUrl || ""}
+                    onChange={(url) => updateProfileCard("miniAvatarUrl", url)}
+                    folder="profile"
+                    fieldKey="miniAvatarUrl"
+                    uploadAndSet={uploadAndSet}
+                    uploadingImage={uploadingImage}
+                    config={config}
+                    accept="image/webp,image/png,image/jpeg"
+                    placeholder="Kosongkan agar otomatis mengikuti foto utama"
+                    previewShape="square"
+                  />
                 </div>
 
                 <div>
@@ -398,7 +434,7 @@ export function TabAppearance({
             </section>
 
             <section className="rounded-2xl border border-line/70 bg-white/70 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Efek Hologram & Interaksi 3D</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Efek Hologram &amp; Interaksi 3D</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 flex items-center justify-between text-[11px] font-semibold text-muted">
@@ -449,6 +485,17 @@ export function TabAppearance({
                 </div>
 
                 <div>
+                  <label className="mb-1 block text-[11px] font-semibold text-muted">Penyesuaian Foto (Image Fit)</label>
+                  <select
+                    value={config.profileCard.imageFit}
+                    onChange={(e) => updateProfileCard("imageFit", e.target.value as "cover" | "contain")}
+                    className={inputClass}
+                  >
+                    <option value="cover">Cover (Isi Penuh Frame)</option>
+                    <option value="contain">Contain (Utuh Tanpa Crop)</option>
+                  </select>
+                </div>
+                <div>
                   <label className="mb-1 block text-[11px] font-semibold text-muted">Tema Visual</label>
                   <select
                     value={config.profileCard.theme}
@@ -467,15 +514,190 @@ export function TabAppearance({
           <div className="sticky top-24 self-start rounded-2xl border border-line/70 bg-white/70 p-4 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Hologram Profile Card</h3>
             <div className="mt-3 flex items-center justify-center p-4">
-              <ProfileCard
-                {...config.profileCard}
-                avatarUrl={config.profileCard.avatarUrl || config.generalProfile?.avatarUrl || undefined}
-                imageFit={config.profileCard.avatarUrl ? config.profileCard.imageFit || "cover" : "cover"}
-              />
+              {(() => {
+                const previewAvatar =
+                  config.profileCard.avatarUrl ||
+                  config.generalProfile?.avatarUrl ||
+                  "/avatar-portrait.webp";
+                const previewSecondary =
+                  !config.profileCard.avatarUrl &&
+                  (previewAvatar === "/card-front-v2.webp" ||
+                    previewAvatar === config.lanyard.frontImage)
+                    ? config.lanyard.backImage || "/card-back-v2.webp"
+                    : undefined;
+                return (
+                  <ProfileCard
+                    {...config.profileCard}
+                    avatarUrl={previewAvatar}
+                    secondaryAvatarUrl={previewSecondary}
+                    miniAvatarUrl={config.profileCard.miniAvatarUrl || previewAvatar}
+                    imageFit={config.profileCard.imageFit || "cover"}
+                  />
+                );
+              })()}
             </div>
             <p className="mt-2 text-center text-[11px] text-muted">
               Gerakkan kursor di atas kartu untuk melihat efek glare hologram dan 3D tilt.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== SUBTAB 3: SEO & OPENGRAPH ===================== */}
+      {subTab === "seo" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-line/70 bg-white/80 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-ink">SEO Global, OpenGraph &amp; Schema.org</h3>
+                <p className="text-xs text-muted">
+                  Diterapkan langsung ke tag judul halaman, meta OpenGraph/Twitter, `robots.txt`, `sitemap.xml`, dan JSON-LD `Person`
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink">
+                <input
+                  type="checkbox"
+                  checked={seo.robotsIndex !== false}
+                  onChange={(e) => updateSeo({ robotsIndex: e.target.checked })}
+                  className="size-4 rounded text-brand"
+                />
+                <span>Izinkan Pengindeksan (`index, follow`)</span>
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-ink">Meta Title Utama (ID)</label>
+                <input
+                  type="text"
+                  value={seo.metaTitle || ""}
+                  onChange={(e) => updateSeo({ metaTitle: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Zakaria Mujur Prasetyo | UI/UX & Frontend"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Meta Title (EN)</label>
+                <input
+                  type="text"
+                  value={seo.metaTitleEn || ""}
+                  onChange={(e) => updateSeo({ metaTitleEn: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Zakaria Mujur Prasetyo | Portfolio"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Meta Description (ID)</label>
+                <textarea
+                  rows={3}
+                  value={seo.metaDesc || ""}
+                  onChange={(e) => updateSeo({ metaDesc: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Ringkasan profil untuk hasil pencarian Google..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Meta Description (EN)</label>
+                <textarea
+                  rows={3}
+                  value={seo.metaDescEn || ""}
+                  onChange={(e) => updateSeo({ metaDescEn: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="English meta description..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Canonical Site URL</label>
+                <input
+                  type="url"
+                  value={seo.canonicalUrl || ""}
+                  onChange={(e) => updateSeo({ canonicalUrl: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="https://zakariamp.vercel.app"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Schema.org `jobTitle`</label>
+                <input
+                  type="text"
+                  value={seo.personJobTitle || ""}
+                  onChange={(e) => updateSeo({ personJobTitle: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="UI/UX Designer, Frontend Developer & Graphic Designer"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-ink">Kata Kunci SEO (`keywords`, pisah koma)</label>
+                <input
+                  type="text"
+                  value={(seo.keywords || []).join(", ")}
+                  onChange={(e) =>
+                    updateSeo({
+                      keywords: e.target.value
+                        .split(",")
+                        .map((k) => k.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Zakaria Mujur Prasetyo, ZekkTech, Frontend Developer, UI/UX Designer"
+                />
+              </div>
+
+              <div>
+                <MediaFieldControl
+                  label="Gambar OpenGraph / Share Card (`og:image`, default `/opengraph-image`)"
+                  value={seo.ogImage || ""}
+                  onChange={(url) => updateSeo({ ogImage: url })}
+                  folder="seo"
+                  fieldKey="seo-og-img"
+                  uploadAndSet={uploadAndSet}
+                  uploadingImage={uploadingImage}
+                  config={config}
+                  accept="image/webp,image/png,image/jpeg"
+                  placeholder="/opengraph-image"
+                  previewShape="wide"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">Alt Text Gambar OpenGraph</label>
+                <input
+                  type="text"
+                  value={seo.ogImageAlt || ""}
+                  onChange={(e) => updateSeo({ ogImageAlt: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Zakaria Mujur Prasetyo - ZekkTech Portfolio"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Live SERP Preview */}
+          <div className="rounded-2xl border border-line/70 bg-white/70 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
+            <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">
+              Simulasi Cuplikan Pencarian Google (SERP Preview)
+            </h4>
+            <div className="max-w-2xl rounded-xl border border-line/50 bg-slate-50 p-4 font-sans dark:border-slate-800 dark:bg-slate-950/80">
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {config.generalProfile?.brand || "ZekkTech"}
+                </span>
+                <span>{serpHost}</span>
+              </div>
+              <div className="mt-1 text-base font-medium text-blue-700 dark:text-blue-400">
+                {serpTitle}
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">
+                {serpDesc}
+              </p>
+            </div>
           </div>
         </div>
       )}

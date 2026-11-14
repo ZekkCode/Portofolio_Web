@@ -16,12 +16,11 @@ const RepoPreviewModal = dynamic(
 
 interface ProjectCardProps {
   project: Project;
-  indexNum: string;
   onPreview: (project: Project) => void;
   isEn: boolean;
 }
 
-function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardProps) {
+function ProjectTiltedCard({ project, onPreview, isEn }: ProjectCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
@@ -79,39 +78,34 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
       onPointerLeave={handlePointerLeave}
       onMouseEnter={prefetchModal}
       onFocus={prefetchModal}
-      className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-shadow duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422] will-change-transform"
+      className="group relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-shadow duration-300 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
       style={{ transformStyle: "preserve-3d" }}
     >
       <div>
         {/* Top Metadata */}
-        <div className="flex items-center justify-between border-b border-line/60 pb-3 dark:border-line/40">
-          <span className="font-mono text-xs font-bold text-brand dark:text-blue-400">
-            #{indexNum}
-          </span>
-          <div className="flex items-center gap-2">
-            {project.category && (
-              <span className="rounded bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/10 dark:text-blue-300">
-                {project.category === "both" ? "IT & Design" : project.category.toUpperCase()}
-              </span>
-            )}
-            {project.role && (
-              <span className="text-[11px] font-medium text-muted">
-                {project.role}
-              </span>
-            )}
-          </div>
+        <div className="flex items-center justify-between gap-2 pb-3 border-b border-line/50 dark:border-line/30">
+          {project.category && (
+            <span className="whitespace-nowrap shrink-0 text-[11px] font-semibold tracking-wide text-brand dark:text-blue-400">
+              {project.category === "both" ? "IT & Design" : project.category.toUpperCase()}
+            </span>
+          )}
+          {project.role && (
+            <span className="text-[11px] font-medium text-muted truncate text-right">
+              {project.role}
+            </span>
+          )}
         </div>
 
         {/* Screenshot Thumbnail */}
         {project.image && (
-          <div ref={mediaRef} className="mt-3.5 will-change-transform">
+          <div ref={mediaRef} className="mt-3.5">
             <button
               type="button"
               onClick={() => onPreview(project)}
               className="group/preview relative block w-full overflow-hidden rounded-xl border border-line/70 text-start transition hover:border-brand/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               aria-label={`${t("projects.previewBtn")}: ${title}`}
             >
-              <div className="relative h-36 w-full overflow-hidden bg-surface">
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={project.image}
@@ -139,14 +133,12 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
           </p>
         </div>
 
-        {/* Problem & Highlight Insight */}
+        {/* Solution Focus Note */}
         {focusText && (
-          <div className="mt-3.5 rounded-xl border border-line/50 bg-slate-50/70 p-3 text-[11px] dark:border-line/30 dark:bg-[#181d30]/50">
-            <p className="text-body line-clamp-2">
-              <strong className="text-ink">{t("projects.focus", "Fokus Solusi:")} </strong>
-              {focusText}
-            </p>
-          </div>
+          <p className="mt-3.5 border-l-2 border-brand/35 pl-3 text-xs leading-relaxed text-body line-clamp-2 dark:border-blue-400/35">
+            <strong className="font-semibold text-ink">{t("projects.focus", "Fokus:")} </strong>
+            {focusText}
+          </p>
         )}
       </div>
 
@@ -173,7 +165,7 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
             <ArrowUpRight className="size-3.5" />
           </button>
 
-          {project.repo ? (
+          {project.repo && (
             <a
               href={project.repo}
               target="_blank"
@@ -183,8 +175,6 @@ function ProjectTiltedCard({ project, indexNum, onPreview, isEn }: ProjectCardPr
               <span>{t("projects.viewRepo")}</span>
               <ArrowRight className="size-3.5" />
             </a>
-          ) : (
-            <span className="text-xs text-muted">{t("repoModal.internal")}</span>
           )}
         </div>
       </div>
@@ -221,10 +211,12 @@ export function ProjectsSection() {
       <div id="portofolio" className="absolute top-0 -mt-24" aria-hidden="true" />
 
       <ScrollReveal y={24}>
-        <SectionTitle
-          title={t("projects.title")}
-          desc={t("projects.desc")}
-        />
+        <div className="relative z-[2]">
+          <SectionTitle
+            title={t("projects.title")}
+            desc={t("projects.desc")}
+          />
+        </div>
       </ScrollReveal>
 
       {/* Category Filter Tabs */}
@@ -232,7 +224,7 @@ export function ProjectsSection() {
         <div
           role="tablist"
           aria-label={t("projects.title", "Proyek")}
-          className="mb-8 flex flex-wrap items-center justify-center gap-2"
+          className="relative z-[2] mb-8 flex flex-wrap items-center justify-center gap-2"
         >
           {(
             [
@@ -263,7 +255,7 @@ export function ProjectsSection() {
         <Parallax speed={0.06}>
           <div
             id="proyek-empty"
-            className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
+            className="relative z-[2] flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 bg-white/50 px-6 py-14 text-center shadow-2xs dark:border-line/40 dark:bg-[#111422]/50"
           >
             <div className="flex size-14 items-center justify-center rounded-xl border border-line/60 bg-surface text-muted shadow-2xs dark:border-line/40 dark:bg-[#151928]">
               <svg
@@ -305,20 +297,23 @@ export function ProjectsSection() {
         </Parallax>
       ) : (
         <Parallax speed={0.055}>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project, idx) => {
-              const indexNum = String(idx + 1).padStart(2, "0");
-
-              return (
-                <ProjectTiltedCard
-                  key={project.id}
-                  project={project}
-                  indexNum={indexNum}
-                  onPreview={setSelectedProject}
-                  isEn={isEn}
-                />
-              );
-            })}
+          <div
+            className={`relative z-[2] grid gap-5 ${
+              filteredProjects.length === 1
+                ? "max-w-xl mx-auto"
+                : filteredProjects.length === 2 || filteredProjects.length === 4
+                ? "sm:grid-cols-2"
+                : "sm:grid-cols-2 lg:grid-cols-3"
+            }`}
+          >
+            {filteredProjects.map((project) => (
+              <ProjectTiltedCard
+                key={project.id}
+                project={project}
+                onPreview={setSelectedProject}
+                isEn={isEn}
+              />
+            ))}
           </div>
         </Parallax>
       )}

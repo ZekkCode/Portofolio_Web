@@ -8,7 +8,6 @@ import type {
   CertificateItem,
   TechStackItem,
   ServiceItemConfig,
-  FaqItemConfig,
   BlogConfig,
   GeneralProfileConfig,
   StatsConfig,

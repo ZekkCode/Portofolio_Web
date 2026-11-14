@@ -16,7 +16,7 @@ export function ProfileCardStage() {
         avatarUrl={pc.avatarUrl || generalProfile?.avatarUrl || undefined}
         iconUrl={pc.iconUrl || undefined}
         miniAvatarUrl={pc.miniAvatarUrl || undefined}
-        imageFit={pc.imageFit || "contain"}
+        imageFit={pc.avatarUrl ? pc.imageFit || "cover" : "cover"}
         backdropColor={pc.backdropColor || undefined}
         onContactClick={() => {
           window.location.href = `mailto:${generalProfile?.email || profile.contact.email}`;

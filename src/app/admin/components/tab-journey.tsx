@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SiteConfig, EducationItem, ExperienceItem, AcademicProject } from "@/lib/site-store";
-import { Plus, Trash2, ChevronUp, ChevronDown, GraduationCap, Briefcase, Upload, FolderGit2 } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, GraduationCap, Briefcase } from "lucide-react";
 
 interface TabJourneyProps {
   config: SiteConfig;
@@ -22,8 +22,6 @@ export function TabJourney({
   config,
   setDraft,
   setStatus,
-  uploadAndSet,
-  uploadingImage,
   inputClass,
 }: TabJourneyProps) {
   const [subTab, setSubTab] = useState<"education" | "experience">("education");

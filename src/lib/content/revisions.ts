@@ -1,6 +1,5 @@
 import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
-import type { ContentRevision } from "./types";
 
 const REVISIONS_INDEX_ID = "revisions_index";
 const MAX_REVISIONS = 25;

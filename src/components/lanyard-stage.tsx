@@ -44,7 +44,7 @@ export function StaticLanyardCard({ frontImage, strapColor }: StaticLanyardCardP
       </div>
 
       {/* 3. Authentic ID Card Badge */}
-      <div className="relative z-20 -mt-1.5 transition-transform duration-300 hover:rotate-0 hover:scale-[1.01] will-change-transform">
+      <div className="relative z-20 -mt-1.5 transition-transform duration-300 hover:rotate-0 hover:scale-[1.01]">
         <div className="relative w-[225px] sm:w-[265px] lg:w-[300px] aspect-[1/1.406] rounded-2xl overflow-hidden shadow-2xl border border-white/30 dark:border-white/15 bg-slate-900">
           <Image
             src={cardImage}

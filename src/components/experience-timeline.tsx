@@ -81,7 +81,7 @@ export function ExperienceTimeline() {
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: timeline,
-        start: "top 86%",
+        start: "top 68%",
         end: "bottom 20%",
         scrub: 0.65,
         invalidateOnRefresh: true,
@@ -114,8 +114,8 @@ export function ExperienceTimeline() {
         gsap.fromTo(
           validCards,
           {
-            x: (i: number) => (i + 1) * -38,
-            opacity: 0.75,
+            x: (i: number) => i * 22,
+            opacity: 0.78,
           },
           {
             x: 0,
@@ -124,8 +124,8 @@ export function ExperienceTimeline() {
             force3D: true,
             scrollTrigger: {
               trigger: timeline,
-              start: "top 88%",
-              end: "bottom 32%",
+              start: "top 68%",
+              end: "bottom 20%",
               scrub: 0.7,
               invalidateOnRefresh: true,
             },
@@ -198,31 +198,12 @@ export function ExperienceTimeline() {
       className="relative w-full overflow-hidden"
       aria-label="Riwayat Organisasi & Karir"
     >
-      {/* Top Header: Title & Step Indicators */}
-      <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2">
-          <Briefcase className="size-4 text-brand dark:text-blue-400" />
-          <span className="font-display text-sm font-bold text-ink">
-            {t("about.experienceTitle", "Aktivitas Organisasi & Karir")}
-          </span>
-        </div>
-
-        {/* Milestone Indicator Pills */}
-        <div
-          className="flex items-center gap-1.5"
-          aria-label={`Milestone organisasi ${activeIndex + 1} dari ${items.length}`}
-        >
-          {items.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === activeIndex
-                  ? "w-6 bg-brand dark:bg-blue-400"
-                  : "w-1.5 bg-line dark:bg-line/60"
-              }`}
-            />
-          ))}
-        </div>
+      {/* Top Header: Title */}
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <Briefcase className="size-4 text-brand dark:text-blue-400" />
+        <span className="font-display text-sm font-bold text-ink">
+          {t("about.experienceTitle", "Aktivitas Organisasi & Karir")}
+        </span>
       </div>
 
       {/* HORIZONTAL TIMELINE TRACK WITH MILESTONE NODES */}
@@ -295,7 +276,7 @@ export function ExperienceTimeline() {
         tabIndex={0}
         role="region"
         aria-label="Daftar Pengalaman Karir & Organisasi"
-        className="flex gap-4 sm:gap-5 overflow-x-auto pt-1 pb-4 px-1 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl"
+        className="flex gap-4 sm:gap-5 overflow-x-auto pt-1 pb-4 px-1 scroll-px-2 no-scrollbar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl"
         style={{ scrollbarWidth: "none" }}
       >
         {items.map((item, idx) => {
@@ -309,7 +290,7 @@ export function ExperienceTimeline() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
+              className={`shrink-0 w-[84vw] sm:w-[320px] md:w-[350px] rounded-xl border bg-white p-4 sm:p-5 shadow-2xs transition-[border-color,box-shadow] duration-300 dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-md ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
                   : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"

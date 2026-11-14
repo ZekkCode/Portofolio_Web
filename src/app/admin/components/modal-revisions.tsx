@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { RevisionsIndexItem } from "@/lib/content/revisions";
 import type { SiteConfig } from "@/lib/site-store";
-import { History, RotateCcw, X, Clock, User, CheckCircle2, AlertTriangle, Layers } from "lucide-react";
+import { History, RotateCcw, X, Clock, User, AlertTriangle, Layers } from "lucide-react";
 
 interface ModalRevisionsProps {
   isOpen: boolean;

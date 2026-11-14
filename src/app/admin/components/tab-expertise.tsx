@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SiteConfig, TechStackItem, ServiceItemConfig } from "@/lib/site-store";
-import { Plus, Trash2, ChevronUp, ChevronDown, Wrench, Layers, Upload, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, Wrench, Layers, Upload } from "lucide-react";
 
 interface TabExpertiseProps {
   config: SiteConfig;

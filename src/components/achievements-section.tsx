@@ -8,7 +8,7 @@ import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type AchievementItem } from "@/lib/site-store";
 
 export function AchievementsSection() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const currentLang = i18n.language || "id";
   const isEn = currentLang === "en";
 
@@ -31,37 +31,37 @@ export function AchievementsSection() {
         return {
           label: isEn ? "Award" : "Penghargaan",
           icon: Trophy,
-          classes: "bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300 border-amber-500/20",
+          classes: "text-amber-600 dark:text-amber-300",
         };
       case "competition":
         return {
           label: isEn ? "Competition" : "Kompetisi",
           icon: Medal,
-          classes: "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300 border-blue-500/20",
+          classes: "text-blue-600 dark:text-blue-300",
         };
       case "leadership":
         return {
           label: isEn ? "Leadership" : "Kepemimpinan",
           icon: Star,
-          classes: "bg-purple-500/10 text-purple-600 dark:bg-purple-400/10 dark:text-purple-300 border-purple-500/20",
+          classes: "text-purple-600 dark:text-purple-300",
         };
       case "program":
         return {
           label: isEn ? "Selected Program" : "Program Terpilih",
           icon: Award,
-          classes: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300 border-emerald-500/20",
+          classes: "text-emerald-600 dark:text-emerald-300",
         };
       default:
         return {
           label: isEn ? "Recognition" : "Rekognisi",
           icon: Award,
-          classes: "bg-brand/10 text-brand dark:bg-blue-500/10 dark:text-blue-400 border-brand/20",
+          classes: "text-brand dark:text-blue-400",
         };
     }
   };
 
   return (
-    <section id="achievements" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="achievements" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="prestasi" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div id="rekognisi" className="absolute top-0 -mt-24" aria-hidden="true" />
 
@@ -90,17 +90,17 @@ export function AchievementsSection() {
                 className="group relative flex h-full flex-col justify-between rounded-2xl border border-line/80 bg-white p-5 sm:p-6 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
               >
                 <div>
-                  {/* Header: Category Badge + Date */}
-                  <div className="flex items-center justify-between gap-3 border-b border-line/60 pb-3 dark:border-line/40">
+                  {/* Header: Category + Date */}
+                  <div className="flex items-center justify-between gap-3">
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${badge.classes}`}
+                      className={`inline-flex items-center gap-1.5 text-xs font-semibold ${badge.classes}`}
                     >
                       <Icon className="size-3.5" />
                       <span>{badge.label}</span>
                     </span>
 
                     {item.date && (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-muted">
+                      <span className="flex items-center gap-1 font-mono text-[11px] font-medium text-muted">
                         <Calendar className="size-3" />
                         <span>{item.date}</span>
                       </span>

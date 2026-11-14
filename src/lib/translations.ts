@@ -26,7 +26,7 @@ export const translations = {
     },
     about: {
       title: "Desain Antarmuka & Rekayasa Web",
-      desc: "Berangkat dari multimedia dan desain grafis, kini fokus merancang antarmuka terstruktur serta membangun aplikasi web yang cepat dan aksesibel.",
+      desc: "Dari desain multimedia dan identitas visual hingga implementasi frontend web yang cepat dan aksesibel.",
       philosophy: "Pendekatan Kerja",
       expTitle: "Pengalaman & Organisasi",
       metaLocation: "Lokasi Basis",
@@ -135,8 +135,8 @@ export const translations = {
       solution: "Solusi:",
       outcome: "Hasil:",
       focus: "Fokus:",
-      emptyTitle: "Koleksi Proyek Segera Hadir",
-      emptyDesc: "Dokumentasi dan studi kasus proyek sedang dalam tahap kurasi dan pembaruan berkala. Kunjungi repositori GitHub untuk melihat kode sumber langsung.",
+      emptyTitle: "Belum Ada Proyek yang Ditampilkan",
+      emptyDesc: "Dokumentasi dan studi kasus proyek sedang dikurasi dan diperbarui secara berkala. Kunjungi repositori GitHub untuk melihat kode sumber langsung.",
     },
     blog: {
       title: "Latest from ZekkTech Blog",

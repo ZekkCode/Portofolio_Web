@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { SiteConfig, CertificateItem, AchievementItem, CvDocConfig } from "@/lib/site-store";
 import type { RoleKey } from "@/components/cv-preview-modal";
-import { Plus, Trash2, ChevronUp, ChevronDown, Award, Trophy, FileText, Upload, ExternalLink, Star } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, Award, Trophy, FileText, Upload, Star } from "lucide-react";
 
 interface TabCredentialsProps {
   config: SiteConfig;

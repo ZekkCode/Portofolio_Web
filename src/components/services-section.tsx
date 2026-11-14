@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, defaultServices, type ServiceItemConfig } from "@/lib/site-store";
-import { Layout, Code, Video, Server, Sparkles, ArrowRight } from "lucide-react";
+import { Layout, Code, Video, Server, ArrowRight } from "lucide-react";
 
 export function ServicesSection() {
   const { t, i18n } = useTranslation();
@@ -53,7 +53,7 @@ export function ServicesSection() {
               {renderIcon(service.iconName)}
             </div>
 
-            <h3 className="font-display text-base sm:text-lg font-bold text-brand dark:text-blue-400 transition-colors group-hover:text-brand-ink dark:group-hover:text-blue-300">
+            <h3 className="font-display text-base sm:text-lg font-bold text-ink transition-colors group-hover:text-brand dark:group-hover:text-blue-400">
               {title}
             </h3>
           </div>
@@ -79,7 +79,7 @@ export function ServicesSection() {
   };
 
   return (
-    <section id="services" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="services" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="layanan" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle title={t("services.title")} desc={t("services.desc")} />

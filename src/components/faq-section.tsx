@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
-import { useSiteConfig, defaultFaq, type FaqItemConfig } from "@/lib/site-store";
+import { useSiteConfig, defaultFaq } from "@/lib/site-store";
 
 export function FaqSection() {
   const { t, i18n } = useTranslation();
@@ -20,7 +20,7 @@ export function FaqSection() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <section id="faq" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="faq" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="tanya-jawab" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle title={t("faq.title")} desc={t("faq.desc")} />

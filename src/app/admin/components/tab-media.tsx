@@ -10,10 +10,7 @@ import {
   ImageIcon,
   FileText,
   Search,
-  Filter,
-  Layers,
   Sparkles,
-  Info,
 } from "lucide-react";
 
 interface TabMediaProps {
@@ -41,7 +38,6 @@ export function TabMedia({
   setStatus,
   uploadAndSet,
   uploadingImage,
-  inputClass,
 }: TabMediaProps) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<string>("projects");

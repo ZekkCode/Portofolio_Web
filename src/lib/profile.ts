@@ -11,7 +11,7 @@ export const profile = {
   since: "2020",
   bio: [
     "Mahasiswa Teknik Informatika Universitas Trunojoyo Madura (angkatan 2024) yang mendalami UI/UX design dan rekayasa frontend web sejak 2020. Terbiasa merancang design system di Figma dan mengimplementasikannya ke Next.js serta TypeScript.",
-    "Berangkat dari latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang rapi, responsif, dan mudah digunakan untuk organisasi kampus dan klien freelance.",
+    "Memiliki latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang terstruktur, cepat, dan mudah digunakan untuk organisasi kampus dan klien.",
   ],
   stats: [
     { value: "7", label: "Proyek Selesai" },

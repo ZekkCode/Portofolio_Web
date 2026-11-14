@@ -23,7 +23,6 @@ import {
   CloudDownload,
   AlertTriangle,
   CheckCircle2,
-  ExternalLink,
   User,
   GraduationCap,
   FolderGit2,
@@ -342,12 +341,9 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display text-base font-bold text-ink">Panel Admin</span>
-                <span className="hidden sm:inline-flex rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand">
-                  CMS v3
-                </span>
                 {hasUnsavedChanges && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-                    <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="size-1.5 rounded-full bg-amber-500" />
                     Draf Belum Disimpan
                   </span>
                 )}

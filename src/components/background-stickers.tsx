@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import { StickerPeel } from "@/components/sticker-peel";
 import { STICKER_LOGOS, type StickerItem } from "@/lib/sticker-manifest";
 import { useAdaptivePerformance } from "@/lib/device-performance";
-import { useInView } from "@/hooks/use-in-view";
 import { useMounted } from "@/lib/use-mounted";
 
 interface PlacementSlot {
@@ -125,21 +124,61 @@ function StickerSlotItem({
   slotStyle: React.CSSProperties;
   isMobileOrLow: boolean;
 }) {
-  // Lazy one-shot mounting near viewport: once mounted with a lightweight 2D canvas
-  // backed by the shared WebGL2 sticker compositor, keep mounted to avoid scroll remount churn.
-  const { ref, isInView } = useInView<HTMLDivElement>({
-    rootMargin: "420px 0px 420px 0px",
-    triggerOnce: true,
-    trackDocumentVisibility: false,
-  });
+  // Keep resting background stickers as crisp lazy images with zero WebGL/scroll commit churn;
+  // promote a slot seamlessly to the WebGL2 StickerPeel compositor only when the user interacts with it.
+  const [activated, setActivated] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [peelReady, setPeelReady] = useState(false);
 
   return (
     <div
-      ref={ref}
+      data-sticker-slot={slot.id}
       style={slotStyle}
+      onPointerEnter={(e) => {
+        if (e.pointerType !== "touch") {
+          setActivated(true);
+          setHovered(true);
+        }
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+      }}
+      onPointerDown={() => {
+        setActivated(true);
+        setHovered(true);
+      }}
+      onFocus={() => {
+        setActivated(true);
+        setHovered(true);
+      }}
+      onBlur={() => {
+        setHovered(false);
+      }}
       className="pointer-events-auto flex items-center justify-center"
     >
-      {isInView ? (
+      {!peelReady && (
+        <div
+          style={{
+            width: `${width}px`,
+            height: `${width}px`,
+            transform: `rotate(${rotation}deg)`,
+          }}
+          className="flex items-center justify-center select-none pointer-events-none"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logo.src}
+            alt=""
+            width={width}
+            height={width}
+            decoding="async"
+            loading="lazy"
+            className="max-w-full max-h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.16)]"
+          />
+        </div>
+      )}
+
+      {activated && (
         <StickerPeel
           imageSrc={logo.src}
           width={width}
@@ -157,28 +196,11 @@ function StickerSlotItem({
           swing={0}
           intro={false}
           initialPosition="center"
+          initialHover={hovered}
+          activeHover={hovered}
+          onReady={() => setPeelReady(true)}
           dpr={isMobileOrLow ? 1.5 : 2}
         />
-      ) : (
-        <div
-          style={{
-            width: `${width}px`,
-            height: `${width}px`,
-            transform: `rotate(${rotation}deg)`,
-          }}
-          className="flex items-center justify-center select-none pointer-events-none"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logo.src}
-            alt=""
-            width={width}
-            height={width}
-            decoding="async"
-            loading="lazy"
-            className="max-w-full max-h-full object-contain filter drop-shadow-xs"
-          />
-        </div>
       )}
     </div>
   );
@@ -193,7 +215,7 @@ function generateActiveStickers(): ActiveSticker[] {
 
   // Slots selection: guaranteed equal left/right balance across all screen sizes
   const availableSlots = isMobile
-    ? CANDIDATE_SLOTS.filter((s) => s.mobileSafe)
+    ? CANDIDATE_SLOTS.filter((s) => s.mobileSafe && s.topPercent >= 11)
     : isTablet
     ? CANDIDATE_SLOTS.filter((s) => s.tabletSafe)
     : [...CANDIDATE_SLOTS];
@@ -287,18 +309,21 @@ export function BackgroundStickers() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-20 overflow-hidden select-none"
+      className="pointer-events-none absolute inset-0 z-[1] xl:z-20 overflow-hidden select-none"
       aria-hidden="true"
     >
       {activeStickers.map(({ slot, logo, rotation, width }) => {
+        if (isMobileScreen && (!slot.mobileSafe || slot.topPercent < 11)) {
+          return null;
+        }
         const shiftSign = slot.horizontalShift >= 0 ? `+ ${slot.horizontalShift}px` : `- ${Math.abs(slot.horizontalShift)}px`;
         const slotStyle: React.CSSProperties = {
           position: "absolute",
           top: `${slot.topPercent}%`,
           ...(isMobileScreen
             ? slot.side === "left"
-              ? { left: "clamp(4px, 2vw, 14px)" }
-              : { right: "clamp(4px, 2vw, 14px)" }
+              ? { left: "-20px", opacity: 0.55 }
+              : { right: "-16px", opacity: 0.55 }
             : slot.side === "left"
             ? { left: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }
             : { right: `clamp(12px, calc(50% - 512px - 68px ${shiftSign}), 220px)` }),

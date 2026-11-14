@@ -112,7 +112,7 @@ export function StaticCvFolder({
                   transform: `translate3d(${xShift}px, ${yShift}px, 0) rotate(${isOpen ? rot : 0}deg)`,
                   zIndex: idx + 1,
                 }}
-                className="absolute w-[200px] sm:w-[240px] aspect-[1/1.35] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-lg p-3 cursor-pointer transition-all duration-500 ease-out hover:scale-105 hover:z-20 will-change-transform"
+                className="absolute w-[200px] sm:w-[240px] aspect-[1/1.35] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-lg p-3 cursor-pointer transition-all duration-500 ease-out hover:scale-105 hover:z-20"
               >
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
                   <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">
@@ -236,7 +236,7 @@ export function CvFolderSection() {
       {/* Main Interactive Stage: 3D Folder Berkas Karir */}
       <div
         ref={stageRef}
-        className="relative mt-8 flex min-h-[400px] sm:min-h-[460px] items-center justify-center py-6"
+        className="relative z-[2] mt-8 flex min-h-[400px] sm:min-h-[460px] items-center justify-center py-6"
       >
         <DynamicFolder
           label="CV / Zekk"
@@ -277,7 +277,7 @@ export function CvFolderSection() {
             className="pointer-events-auto group inline-flex min-h-[44px] h-11 items-center gap-2.5 rounded-xl border border-brand-light/30 bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             <FileText className="size-4 text-sky-200 transition-transform group-hover:scale-110 motion-reduce:transform-none" />
-            <span>{t("cv.openAll", "Buka Berkas Karier")}</span>
+            <span>{t("cv.viewCv", "Lihat CV")}</span>
             <ArrowUpRight className="size-4 text-white/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
           </button>
         </div>

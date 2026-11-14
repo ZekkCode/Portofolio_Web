@@ -19,7 +19,7 @@ import { useAdaptivePerformance } from "@/lib/device-performance";
 import { profile } from "@/lib/profile";
 import { useSiteConfig, defaultTechStack } from "@/lib/site-store";
 import { isSectionVisible } from "@/lib/content/selectors";
-import { ArrowRight, FileText, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 import { AcademicJourneySection } from "@/components/academic-journey-section";
 import { AchievementsSection } from "@/components/achievements-section";
 import { ExperienceTimeline } from "@/components/experience-timeline";
@@ -128,7 +128,7 @@ function Hero() {
   return (
     <section
       id="atas"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-3 sm:pt-8 lg:pt-10 pb-6 sm:pb-8"
+      className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-3 sm:pt-8 lg:pt-10 pb-6 sm:pb-8"
     >
       <div id="hero" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div className="grid items-start gap-3 sm:gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
@@ -223,7 +223,7 @@ function About() {
   ];
 
   return (
-    <section id="tentang" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-6 pb-14 sm:pt-8 sm:pb-16">
+    <section id="tentang" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 pt-6 pb-14 sm:pt-8 sm:pb-16">
       <div id="about" className="absolute top-0 -mt-24" aria-hidden="true" />
       <div id="about-me" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
@@ -234,27 +234,26 @@ function About() {
       </ScrollReveal>
 
       <div className="space-y-10">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 items-start">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12 items-start">
           <div className="space-y-4 text-sm sm:text-base leading-relaxed text-body">
             {bioParagraphs.map((par) => (
               <p key={par.slice(0, 24)}>{par}</p>
             ))}
           </div>
 
-          {/* Grounded Metric Cards */}
+          {/* Typographic Stat Ledger */}
           <Parallax speed={0.06}>
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-6 border-t border-line/70 pt-5 dark:border-line/50">
               {statItems.map((stat) => (
                 <div
                   key={stat.key}
-                  className="group relative overflow-hidden rounded-xl border border-line/80 bg-white p-4 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-md dark:border-line/60 dark:bg-[#111422]"
+                  className="border-l-2 border-brand/25 pl-3.5 dark:border-blue-400/25"
                 >
-                  <dt className="sr-only">{t(`about.stats.${stat.key}`)}</dt>
-                  <dd className="font-display text-2xl font-extrabold text-ink group-hover:text-brand transition-colors leading-none">
-                    {stat.value}
-                  </dd>
-                  <dd className="mt-2 text-xs font-medium text-body">
+                  <dt className="text-xs font-medium text-muted">
                     {t(`about.stats.${stat.key}`)}
+                  </dt>
+                  <dd className="mt-1 font-display text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums text-ink leading-none">
+                    {stat.value}
                   </dd>
                 </div>
               ))}
@@ -307,7 +306,7 @@ function Stack() {
   ];
 
   return (
-    <section id="stack" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="stack" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="tech-stack" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
@@ -453,21 +452,19 @@ function Contact() {
     ? generalProfile?.availabilityEn || t("contact.availability", "Open for collaboration")
     : generalProfile?.availability || t("contact.availability", "Terbuka untuk kolaborasi");
 
-  const socials = (generalProfile?.socials || []).filter((s) => s.visible !== false);
-
   return (
-    <section id="kontak" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full">
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-xs dark:border-line/60 dark:bg-[#111422]">
           <div className="grid items-stretch lg:grid-cols-[1fr_1fr]">
             {/* KIRI: Hologram Profile Card */}
-            <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-gradient-to-b from-slate-50/70 via-white to-slate-100/50 dark:from-[#0b0e1a] dark:to-[#13182b] p-4 sm:p-8">
+            <div className="relative flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-5 sm:p-8">
               <DynamicProfileCardStage />
             </div>
 
             {/* KANAN: Panel Informasi Kontak */}
-            <div className="relative flex flex-col justify-between p-4 sm:p-8 lg:p-10 space-y-6">
+            <div className="relative flex flex-col justify-between p-6 sm:p-8 lg:p-10 space-y-8">
               <div className="space-y-4">
                 <div>
                   <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
@@ -478,62 +475,50 @@ function Contact() {
                   </p>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3 pt-2">
+                {/* Primary Email Action */}
+                <div className="flex flex-wrap items-center gap-4 pt-2">
                   <a
                     href={`mailto:${email}`}
                     className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                   >
                     <Mail className="size-4" />
-                    <span>{t("nav.contactBtn", "Contact Me")}</span>
+                    <span>{t("hero.emailBtn", "Kirim Email")}</span>
                   </a>
                   <SmoothNavLink
                     href="#cv"
-                    className="inline-flex min-h-[44px] h-11 items-center justify-center gap-2 rounded-xl border border-line/80 bg-transparent px-5 py-2.5 text-sm font-semibold text-ink transition-all duration-150 hover:bg-brand/5 hover:border-brand/40 hover:text-brand hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/60 dark:text-slate-200 dark:hover:bg-brand/10 dark:hover:border-brand/50 dark:hover:text-blue-400"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-brand dark:text-slate-200 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
                   >
-                    <FileText className="size-3.5 text-brand dark:text-blue-400" />
                     <span>{t("hero.cvBtn", "Berkas Karier")}</span>
                     <ArrowRight className="size-3.5" />
                   </SmoothNavLink>
                 </div>
               </div>
 
-              {/* Info Kontak & Lokasi */}
-              <div className="space-y-4 border-t border-line/60 pt-5 dark:border-line/40">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl border border-line/60 bg-slate-50/70 p-3 dark:border-line/40 dark:bg-[#181d30]/60">
-                    <span className="block text-[11px] font-semibold text-body">{t("contact.location")}</span>
-                    <span className="mt-0.5 font-bold text-ink">{location}</span>
-                  </div>
-                  <div className="rounded-xl border border-line/60 bg-slate-50/70 p-3 dark:border-line/40 dark:bg-[#181d30]/60">
-                    <span className="block text-[11px] font-semibold text-body">{t("contact.status")}</span>
-                    <span className="mt-0.5 font-bold text-brand dark:text-blue-400">{availability}</span>
-                  </div>
+              {/* Clean Direct Contact Ledger */}
+              <dl className="space-y-3 border-t border-line/60 pt-5 text-sm dark:border-line/40">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-xs font-medium text-muted">Email</dt>
+                  <dd className="font-mono text-xs sm:text-sm font-semibold text-ink">
+                    <a
+                      href={`mailto:${email}`}
+                      className="hover:text-brand dark:hover:text-blue-400 transition-colors"
+                    >
+                      {email}
+                    </a>
+                  </dd>
                 </div>
-
-                {/* Socials */}
-                <div className="pt-1">
-                  <span className="text-xs font-semibold text-ink">{t("contact.socialsTitle")}</span>
-                  <ul className="mt-2 flex flex-wrap items-center gap-2">
-                    {socials.map((social) => (
-                      <li key={social.id || social.label}>
-                        <a
-                          href={social.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label={social.label}
-                          title={social.label}
-                          className={`group flex size-11 items-center justify-center rounded-xl border border-line/70 bg-white/70 text-body shadow-2xs backdrop-blur-xs transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-line/40 dark:bg-slate-900/60 dark:text-slate-300 ${getSocialHoverClasses(social.label)}`}
-                        >
-                          <span className="transition-transform duration-200 group-hover:scale-110 motion-reduce:transform-none">
-                            <SocialIcon label={social.label} className="size-5" />
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-xs font-medium text-muted">{t("contact.location").replace(/:$/, "")}</dt>
+                  <dd className="text-xs sm:text-sm font-semibold text-ink text-right">{location}</dd>
                 </div>
-              </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-xs font-medium text-muted">{t("contact.status").replace(/:$/, "")}</dt>
+                  <dd className="inline-flex items-center justify-end gap-2 text-xs sm:text-sm font-semibold text-brand dark:text-blue-400 text-right">
+                    <span className="size-2 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
+                    <span>{availability}</span>
+                  </dd>
+                </div>
+              </dl>
             </div>
           </div>
         </div>
@@ -600,7 +585,7 @@ function Footer() {
         </div>
       </div>
 
-      <Parallax speed={-0.06} align="center">
+      <Parallax speed={-0.06} align="bottom">
         <div className="relative mx-auto w-full max-w-6xl px-5 text-center select-none pointer-events-none mt-10 sm:mt-14 -mb-4 sm:-mb-6">
           <p
             aria-hidden="true"

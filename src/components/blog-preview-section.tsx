@@ -64,7 +64,7 @@ export function BlogPreviewSection() {
   return (
     <section
       id="blog"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
+      className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
       aria-label="Latest from ZekkTech Blog"
     >
       {/* Anchor alias for url-friendly Indonesian navigation */}
@@ -110,7 +110,8 @@ export function BlogPreviewSection() {
                       <img
                         src={post.coverImage}
                         alt={post.title}
-                        loading="lazy"
+                        loading="eager"
+                        decoding="async"
                         onError={() => handleImageError(post.id)}
                         className="size-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
                       />
@@ -123,15 +124,17 @@ export function BlogPreviewSection() {
                       </div>
                     )}
 
-                    {/* Category Pill Tag on Thumbnail */}
-                    <div className="absolute top-2.5 left-2.5">
-                      <span className="inline-flex items-center rounded-md bg-white/90 dark:bg-black/80 px-2 py-0.5 text-[10.5px] font-semibold text-brand dark:text-blue-400 backdrop-blur-xs shadow-2xs border border-white/20">
-                        {post.category || "Teknologi"}
-                      </span>
-                    </div>
+                    {/* Category Tag on Thumbnail */}
+                    {post.category && (
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="inline-flex items-center rounded-md bg-white/90 dark:bg-black/80 px-2 py-0.5 text-[10.5px] font-semibold text-brand dark:text-blue-400 backdrop-blur-xs shadow-2xs border border-white/20">
+                          {post.category}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Date & Metadata */}
+                  {/* Date & Source */}
                   <div className="mt-3.5 flex items-center justify-between text-xs text-muted">
                     {post.publishedAt ? (
                       <span className="inline-flex items-center gap-1.5 font-mono text-[11px]">
@@ -139,17 +142,17 @@ export function BlogPreviewSection() {
                         {post.publishedAt}
                       </span>
                     ) : (
-                      <span className="font-mono text-[11px]">ZekkTech Blog</span>
+                      <span className="font-mono text-[11px]">zekktech.biz.id</span>
                     )}
 
-                    <span className="text-[11px] text-muted group-hover:text-brand dark:group-hover:text-blue-400 transition-colors inline-flex items-center gap-0.5">
-                      <span>Baca</span>
+                    <span className="text-[11px] font-medium text-brand dark:text-blue-400 inline-flex items-center gap-0.5">
+                      <span>{t("blog.readBtn", "Baca")}</span>
                       <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
                     </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="mt-2.5 font-display text-base font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                  <h3 className="mt-2 font-display text-base font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                     {post.title}
                   </h3>
 
@@ -159,12 +162,6 @@ export function BlogPreviewSection() {
                       {post.excerpt}
                     </p>
                   )}
-                </div>
-
-                {/* Subtle Bottom Accent Indicator */}
-                <div className="mt-4 pt-3 border-t border-line/40 dark:border-line/20 flex items-center justify-between text-[11px] font-medium text-muted">
-                  <span className="font-mono text-brand/80 dark:text-blue-400/80">zekktech.biz.id</span>
-                  <span className="text-body group-hover:text-ink transition-colors">Tab Baru</span>
                 </div>
               </a>
             );

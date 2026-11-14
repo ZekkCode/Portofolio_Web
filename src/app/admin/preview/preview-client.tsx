@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SiteConfig } from "@/lib/site-config";
 import { publishCloudConfig } from "@/lib/site-store";
-import { ArrowLeft, CheckCircle2, AlertTriangle, Eye, Send } from "lucide-react";
+import { ArrowLeft, Eye, Send } from "lucide-react";
 import Home from "@/app/page";
 
 interface PreviewClientProps {
@@ -13,7 +13,7 @@ interface PreviewClientProps {
   userEmail: string;
 }
 
-export function PreviewClient({ initialConfig, userEmail }: PreviewClientProps) {
+export function PreviewClient({ initialConfig }: PreviewClientProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [publishStatus, setPublishStatus] = useState<string | null>(null);

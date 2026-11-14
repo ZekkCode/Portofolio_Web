@@ -1,4 +1,3 @@
-import { profile } from "@/lib/profile";
 import type { SiteConfig } from "@/lib/site-config";
 import {
   getPublishedProfile,

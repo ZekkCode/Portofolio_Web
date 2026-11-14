@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { SiteConfig, SocialLinkItem } from "@/lib/site-store";
-import { Plus, Trash2, Upload, User, Globe, Mail, Phone, Share2, BarChart2, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Upload, User, Globe, Mail, Share2, BarChart2 } from "lucide-react";
 
 interface TabGeneralProps {
   config: SiteConfig;

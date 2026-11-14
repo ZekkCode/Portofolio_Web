@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SiteConfig, Project } from "@/lib/site-store";
-import { Trash2, ChevronUp, ChevronDown, Upload, FolderGit2, Star, Eye, ExternalLink } from "lucide-react";
+import { Trash2, ChevronUp, ChevronDown, Upload, FolderGit2, Star } from "lucide-react";
 
 interface TabWorksProps {
   config: SiteConfig;
@@ -142,7 +142,7 @@ export function TabWorks({
         <div className="rounded-2xl border border-dashed border-line p-10 text-center dark:border-line/40">
           <FolderGit2 className="mx-auto size-8 text-muted" />
           <h3 className="mt-3 text-sm font-bold text-ink">Belum Ada Proyek yang Ditampilkan</h3>
-          <p className="mt-1 text-xs text-muted">Koleksi proyek saat ini kosong (Zero Slop Policy). Klik tombol di bawah untuk menambahkan proyek portofolio pertama Anda.</p>
+          <p className="mt-1 text-xs text-muted">Belum ada proyek yang ditambahkan. Klik tombol di bawah untuk menambahkan proyek portofolio pertama Anda.</p>
           <button
             type="button"
             onClick={addProject}

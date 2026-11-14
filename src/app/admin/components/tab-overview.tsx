@@ -9,9 +9,7 @@ import {
   GraduationCap,
   Briefcase,
   Wrench,
-  HelpCircle,
   ShieldCheck,
-  AlertTriangle,
   History,
   Eye,
   Download,
@@ -19,6 +17,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Layers,
+  ArrowRight,
 } from "lucide-react";
 import type { AdminTabKey } from "../admin-client";
 
@@ -39,19 +38,16 @@ export function TabOverview({
 }: TabOverviewProps) {
   const projects = config.projects || [];
   const publishedProjects = projects.filter((p) => p.published !== false);
-  const draftProjects = projects.filter((p) => p.published === false);
 
   const certs = config.certificates || [];
   const verifiedCerts = certs.filter((c) => Boolean(c.credentialUrl || c.credentialPdf));
 
   const education = config.education || [];
   const experience = config.experience || [];
-  const achievements = config.achievements || [];
   const services = config.services || [];
   const techStack = config.techStack || [];
   const totalTools = techStack.length;
   const categoriesCount = new Set(techStack.map((s) => s.category)).size;
-  const faq = config.faq || [];
 
   return (
     <div className="space-y-6">
@@ -59,12 +55,9 @@ export function TabOverview({
       <div className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-surface/80 via-surface/40 to-brand/5 p-6 backdrop-blur-sm dark:border-line/40 dark:from-slate-900/80 dark:to-brand/10">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex size-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                ZekkTech CMS v3 • Status Operasional
-              </span>
-            </div>
+            <span className="block text-[11px] font-semibold text-muted">
+              Ringkasan & Status Konfigurasi
+            </span>
             <h2 className="text-xl font-bold tracking-tight text-ink md:text-2xl">
               Pusat Kendali Portofolio
             </h2>
@@ -212,7 +205,7 @@ export function TabOverview({
                 <PlusCircle className="size-4 text-brand" />
                 <span>Tambah Proyek Baru</span>
               </span>
-              <span className="text-[10px] text-muted">Works</span>
+              <ArrowRight className="size-3.5 text-muted" />
             </button>
 
             <button
@@ -224,7 +217,7 @@ export function TabOverview({
                 <Award className="size-4 text-brand" />
                 <span>Kelola Sertifikasi & Berkas CV</span>
               </span>
-              <span className="text-[10px] text-muted">Certs</span>
+              <ArrowRight className="size-3.5 text-muted" />
             </button>
 
             <button
@@ -236,7 +229,7 @@ export function TabOverview({
                 <GraduationCap className="size-4 text-brand" />
                 <span>Perbarui Linimasa Akademik / Karier</span>
               </span>
-              <span className="text-[10px] text-muted">Journey</span>
+              <ArrowRight className="size-3.5 text-muted" />
             </button>
           </div>
         </div>
@@ -291,7 +284,7 @@ export function TabOverview({
                 <Download className="size-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Unduh Cadangan JSON</span>
               </span>
-              <span className="text-[10px] text-muted">Export</span>
+              <ArrowRight className="size-3.5 text-muted" />
             </a>
 
             <button
@@ -303,7 +296,7 @@ export function TabOverview({
                 <Wrench className="size-4 text-brand" />
                 <span>Pusat Pemeliharaan & Impor</span>
               </span>
-              <span className="text-[10px] text-muted">Maintenance</span>
+              <ArrowRight className="size-3.5 text-muted" />
             </button>
           </div>
         </div>

@@ -6,8 +6,6 @@ import { SectionTitle } from "@/components/section-title";
 import { ScrollReveal } from "@/components/parallax";
 import { useSiteConfig, defaultEducation, type EducationItem } from "@/lib/site-store";
 import {
-  GraduationCap,
-  School,
   MapPin,
   Calendar,
   BookOpen,
@@ -232,7 +230,7 @@ export function AcademicJourneySection() {
     <section
       ref={sectionRef}
       id="akademik"
-      className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20 overflow-hidden"
+      className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20 overflow-hidden"
       aria-label={t("academic.title", "Jejak Akademik")}
     >
       {/* Anchor aliases for friendly URL navigation */}
@@ -240,32 +238,13 @@ export function AcademicJourneySection() {
       <div id="pendidikan" className="absolute top-0 -mt-24" aria-hidden="true" />
 
       <ScrollReveal y={24}>
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <SectionTitle
-            title={t("academic.title", "Jejak Akademik")}
-            desc={t(
-              "academic.desc",
-              "Latar belakang pendidikan formal dan bidang keilmuan yang menjadi fondasi rekayasa digital."
-            )}
-          />
-
-          {/* Subtle Milestone Step Indicators (Parallax Scroll Driven - No Buttons) */}
-          <div
-            className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 mb-4 sm:mb-0"
-            aria-label={`Milestone akademik ${activeIndex + 1} dari ${items.length}`}
-          >
-            {items.map((_, i) => (
-              <span
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === activeIndex
-                    ? "w-6 bg-brand dark:bg-blue-400"
-                    : "w-1.5 bg-line dark:bg-line/60"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+        <SectionTitle
+          title={t("academic.title", "Jejak Akademik")}
+          desc={t(
+            "academic.desc",
+            "Latar belakang pendidikan formal dan bidang keilmuan yang menjadi fondasi rekayasa digital."
+          )}
+        />
       </ScrollReveal>
 
       {items.length === 0 ? (
@@ -377,10 +356,6 @@ export function AcademicJourneySection() {
       >
         {items.map((edu, idx) => {
           const isActive = idx === activeIndex;
-          const isUniversity =
-            edu.degree?.toLowerCase().includes("sarjana") ||
-            edu.degree?.toLowerCase().includes("s1") ||
-            edu.institution?.toLowerCase().includes("universitas");
           const isExpanded = Boolean(expanded[edu.id]);
           const focusList =
             currentLang === "en" && edu.focusEn && edu.focusEn.length > 0
@@ -388,12 +363,19 @@ export function AcademicJourneySection() {
               : edu.focus || [];
           const statusLabel =
             currentLang === "en" && edu.statusEn ? edu.statusEn : edu.status;
+          const initials = (edu.institution || "ED")
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((w) => w[0])
+            .slice(0, 3)
+            .join("")
+            .toUpperCase();
 
           const logoScale = prefersReducedMotion
             ? 1
             : isActive
-            ? 1.14
-            : 0.94;
+            ? 1.08
+            : 0.96;
 
           return (
             <div
@@ -401,22 +383,21 @@ export function AcademicJourneySection() {
               ref={(el) => {
                 cardRefs.current[idx] = el;
               }}
-              className={`shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow,opacity] duration-300 will-change-transform dark:bg-[#111422] ${
+              className={`shrink-0 w-[88vw] sm:w-[420px] lg:w-[460px] rounded-2xl border bg-white p-5 sm:p-6 shadow-2xs transition-[border-color,box-shadow] duration-300 dark:bg-[#111422] ${
                 isActive
                   ? "border-brand shadow-lg ring-1 ring-brand/20 dark:border-blue-500/80 dark:ring-blue-500/20 opacity-100"
-                  : "border-line/80 hover:border-brand/40 opacity-80 hover:opacity-100 dark:border-line/50"
+                  : "border-line/80 hover:border-brand/40 opacity-85 hover:opacity-100 dark:border-line/50"
               }`}
             >
-              {/* Card Header: Logo, Institution, Status */}
-              <div className="flex items-start gap-4">
-                {/* Fixed container for Institution Logo with smooth scale */}
-                <div className="relative size-14 sm:size-16 rounded-xl border border-line/60 bg-slate-50/90 dark:border-line/40 dark:bg-[#181d30]/80 p-2 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+              {/* Card Header: Institution First, Logo & Understated Status */}
+              <div className="flex items-start gap-3.5">
+                <div className="relative size-11 rounded-xl border border-line/60 bg-slate-50/90 dark:border-line/40 dark:bg-[#181d30]/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
                   {edu.logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={edu.logo}
                       alt={`Logo ${edu.institution}`}
-                      className="size-full object-contain will-change-transform transition-transform duration-300"
+                      className="size-full object-contain transition-transform duration-300"
                       style={{
                         transform: `scale(${logoScale})`,
                       }}
@@ -424,68 +405,70 @@ export function AcademicJourneySection() {
                       decoding="async"
                     />
                   ) : (
-                    <div
-                      className="size-full flex items-center justify-center will-change-transform transition-transform duration-300 text-brand dark:text-blue-400"
+                    <span
+                      className="font-mono text-[11px] font-bold tracking-tight text-brand dark:text-blue-400 transition-transform duration-300 select-none"
                       style={{
                         transform: `scale(${logoScale})`,
                       }}
                     >
-                      {isUniversity ? (
-                        <GraduationCap className="size-8" />
-                      ) : (
-                        <School className="size-8" />
-                      )}
-                    </div>
+                      {initials}
+                    </span>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-bold text-brand">
-                      #0{idx + 1} • {edu.startYear}
-                    </span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                        edu.current
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-surface text-body border border-line/60 dark:bg-slate-800"
-                      }`}
-                    >
-                      {statusLabel}
-                    </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-display text-base sm:text-lg font-bold text-ink tracking-tight leading-snug">
+                      {edu.institution}
+                    </h3>
+                    {statusLabel && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 shrink-0 pt-0.5 text-[11px] font-medium ${
+                          edu.current
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-muted"
+                        }`}
+                      >
+                        {edu.current && (
+                          <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                        )}
+                        <span>{statusLabel}</span>
+                      </span>
+                    )}
                   </div>
 
-                  <h3 className="mt-1 font-display text-base sm:text-lg font-bold text-ink tracking-tight truncate">
-                    {edu.institution}
-                  </h3>
-
-                  <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted">
-                    <MapPin className="size-3 shrink-0" />
-                    <span className="truncate">{edu.location}</span>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px]">
+                      <Calendar className="size-3 shrink-0" />
+                      <span>
+                        {edu.startYear} —{" "}
+                        {edu.current
+                          ? currentLang === "en"
+                            ? "Present"
+                            : "Sekarang"
+                          : edu.endYear}
+                      </span>
+                    </span>
+                    {edu.location && (
+                      <span className="inline-flex items-center gap-1 min-w-0">
+                        <MapPin className="size-3 shrink-0" />
+                        <span className="truncate">{edu.location}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Major / Program & Period */}
-              <div className="mt-4 pt-4 border-t border-line/60 dark:border-line/40">
+              {/* Major / Program & Degree */}
+              <div className="mt-4 pt-3.5 border-t border-line/60 dark:border-line/40">
                 <h4 className="font-display text-sm sm:text-base font-bold text-ink">
                   {edu.program}
                 </h4>
-                <p className="mt-0.5 text-xs text-muted font-medium">
-                  {edu.degree}
-                </p>
-
-                <div className="flex items-center gap-2 mt-2 text-xs text-muted">
-                  <Calendar className="size-3.5 shrink-0" />
-                  <span className="font-mono text-[11px]">
-                    {edu.startYear} —{" "}
-                    {edu.current
-                      ? currentLang === "en"
-                        ? "Present"
-                        : "Sekarang"
-                      : edu.endYear}
-                  </span>
-                </div>
+                {edu.degree && (
+                  <p className="mt-0.5 text-xs text-muted font-medium">
+                    {edu.degree}
+                  </p>
+                )}
               </div>
 
               {/* Brief Description */}
@@ -560,11 +543,11 @@ export function AcademicJourneySection() {
                             : "Proyek & Riset Terkait"}
                         </span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="divide-y divide-line/50 dark:divide-line/30">
                         {edu.projects.map((proj) => (
                           <div
                             key={proj.title}
-                            className="rounded-lg border border-line/60 bg-surface/50 p-2.5 dark:border-line/30 dark:bg-slate-900/40"
+                            className="py-2 first:pt-0 last:pb-0"
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-semibold text-ink truncate">
@@ -583,7 +566,7 @@ export function AcademicJourneySection() {
                               )}
                             </div>
                             {proj.desc && (
-                              <p className="mt-1 text-[11px] text-body leading-relaxed">
+                              <p className="mt-0.5 text-[11px] text-body leading-relaxed">
                                 {proj.desc}
                               </p>
                             )}

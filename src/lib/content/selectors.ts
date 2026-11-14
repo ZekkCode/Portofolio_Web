@@ -1,16 +1,11 @@
 import type {
   SiteConfig,
-  GeneralProfileConfig,
-  StatsConfig,
   Project,
   EducationItem,
   ExperienceItem,
   AchievementItem,
   CertificateItem,
   TechStackItem,
-  ServiceItemConfig,
-  FaqItemConfig,
-  SectionVisibilityConfig,
 } from "./types";
 import { profile } from "@/lib/profile";
 

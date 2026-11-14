@@ -300,7 +300,7 @@ export const defaultProfileCard: ProfileCardConfig = {
   avatarUrl: "",
   iconUrl: "",
   miniAvatarUrl: "",
-  imageFit: "contain",
+  imageFit: "cover",
   name: profile.name,
   title: profile.roles,
   handle: "zekksparow",
@@ -333,7 +333,7 @@ export const defaultGeneralProfile: GeneralProfileConfig = {
     "Informatics student from Mojokerto. Designing interfaces in Figma, developing responsive web applications with Next.js & TypeScript, and exploring physical 3D interactions.",
   bio: [
     "Mahasiswa Teknik Informatika Universitas Trunojoyo Madura (angkatan 2024) yang mendalami UI/UX design dan rekayasa frontend web sejak 2020. Terbiasa merancang design system di Figma dan mengimplementasikannya ke Next.js serta TypeScript.",
-    "Berangkat dari latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang rapi, responsif, dan mudah digunakan untuk organisasi kampus dan klien freelance.",
+    "Memiliki latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang terstruktur, cepat, dan mudah digunakan untuk organisasi kampus dan klien.",
   ],
   bioEn: [
     "Informatics Engineering student at Universitas Trunojoyo Madura (class of 2024) specializing in UI/UX design and frontend web engineering since 2020. Experienced in crafting design systems in Figma and translating them into robust Next.js and TypeScript applications.",

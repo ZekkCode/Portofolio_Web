@@ -22,6 +22,7 @@ export function useBuddyRoaming({
 
   // Position references (avoiding high-frequency React re-renders)
   const xRef = useRef<number>(24);
+  const lastRenderedXRef = useRef<number | null>(null);
   const directionRef = useRef<BuddyDirection>(1);
   const stateRef = useRef<BuddyState>("idle");
   const domRef = useRef<HTMLDivElement | null>(null);
@@ -60,8 +61,10 @@ export function useBuddyRoaming({
 
   // Apply transform directly to DOM node for 60fps hardware-accelerated movement
   const applyTransform = useCallback((x: number) => {
-    if (domRef.current) {
-      domRef.current.style.transform = `translate3d(${Math.round(x)}px, 0, 0)`;
+    const rounded = Math.round(x);
+    if (domRef.current && lastRenderedXRef.current !== rounded) {
+      lastRenderedXRef.current = rounded;
+      domRef.current.style.transform = `translate3d(${rounded}px, 0, 0)`;
     }
   }, []);
 

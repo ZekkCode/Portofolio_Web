@@ -24,6 +24,9 @@ export interface StickerPeelProps
   bounce?: number;
   intro?: boolean;
   initialPosition?: "center" | { x: number; y: number };
+  initialHover?: boolean;
+  activeHover?: boolean;
+  onReady?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   dpr?: number;
@@ -49,6 +52,8 @@ type Settings = {
   bounce: number;
   intro: boolean;
   initialPosition: "center" | { x: number; y: number };
+  initialHover: boolean;
+  onReady?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   dpr?: number;
@@ -806,6 +811,9 @@ export const StickerPeel = memo(function StickerPeel({
   bounce = 0.35,
   intro = false,
   initialPosition = "center",
+  initialHover = false,
+  activeHover,
+  onReady,
   onDragStart,
   onDragEnd,
   dpr,
@@ -817,6 +825,7 @@ export const StickerPeel = memo(function StickerPeel({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hitRef = useRef<HTMLDivElement>(null);
   const wakeRef = useRef<(() => void) | null>(null);
+  const hoverSyncRef = useRef<((hovered: boolean) => void) | null>(null);
   const [fallback, setFallback] = useState(false);
 
   const settings: Settings = {
@@ -838,6 +847,8 @@ export const StickerPeel = memo(function StickerPeel({
     bounce: clamp(bounce, 0, 1),
     intro,
     initialPosition,
+    initialHover,
+    onReady,
     onDragStart,
     onDragEnd,
     dpr,
@@ -1090,8 +1101,14 @@ export const StickerPeel = memo(function StickerPeel({
         Math.abs(wrapAngle(dirTarget - state.dir)) > 0.002 ||
         Math.hypot(lightTarget.x - state.light.x, lightTarget.y - state.light.y, lightTarget.z - state.light.z) > 0.5;
 
-      canvas.style.opacity = "1";
-      root.style.willChange = moving ? "transform" : "";
+      if (canvas.style.opacity !== "1") {
+        canvas.style.opacity = "1";
+        settingsRef.current.onReady?.();
+      }
+      const nextWillChange = settingsRef.current.draggable && moving ? "transform" : "";
+      if (root.style.willChange !== nextWillChange) {
+        root.style.willChange = nextWillChange;
+      }
 
       if ((dirty || moving || !drawnInitial) && asset) {
         if (!draw()) return;
@@ -1229,15 +1246,26 @@ export const StickerPeel = memo(function StickerPeel({
     hit.addEventListener("pointercancel", onHitUp);
 
     applyLayout();
+    if (settingsRef.current.initialHover) {
+      state.hover = true;
+      dirty = true;
+    }
     load(settingsRef.current.imageSrc);
     wakeRef.current = () => {
       layout();
+    };
+    hoverSyncRef.current = (hovered: boolean) => {
+      if (state.hover === hovered) return;
+      state.hover = hovered;
+      dirty = true;
+      wake();
     };
 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
       wakeRef.current = null;
+      hoverSyncRef.current = null;
       resizeObserver.disconnect();
       intersection.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -1253,6 +1281,12 @@ export const StickerPeel = memo(function StickerPeel({
   useEffect(() => {
     wakeRef.current?.();
   }, [imageSrc, width, rotate, peelDirection, curlRadius, dpr]);
+
+  useEffect(() => {
+    if (activeHover !== undefined) {
+      hoverSyncRef.current?.(activeHover);
+    }
+  }, [activeHover]);
 
   return (
     <div

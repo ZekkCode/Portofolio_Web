@@ -13,7 +13,7 @@ interface ParallaxProps {
   children: ReactNode;
   speed?: number; // e.g. -0.3 to 0.3 (negative = rises faster, positive = lags behind)
   offset?: number; // explicit pixel translation override
-  align?: "center" | "top"; // "top" for hero/top-of-page elements, "center" for page sections
+  align?: "center" | "top" | "bottom"; // "top" for hero/top-of-page, "bottom" for footer, "center" for mid-page sections
   className?: string;
   style?: CSSProperties;
   scrub?: boolean | number;
@@ -63,20 +63,32 @@ export function Parallax({
 
         // Desktop ~32-54px range for speed 0.06-0.1, Mobile ~15-26px range for crisp depth without overflow
         const baseDistance = typeof offset === "number" ? offset : speed * (mobile ? 260 : 540);
+        const startY =
+          align === "top"
+            ? 0
+            : align === "bottom"
+              ? -baseDistance
+              : -baseDistance * 0.5;
+        const endY =
+          align === "top"
+            ? baseDistance
+            : align === "bottom"
+              ? 0
+              : baseDistance * 0.5;
 
         gsap.fromTo(
           content,
           {
-            y: align === "top" ? 0 : -baseDistance * 0.5,
+            y: startY,
           },
           {
-            y: align === "top" ? baseDistance : baseDistance * 0.5,
+            y: endY,
             ease: "none",
             force3D: true,
             scrollTrigger: {
               trigger,
               start: align === "top" ? "top top" : "top bottom",
-              end: align === "top" ? "bottom top" : "bottom top",
+              end: align === "bottom" ? "bottom bottom" : "bottom top",
               scrub: typeof scrub === "number" ? scrub : 0.65,
               invalidateOnRefresh: true,
             },

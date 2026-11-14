@@ -4,7 +4,7 @@ import { useState } from "react";
 import Lanyard from "@/components/lanyard";
 import ProfileCard from "@/components/profile-card";
 import type { SiteConfig, LanyardConfig, ProfileCardConfig } from "@/lib/site-store";
-import { Upload, Sparkles, Layers, Sliders, Eye } from "lucide-react";
+import { Upload, Sparkles, Layers } from "lucide-react";
 
 interface TabAppearanceProps {
   config: SiteConfig;
@@ -142,7 +142,7 @@ export function TabAppearance({
           }`}
         >
           <Layers className="size-4" />
-          Hologram Profile Card (Hero)
+          Hologram Profile Card (Kontak)
         </button>
       </div>
 
@@ -467,7 +467,11 @@ export function TabAppearance({
           <div className="sticky top-24 self-start rounded-2xl border border-line/70 bg-white/70 p-4 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Hologram Profile Card</h3>
             <div className="mt-3 flex items-center justify-center p-4">
-              <ProfileCard {...config.profileCard} />
+              <ProfileCard
+                {...config.profileCard}
+                avatarUrl={config.profileCard.avatarUrl || config.generalProfile?.avatarUrl || undefined}
+                imageFit={config.profileCard.avatarUrl ? config.profileCard.imageFit || "cover" : "cover"}
+              />
             </div>
             <p className="mt-2 text-center text-[11px] text-muted">
               Gerakkan kursor di atas kartu untuk melihat efek glare hologram dan 3D tilt.

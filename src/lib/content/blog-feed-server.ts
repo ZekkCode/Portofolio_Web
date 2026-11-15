@@ -1,6 +1,8 @@
 import { lookup as dnsLookupDefault } from "node:dns/promises";
 import { isIP } from "node:net";
 import {
+  extractAlternateFeedUrl,
+  isHtmlFeedResponse,
   parseExternalFeedPayload,
   sanitizeSyncErrorMessage,
   isPrivateOrReservedIp,
@@ -10,7 +12,7 @@ import {
 } from "./blog-sync";
 
 export const MAX_BLOG_FEED_BYTES = 1_500_000;
-export const DEFAULT_BLOG_FEED_TIMEOUT_MS = 4500;
+export const DEFAULT_BLOG_FEED_TIMEOUT_MS = 9000;
 export const DEFAULT_BLOG_FEED_MAX_REDIRECTS = 3;
 const SERVER_FEED_CACHE_TTL_MS = 60_000;
 
@@ -204,10 +206,168 @@ export function clearBlogFeedServerCache(): void {
   serverFeedCache.clear();
 }
 
+async function fetchSingleFeedTarget(params: {
+  initialUrl: URL;
+  attemptAt: string;
+  limit: number;
+  maxBytes: number;
+  maxRedirects: number;
+  controller: AbortController;
+  guard: (rawUrl: string) => Promise<URL>;
+  acceptHeader: string;
+}): Promise<
+  | { ok: true; text: string; contentType: string; finalUrl: string }
+  | { ok: false; result: BlogSyncResult }
+> {
+  const { initialUrl, attemptAt, maxBytes, maxRedirects, controller, guard, acceptHeader } = params;
+  let currentUrl = initialUrl;
+  let response: Response | null = null;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    response = await fetch(currentUrl.toString(), {
+      method: "GET",
+      redirect: "manual",
+      signal: controller.signal,
+      headers: {
+        Accept: acceptHeader,
+        "User-Agent": "ZekkPortfolio-FeedSync/2.0 (+https://zakariamp.dev)",
+      },
+      cache: "no-store",
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      try {
+        await response.body?.cancel();
+      } catch {
+        // ignore
+      }
+
+      const location = response.headers.get("location")?.trim();
+      if (!location) {
+        return {
+          ok: false,
+          result: failureResult({
+            attemptAt,
+            sourceUrl: currentUrl.toString(),
+            errorCode: "http_error",
+            errorMessage: `Server sumber mengembalikan redirect HTTP ${response.status} tanpa header Location.`,
+          }),
+        };
+      }
+
+      if (hop >= maxRedirects) {
+        return {
+          ok: false,
+          result: failureResult({
+            attemptAt,
+            sourceUrl: currentUrl.toString(),
+            errorCode: "too_many_redirects",
+            errorMessage: `Pengalihan (redirect) melebihi batas maksimum ${maxRedirects} kali.`,
+          }),
+        };
+      }
+
+      let resolvedTarget: string;
+      try {
+        resolvedTarget = new URL(location, currentUrl).toString();
+      } catch {
+        return {
+          ok: false,
+          result: failureResult({
+            attemptAt,
+            sourceUrl: currentUrl.toString(),
+            errorCode: "unsafe_url",
+            errorMessage: "Header redirect mengarah ke URL yang tidak valid.",
+          }),
+        };
+      }
+
+      try {
+        currentUrl = await guard(resolvedTarget);
+      } catch (err) {
+        if (err instanceof BlogFeedGuardError) {
+          return {
+            ok: false,
+            result: failureResult({
+              attemptAt,
+              sourceUrl: resolvedTarget,
+              errorCode: err.code,
+              errorMessage: err.message,
+            }),
+          };
+        }
+        return {
+          ok: false,
+          result: failureResult({
+            attemptAt,
+            sourceUrl: resolvedTarget,
+            errorCode: "blocked_destination",
+            errorMessage: "Tujuan redirect diblokir demi keamanan.",
+          }),
+        };
+      }
+
+      continue;
+    }
+
+    break;
+  }
+
+  if (!response) {
+    return {
+      ok: false,
+      result: failureResult({
+        attemptAt,
+        sourceUrl: currentUrl.toString(),
+        errorCode: "http_error",
+        errorMessage: "Tidak menerima respons HTTP dari sumber feed.",
+      }),
+    };
+  }
+
+  if (!response.ok) {
+    try {
+      await response.body?.cancel();
+    } catch {
+      // ignore
+    }
+    return {
+      ok: false,
+      result: failureResult({
+        attemptAt,
+        sourceUrl: currentUrl.toString(),
+        errorCode: "http_error",
+        errorMessage: `Sumber feed merespons dengan status HTTP ${response.status}.`,
+      }),
+    };
+  }
+
+  const bodyRead = await readResponseWithSizeLimit(response, maxBytes, controller);
+  if (!bodyRead.ok) {
+    return {
+      ok: false,
+      result: failureResult({
+        attemptAt,
+        sourceUrl: currentUrl.toString(),
+        errorCode: "response_too_large",
+        errorMessage: bodyRead.errorMessage,
+      }),
+    };
+  }
+
+  return {
+    ok: true,
+    text: bodyRead.text,
+    contentType: response.headers.get("content-type") || "",
+    finalUrl: currentUrl.toString(),
+  };
+}
+
 /**
  * Mengambil dan mem-parse feed blog eksternal dari sisi server dengan proteksi penuh:
  * validasi URL & DNS publik di setiap hop redirect, batas redirect, timeout ketat,
- * serta batas ukuran respons.
+ * serta batas ukuran respons. Jika respons HTML mendeklarasikan <link rel="alternate"> resmi
+ * atau memuat kartu artikel portal terstruktur (seperti /blog), data tetap diekstrak secara aman.
  */
 export async function fetchBlogFeedSecurely(
   rawUrl: string | undefined,
@@ -231,9 +391,9 @@ export async function fetchBlogFeedSecurely(
     });
   }
 
-  let currentUrl: URL;
+  let initialUrl: URL;
   try {
-    currentUrl = await guard(trimmedInput);
+    initialUrl = await guard(trimmedInput);
   } catch (err) {
     if (err instanceof BlogFeedGuardError) {
       return failureResult({
@@ -252,7 +412,7 @@ export async function fetchBlogFeedSecurely(
   }
 
   const canUseDefaultGuardCache = !options.destinationGuard && !options.dnsLookup && !options.noCache;
-  const cacheKey = `${currentUrl.toString()}::${limit}`;
+  const cacheKey = `${initialUrl.toString()}::${limit}`;
   if (canUseDefaultGuardCache) {
     const cached = serverFeedCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -264,122 +424,72 @@ export async function fetchBlogFeedSecurely(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    let response: Response | null = null;
+    const primaryFetch = await fetchSingleFeedTarget({
+      initialUrl,
+      attemptAt,
+      limit,
+      maxBytes,
+      maxRedirects,
+      controller,
+      guard,
+      acceptHeader:
+        "application/feed+json, application/json, application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, text/html;q=0.5",
+    });
 
-    for (let hop = 0; hop <= maxRedirects; hop++) {
-      response = await fetch(currentUrl.toString(), {
-        method: "GET",
-        redirect: "manual",
-        signal: controller.signal,
-        headers: {
-          Accept:
-            "application/feed+json, application/json, application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9",
-          "User-Agent": "ZekkPortfolio-FeedSync/2.0 (+https://zakariamp.dev)",
-        },
-        cache: "no-store",
-      });
+    if (!primaryFetch.ok) {
+      return primaryFetch.result;
+    }
 
-      if (response.status >= 300 && response.status < 400) {
+    // Jika respons berupa HTML dan mendeklarasikan <link rel="alternate"> resmi, ikuti feed tersebut dulu
+    if (isHtmlFeedResponse(primaryFetch.text, primaryFetch.contentType)) {
+      const altFeedUrl = extractAlternateFeedUrl(primaryFetch.text, primaryFetch.finalUrl);
+      if (altFeedUrl && altFeedUrl !== primaryFetch.finalUrl) {
         try {
-          await response.body?.cancel();
-        } catch {
-          // ignore
-        }
-
-        const location = response.headers.get("location")?.trim();
-        if (!location) {
-          return failureResult({
+          const guardedAlt = await guard(altFeedUrl);
+          const altFetch = await fetchSingleFeedTarget({
+            initialUrl: guardedAlt,
             attemptAt,
-            sourceUrl: currentUrl.toString(),
-            errorCode: "http_error",
-            errorMessage: `Server sumber mengembalikan redirect HTTP ${response.status} tanpa header Location.`,
+            limit,
+            maxBytes,
+            maxRedirects,
+            controller,
+            guard,
+            acceptHeader:
+              "application/feed+json, application/json, application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9",
           });
-        }
-
-        if (hop >= maxRedirects) {
-          return failureResult({
-            attemptAt,
-            sourceUrl: currentUrl.toString(),
-            errorCode: "too_many_redirects",
-            errorMessage: `Pengalihan (redirect) melebihi batas maksimum ${maxRedirects} kali.`,
-          });
-        }
-
-        let resolvedTarget: string;
-        try {
-          resolvedTarget = new URL(location, currentUrl).toString();
-        } catch {
-          return failureResult({
-            attemptAt,
-            sourceUrl: currentUrl.toString(),
-            errorCode: "unsafe_url",
-            errorMessage: "Header redirect mengarah ke URL yang tidak valid.",
-          });
-        }
-
-        try {
-          currentUrl = await guard(resolvedTarget);
-        } catch (err) {
-          if (err instanceof BlogFeedGuardError) {
-            return failureResult({
+          if (altFetch.ok && !isHtmlFeedResponse(altFetch.text, altFetch.contentType)) {
+            const altParsed = parseExternalFeedPayload({
+              rawText: altFetch.text,
+              contentType: altFetch.contentType,
+              limit,
+              sourceUrl: altFetch.finalUrl,
               attemptAt,
-              sourceUrl: resolvedTarget,
-              errorCode: err.code,
-              errorMessage: err.message,
             });
+            if (altParsed.ok) {
+              if (canUseDefaultGuardCache) {
+                if (serverFeedCache.size >= 20) {
+                  const oldestKey = serverFeedCache.keys().next().value;
+                  if (oldestKey) serverFeedCache.delete(oldestKey);
+                }
+                serverFeedCache.set(cacheKey, {
+                  result: altParsed,
+                  expiresAt: Date.now() + SERVER_FEED_CACHE_TTL_MS,
+                });
+              }
+              return altParsed;
+            }
           }
-          return failureResult({
-            attemptAt,
-            sourceUrl: resolvedTarget,
-            errorCode: "blocked_destination",
-            errorMessage: "Tujuan redirect diblokir demi keamanan.",
-          });
+        } catch {
+          // Lanjut evaluasi kartu HTML terstruktur di halaman asal
         }
-
-        continue;
       }
-
-      break;
-    }
-
-    if (!response) {
-      return failureResult({
-        attemptAt,
-        sourceUrl: currentUrl.toString(),
-        errorCode: "http_error",
-        errorMessage: "Tidak menerima respons HTTP dari sumber feed.",
-      });
-    }
-
-    if (!response.ok) {
-      try {
-        await response.body?.cancel();
-      } catch {
-        // ignore
-      }
-      return failureResult({
-        attemptAt,
-        sourceUrl: currentUrl.toString(),
-        errorCode: "http_error",
-        errorMessage: `Sumber feed merespons dengan status HTTP ${response.status}.`,
-      });
-    }
-
-    const bodyRead = await readResponseWithSizeLimit(response, maxBytes, controller);
-    if (!bodyRead.ok) {
-      return failureResult({
-        attemptAt,
-        sourceUrl: currentUrl.toString(),
-        errorCode: "response_too_large",
-        errorMessage: bodyRead.errorMessage,
-      });
     }
 
     const parsedResult = parseExternalFeedPayload({
-      rawText: bodyRead.text,
-      contentType: response.headers.get("content-type") || "",
+      rawText: primaryFetch.text,
+      contentType: primaryFetch.contentType,
       limit,
-      sourceUrl: currentUrl.toString(),
+      sourceUrl: primaryFetch.finalUrl,
       attemptAt,
     });
 
@@ -399,7 +509,7 @@ export async function fetchBlogFeedSecurely(
     if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
       return failureResult({
         attemptAt,
-        sourceUrl: currentUrl.toString(),
+        sourceUrl: initialUrl.toString(),
         errorCode: "timeout",
         errorMessage: `Permintaan feed melebihi batas waktu ${timeoutMs} ms.`,
       });
@@ -408,7 +518,7 @@ export async function fetchBlogFeedSecurely(
     const rawMsg = err instanceof Error ? err.message : "Gagal terhubung ke sumber feed.";
     return failureResult({
       attemptAt,
-      sourceUrl: currentUrl.toString(),
+      sourceUrl: initialUrl.toString(),
       errorCode: "http_error",
       errorMessage: `Gagal mengambil feed: ${rawMsg}`,
     });

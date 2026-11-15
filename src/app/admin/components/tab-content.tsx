@@ -1104,9 +1104,11 @@ export function TabContent({
                     </p>
                   )}
 
-                  {looksLikeHtmlPortal && syncMeta.status !== "success_posts" && (
+                  {looksLikeHtmlPortal &&
+                    effectiveStatus === "error" &&
+                    (syncMeta.errorMessage || "").toLowerCase().includes("html") && (
                     <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-300">
-                      Catatan: URL sumber saat ini mengarah ke halaman web portal (`/blog`), bukan endpoint feed JSON/RSS/Atom. Isi URL endpoint feed khusus jika portal menyediakan feed, atau gunakan Mode Manual.
+                      Catatan: Halaman HTML tersebut tidak memuat tautan feed RSS/Atom/JSON maupun kartu artikel terstruktur. Isi URL endpoint feed khusus jika portal menyediakan feed, atau gunakan Mode Manual.
                     </p>
                   )}
                 </div>

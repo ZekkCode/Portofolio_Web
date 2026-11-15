@@ -581,9 +581,198 @@ function safeHostLabel(rawUrl: string): string {
   }
 }
 
+export function isHtmlFeedResponse(rawText: string, contentType: string): boolean {
+  const ct = (contentType || "").toLowerCase();
+  const trimmed = (rawText || "").trim();
+  return (
+    ct.includes("text/html") ||
+    ct.includes("application/xhtml+xml") ||
+    /^<!doctype\s+html/i.test(trimmed) ||
+    /^<html[\s>]/i.test(trimmed) ||
+    /^<(?:head|body)[\s>]/i.test(trimmed)
+  );
+}
+
 /**
- * Mem-parse respons feed eksternal (JSON / RSS / Atom) secara ketat.
- * Menolak halaman HTML, tidak menebak endpoint tersembunyi, dan tidak mengisi fallback dummy.
+ * Menemukan link feed RSS/Atom/JSON resmi yang dideklarasikan eksplisit oleh halaman HTML
+ * melalui tag <link rel="alternate" type="..."> tanpa menebak endpoint.
+ */
+export function extractAlternateFeedUrl(htmlText: string, baseUrl: string): string | null {
+  if (!htmlText) return null;
+  const linkTags = htmlText.matchAll(/<link\b([^>]+)>/gi);
+  for (const m of linkTags) {
+    const attrs = m[1] || "";
+    if (!/\brel=["'][^"']*\balternate\b[^"']*["']/i.test(attrs)) continue;
+    const typeMatch = attrs.match(/\btype=["']([^"']+)["']/i);
+    const mime = (typeMatch?.[1] || "").toLowerCase().split(";")[0].trim();
+    if (
+      mime !== "application/rss+xml" &&
+      mime !== "application/atom+xml" &&
+      mime !== "application/feed+json" &&
+      mime !== "application/json"
+    ) {
+      continue;
+    }
+    const hrefMatch = attrs.match(/\bhref=["']([^"']+)["']/i);
+    if (!hrefMatch?.[1]) continue;
+    const resolved = resolveSafeArticleUrl(decodeHtmlEntities(hrefMatch[1]), baseUrl);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+function unwrapNextImageProxyUrl(rawSrc: string, baseUrl: string): string {
+  const decoded = decodeHtmlEntities(rawSrc || "").trim();
+  if (!decoded) return "";
+  try {
+    const parsed = new URL(decoded, baseUrl);
+    if (parsed.pathname === "/_next/image" && parsed.searchParams.has("url")) {
+      const inner = parsed.searchParams.get("url") || "";
+      return resolveSafeOptionalImageUrl(inner, baseUrl);
+    }
+    return resolveSafeOptionalImageUrl(parsed.toString(), baseUrl);
+  } catch {
+    return resolveSafeOptionalImageUrl(decoded, baseUrl);
+  }
+}
+
+function isLikelyArticleHref(resolvedUrl: string, sourceUrl: string): boolean {
+  if (canonicalizeBlogUrl(resolvedUrl) === canonicalizeBlogUrl(sourceUrl)) return false;
+  try {
+    const parsed = new URL(resolvedUrl);
+    const segs = parsed.pathname.split("/").filter(Boolean);
+    if (segs.length === 0) return false;
+    // Hindari link halaman nav portal seperti /blog, /about, /contact, /sertifikat
+    if (segs.length === 1 && ["blog", "about", "contact", "portofolio", "sertifikat"].includes(segs[0].toLowerCase())) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function extractArticleFieldsFromCardHtml(
+  cardHtml: string,
+  href: string,
+  idx: number,
+  sourceUrl: string
+): BlogPost | null {
+  const resolvedUrl = resolveSafeArticleUrl(decodeHtmlEntities(href), sourceUrl);
+  if (!resolvedUrl || !isLikelyArticleHref(resolvedUrl, sourceUrl)) return null;
+
+  const headingMatch = cardHtml.match(/<h[1-4]\b[^>]*>([\s\S]*?)<\/h[1-4]>/i);
+  const imgAltMatch = cardHtml.match(/<img\b[^>]*\balt=(["'])([\s\S]*?)\1/i);
+  const title = stripTagsAndNormalize(headingMatch?.[1] || imgAltMatch?.[2] || "");
+  if (!title) return null;
+
+  const excerptMatch =
+    cardHtml.match(
+      /<p\b[^>]*class=(["'])[^"']*\b(?:card-excerpt|excerpt|summary|desc)\b[^"']*\1[^>]*>([\s\S]*?)<\/p>/i
+    ) || cardHtml.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+  const excerpt = stripTagsAndNormalize(excerptMatch?.[2] ?? excerptMatch?.[1] ?? "");
+
+  const categoryMatch = cardHtml.match(
+    /<(?:span|div)\b[^>]*class=(["'])[^"']*\b(?:category-pill|category|badge|tag)\b[^"']*\1[^>]*>([\s\S]*?)<\/(?:span|div)>/i
+  );
+  const category = stripTagsAndNormalize(categoryMatch?.[2] || "") || "Blog";
+
+  const timeDatetimeMatch = cardHtml.match(/<time\b[^>]*\bdatetime=(["'])([^"']+)\1/i);
+  const dateBlockMatch =
+    cardHtml.match(
+      /<(?:span|div|time)\b[^>]*class=(["'])[^"']*\b(?:card-date|date|published)\b[^"']*\1[^>]*>([\s\S]*?)<\/(?:span|div|time)>/i
+    ) || cardHtml.match(/<time\b[^>]*>([\s\S]*?)<\/time>/i);
+  const publishedAt = stripTagsAndNormalize(
+    dateBlockMatch?.[2] ?? dateBlockMatch?.[1] ?? timeDatetimeMatch?.[2] ?? ""
+  );
+
+  const imgSrcMatch = cardHtml.match(/<img\b[^>]*\b(?:src|data-src)=(["'])([^"']+)\1/i);
+  const coverImage = imgSrcMatch?.[2]
+    ? unwrapNextImageProxyUrl(imgSrcMatch[2], sourceUrl)
+    : "";
+
+  return sanitizeFeedPostItem(
+    {
+      title,
+      url: resolvedUrl,
+      excerpt,
+      coverImage,
+      category,
+      publishedAt,
+    },
+    idx,
+    sourceUrl
+  );
+}
+
+/**
+ * Mengekstrak daftar artikel asli dari markup HTML terstruktur portal blog (misalnya kartu <article>
+ * atau tautan /post/ pada zekktech.biz.id/blog) tanpa mengembalikan data contoh fiktif.
+ */
+export function parseHtmlPortalArticleCards(
+  htmlText: string,
+  limit: number,
+  sourceUrl: string,
+  attemptAt: string
+): BlogSyncResult | null {
+  const sourceHost = safeHostLabel(sourceUrl);
+  const maxScan = Math.max(limit * 4, 48);
+  const collected: BlogPost[] = [];
+
+  // Pola 1: <a href="/post/...">...<article>...</article>...</a> (struktur Next.js portal blog)
+  const wrappedAnchorRegex = /<a\b[^>]*\bhref=(["'])([^"'#][^"']*)\1[^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = wrappedAnchorRegex.exec(htmlText)) !== null && collected.length < maxScan) {
+    const href = m[2];
+    const inner = m[3];
+    const hasStructuredCard =
+      /<article\b/i.test(inner) ||
+      (/\/(?:post|posts|article|articles|artikel)\//i.test(href) && /<h[1-4]\b/i.test(inner));
+    if (!hasStructuredCard) continue;
+
+    const item = extractArticleFieldsFromCardHtml(inner, href, collected.length, sourceUrl);
+    if (item) collected.push(item);
+  }
+
+  // Pola 2: <article>...<a href="..."><h3>Title</h3></a>...</article>
+  if (collected.length === 0) {
+    const articleBlockRegex = /<article\b[^>]*>([\s\S]*?)<\/article>/gi;
+    while ((m = articleBlockRegex.exec(htmlText)) !== null && collected.length < maxScan) {
+      const inner = m[1];
+      if (!/<h[1-4]\b/i.test(inner)) continue;
+      const anchorMatch = inner.match(/<a\b[^>]*\bhref=(["'])([^"'#][^"']*)\1/i);
+      if (!anchorMatch?.[2]) continue;
+
+      const item = extractArticleFieldsFromCardHtml(
+        inner,
+        anchorMatch[2],
+        collected.length,
+        sourceUrl
+      );
+      if (item) collected.push(item);
+    }
+  }
+
+  const deduped = deduplicateBlogPosts(collected, sourceUrl).slice(0, limit);
+  if (deduped.length === 0) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    status: "success_posts",
+    attemptAt,
+    syncedAt: attemptAt,
+    sourceHost,
+    count: deduped.length,
+    posts: deduped,
+  };
+}
+
+/**
+ * Mem-parse respons feed eksternal (JSON / RSS / Atom) secara ketat,
+ * serta mendukung kartu artikel HTML terstruktur pada portal blog resmi.
+ * Menolak halaman HTML non-artikel dan tidak pernah mengisi fallback dummy.
  */
 export function parseExternalFeedPayload(params: {
   rawText: string;
@@ -597,14 +786,13 @@ export function parseExternalFeedPayload(params: {
   const trimmed = (rawText || "").trim();
   const sourceHost = safeHostLabel(sourceUrl);
 
-  // Tolak tegas halaman web HTML (termasuk portal HTML seperti /blog)
-  if (
-    ct.includes("text/html") ||
-    ct.includes("application/xhtml+xml") ||
-    /^<!doctype\s+html/i.test(trimmed) ||
-    /^<html[\s>]/i.test(trimmed) ||
-    /^<(?:head|body)[\s>]/i.test(trimmed)
-  ) {
+  // Halaman HTML: ekstrak hanya jika memuat kartu artikel terstruktur; HTML lain tetap ditolak
+  if (isHtmlFeedResponse(trimmed, ct)) {
+    const htmlCardsResult = parseHtmlPortalArticleCards(trimmed, limit, sourceUrl, attemptAt);
+    if (htmlCardsResult) {
+      return htmlCardsResult;
+    }
+
     return {
       ok: false,
       status: "error",
@@ -615,7 +803,7 @@ export function parseExternalFeedPayload(params: {
       posts: [],
       errorCode: "html_not_feed",
       errorMessage:
-        "URL sumber mengembalikan halaman HTML, bukan feed JSON, RSS, atau Atom. Periksa konfigurasi URL feed.",
+        "URL sumber mengembalikan halaman HTML tanpa feed JSON/RSS/Atom maupun kartu artikel terstruktur. Periksa konfigurasi URL.",
     };
   }
 

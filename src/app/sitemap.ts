@@ -10,13 +10,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const prof = getPublishedProfile(config, "id");
   const baseUrl = (seo.canonicalUrl || prof.site || "https://zakariamp.vercel.app").replace(/\/$/, "");
   const lastModified = config.updatedAt ? new Date(config.updatedAt) : new Date();
+  const safeLastMod = Number.isNaN(lastModified.getTime()) ? new Date() : lastModified;
+  const ogImageUrl = seo.ogImage?.startsWith("http")
+    ? seo.ogImage
+    : `${baseUrl}${seo.ogImage?.startsWith("/") ? seo.ogImage : "/opengraph-image"}`;
 
   return [
     {
       url: baseUrl,
-      lastModified: Number.isNaN(lastModified.getTime()) ? new Date() : lastModified,
+      lastModified: safeLastMod,
       changeFrequency: "weekly",
       priority: 1.0,
+      images: [ogImageUrl, `${baseUrl}/images/zakaria-profile-og.png`],
     },
   ];
 }

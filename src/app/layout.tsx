@@ -8,9 +8,13 @@ import { GlobalClickSound } from "@/components/global-click-sound";
 import { profile } from "@/lib/profile";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import {
+  getPublishedCertificates,
+  getPublishedEducation,
   getPublishedFAQ,
   getPublishedProfile,
   getPublishedSeo,
+  getPublishedServices,
+  getPublishedTechStack,
 } from "@/lib/content/selectors";
 import "./globals.css";
 
@@ -49,13 +53,23 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+function resolveAbsoluteUrl(rawUrl: string | undefined, baseUrl: string, fallbackPath: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const candidate = (rawUrl || "").trim() || fallbackPath;
+  try {
+    return new URL(candidate, `${cleanBase}/`).toString();
+  } catch {
+    return `${cleanBase}${fallbackPath.startsWith("/") ? fallbackPath : `/${fallbackPath}`}`;
+  }
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const config = await fetchPublishedContent();
   const pub = getPublishedProfile(config, "id");
   const seo = getPublishedSeo(config, "id");
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = seo.canonicalUrl || pub.site || profile.site;
+  const siteUrl = (seo.canonicalUrl || pub.site || profile.site).replace(/\/$/, "");
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
   const metaDesc = seo.metaDesc || pub.heroDesc;
   const ogImage = seo.ogImage || "/opengraph-image";
@@ -64,11 +78,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(siteUrl),
+    manifest: "/manifest.webmanifest",
     alternates: {
       canonical: "/",
       languages: {
         "id-ID": "/",
-        "en-US": "/",
         "x-default": "/",
       },
     },
@@ -156,10 +170,6 @@ export async function generateMetadata(): Promise<Metadata> {
         "max-snippet": -1,
       },
     },
-    icons: {
-      icon: [{ url: "/icon", type: "image/png", sizes: "32x32" }],
-      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
-    },
     other: {
       "geo.region": "ID-JI",
       "geo.placename": "Mojokerto",
@@ -176,12 +186,54 @@ export default async function RootLayout({
   const pub = getPublishedProfile(config, "id");
   const seo = getPublishedSeo(config, "id");
   const pubFaq = getPublishedFAQ(config, "id");
+  const pubEducation = getPublishedEducation(config, "id");
+  const pubCertificates = getPublishedCertificates(config, undefined, "id");
+  const pubServices = getPublishedServices(config, "id");
+  const pubStack = getPublishedTechStack(config, undefined, { locale: "id" });
+
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = seo.canonicalUrl || pub.site || profile.site;
+  const siteUrl = (seo.canonicalUrl || pub.site || profile.site).replace(/\/$/, "");
   const email = pub.email;
   const phone = pub.phone;
   const bioIntro = pub.heroDesc;
+  const absoluteOgImage = resolveAbsoluteUrl(seo.ogImage, siteUrl, "/opengraph-image");
+  const absolutePortraitUrl = `${siteUrl}/images/zakaria-profile-og.png`;
+
+  const sameAsUrls = Array.from(
+    new Set([
+      ...pub.socials.filter((s) => s.href?.startsWith("http")).map((s) => s.href),
+      ...(config.blog?.portalUrl?.startsWith("http") ? [config.blog.portalUrl] : []),
+    ])
+  );
+
+  const knowsAbout = Array.from(
+    new Set([
+      ...pubServices.map((s) => s.title).filter(Boolean),
+      ...pubStack.map((t) => t.name).filter(Boolean),
+    ])
+  ).slice(0, 16);
+
+  const alumniOf = pubEducation
+    .filter((edu) => edu.institution)
+    .map((edu) => ({
+      "@type": "EducationalOrganization",
+      name: edu.institution,
+    }));
+
+  const credentials = pubCertificates
+    .slice(0, 12)
+    .filter((cert) => cert.title)
+    .map((cert) => ({
+      "@type": "EducationalOccupationalCredential",
+      name: cert.title,
+      credentialCategory: cert.category || "Certificate",
+      recognizedBy: {
+        "@type": "Organization",
+        name: cert.issuer,
+      },
+      ...(cert.credentialUrl?.startsWith("http") ? { url: cert.credentialUrl } : {}),
+    }));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -192,7 +244,7 @@ export default async function RootLayout({
         url: siteUrl,
         name: brand,
         description: seo.metaDesc || `Portfolio resmi ${name} (${brand})`,
-        inLanguage: ["id-ID", "en-US"],
+        inLanguage: "id-ID",
         publisher: {
           "@id": `${siteUrl}/#person`,
         },
@@ -203,7 +255,7 @@ export default async function RootLayout({
         name,
         alternateName: [pub.nickname, brand, config.profileCard?.handle || "zekksparow"],
         url: siteUrl,
-        image: seo.ogImage || `${siteUrl}/opengraph-image`,
+        image: [absolutePortraitUrl, absoluteOgImage],
         jobTitle: seo.personJobTitle || pub.roles,
         description: bioIntro,
         gender: "Male",
@@ -215,15 +267,18 @@ export default async function RootLayout({
           addressLocality: pub.location,
           addressCountry: "ID",
         },
-        sameAs: pub.socials
-          .filter((s) => s.href?.startsWith("http"))
-          .map((s) => s.href),
+        ...(knowsAbout.length > 0 ? { knowsAbout } : {}),
+        ...(alumniOf.length > 0 ? { alumniOf } : {}),
+        ...(credentials.length > 0 ? { hasCredential: credentials } : {}),
+        sameAs: sameAsUrls,
       },
       {
         "@type": "ProfilePage",
         "@id": `${siteUrl}/#profilepage`,
         url: siteUrl,
         name: `${name} | Portfolio`,
+        inLanguage: "id-ID",
+        ...(config.updatedAt ? { dateModified: config.updatedAt } : {}),
         isPartOf: {
           "@id": `${siteUrl}/#website`,
         },
@@ -233,7 +288,7 @@ export default async function RootLayout({
         mainEntity: {
           "@id": `${siteUrl}/#person`,
         },
-        primaryImageOfPage: seo.ogImage || `${siteUrl}/opengraph-image`,
+        primaryImageOfPage: absoluteOgImage,
       },
       ...(pubFaq.length > 0
         ? [
@@ -260,7 +315,7 @@ export default async function RootLayout({
         <script
           id="structured-data"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AdaptivePerformanceProvider>

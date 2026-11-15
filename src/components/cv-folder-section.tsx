@@ -104,9 +104,9 @@ export function StaticCvFolder({
                   />
                 </div>
                 <div className="mt-2 space-y-0.5">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                     {p.title}
-                  </h4>
+                  </h3>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                     {p.subtitle}
                   </p>

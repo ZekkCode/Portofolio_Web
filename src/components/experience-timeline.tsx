@@ -196,9 +196,9 @@ export function ExperienceTimeline() {
       {/* Top Header: Title */}
       <div className="flex items-center gap-2 mb-4 sm:mb-6">
         <Briefcase className="size-4 text-brand dark:text-blue-400" />
-        <span className="font-display text-sm font-bold text-ink">
+        <h3 className="font-display text-sm font-bold text-ink">
           {t("about.experienceTitle", "Aktivitas Organisasi & Karir")}
-        </span>
+        </h3>
       </div>
 
       {/* HORIZONTAL TIMELINE TRACK WITH MILESTONE NODES */}

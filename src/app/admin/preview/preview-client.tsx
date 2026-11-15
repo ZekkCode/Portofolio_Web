@@ -32,7 +32,9 @@ export function PreviewClient({ initialConfig, initialUpdatedAt }: PreviewClient
           router.push("/admin");
         }, 1000);
       } else {
-        setPublishStatus(`Gagal publikasi: ${res.message || "Periksa integritas data"}`);
+        setPublishStatus(
+          `Gagal publikasi: ${res.details?.[0] || res.message || "Periksa integritas data"}`
+        );
       }
     } catch {
       setPublishStatus("Koneksi gagal");

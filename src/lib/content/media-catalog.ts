@@ -85,24 +85,24 @@ export function scanReferencedMedia(config: Partial<SiteConfig>): MediaCatalogIt
 
   // 1. Profil, Identitas & Hero
   if (config.headerLogoUrl) add(config.headerLogoUrl, "Header Brand Logo", "identity");
-  if (config.generalProfile?.avatarUrl) add(config.generalProfile.avatarUrl, "Foto Avatar Profil", "identity");
+  if (config.generalProfile?.avatarUrl) add(config.generalProfile.avatarUrl, "Potret Profil Global (Avatar Orang)", "identity");
   if (config.generalProfile?.aboutPersona?.frontImage) {
-    add(config.generalProfile.aboutPersona.frontImage, "About Persona Card (Depan)", "identity");
+    add(config.generalProfile.aboutPersona.frontImage, "Kartu Persona About (Frontend Dev / Depan)", "identity");
   }
   if (config.generalProfile?.aboutPersona?.backImage) {
-    add(config.generalProfile.aboutPersona.backImage, "About Persona Card (Belakang)", "identity");
+    add(config.generalProfile.aboutPersona.backImage, "Kartu Persona About (Graphic Designer / Belakang)", "identity");
   }
   (config.generalProfile?.socials || []).forEach((soc) => {
     if (soc.iconUrl) add(soc.iconUrl, `Ikon Sosial: ${soc.label}`, "identity");
   });
 
   // 2. Tampilan 3D & ProfileCard
-  if (config.lanyard?.frontImage) add(config.lanyard.frontImage, "Lanyard Depan", "appearance");
-  if (config.lanyard?.backImage) add(config.lanyard.backImage, "Lanyard Belakang", "appearance");
-  if (config.lanyard?.strapImage) add(config.lanyard.strapImage, "Lanyard Tali", "appearance");
-  if (config.profileCard?.avatarUrl) add(config.profileCard.avatarUrl, "Profile Card Avatar", "appearance");
-  if (config.profileCard?.iconUrl) add(config.profileCard.iconUrl, "Profile Card Icon", "appearance");
-  if (config.profileCard?.miniAvatarUrl) add(config.profileCard.miniAvatarUrl, "Profile Card Mini Avatar", "appearance");
+  if (config.lanyard?.frontImage) add(config.lanyard.frontImage, "Lanyard 3D (Sisi Depan / Frontend Dev)", "appearance");
+  if (config.lanyard?.backImage) add(config.lanyard.backImage, "Lanyard 3D (Sisi Belakang / Graphic Designer)", "appearance");
+  if (config.lanyard?.strapImage) add(config.lanyard.strapImage, "Lanyard 3D (Tekstur Tali)", "appearance");
+  if (config.profileCard?.avatarUrl) add(config.profileCard.avatarUrl, "Hologram Card (Avatar Potret Utama)", "appearance");
+  if (config.profileCard?.iconUrl) add(config.profileCard.iconUrl, "Hologram Card (Watermark/Ikon Latar)", "appearance");
+  if (config.profileCard?.miniAvatarUrl) add(config.profileCard.miniAvatarUrl, "Hologram Card (Avatar Mini Footer)", "appearance");
 
   // 3. Proyek
   (config.projects || []).forEach((p) => {

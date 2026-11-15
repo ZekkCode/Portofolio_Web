@@ -1,4 +1,26 @@
 import { profile } from "@/lib/profile";
+import {
+  normalizeCertificateVerification,
+  type CertificateVerificationStatus,
+} from "@/lib/content/certificate-verification";
+import {
+  DEFAULT_TECH_STACK_CATEGORIES,
+  normalizeTechStackCategories,
+  normalizeTechStackItems,
+} from "@/lib/content/tech-stack-categories";
+import {
+  DEFAULT_DESIGNER_CARD_URL,
+  DEFAULT_FRONTEND_CARD_URL,
+  DEFAULT_PORTRAIT_AVATAR_URL,
+} from "@/lib/content/identity-images";
+import {
+  DEFAULT_COMBINED_CV_FILENAME,
+  DEFAULT_COMBINED_CV_PAGES,
+  DEFAULT_COMBINED_CV_PDF_URL,
+  isDefaultCombinedCvPdfUrl,
+} from "@/lib/content/cv-documents";
+
+export type { CertificateVerificationStatus };
 
 export type LanyardConfig = {
   frontImage: string;
@@ -320,6 +342,9 @@ export type CertificateItem = {
   expiryDate?: string;
   category: string;
   image?: string;
+  verificationStatus?: CertificateVerificationStatus;
+  verifiedAt?: string;
+  verifiedEvidenceHash?: string;
   featured?: boolean;
   allowDownload?: boolean;
   published?: boolean;
@@ -418,6 +443,13 @@ export type SyncedBlogPostOverride = {
   updatedAt?: string;
 };
 
+export type BlogSyncStatus =
+  | "never"
+  | "syncing"
+  | "success_empty"
+  | "success_posts"
+  | "error";
+
 export type BlogConfig = {
   feedUrl: string;
   portalUrl?: string;
@@ -435,6 +467,10 @@ export type BlogConfig = {
   syncedPosts?: ManualBlogPostConfig[];
   syncedOverrides?: Record<string, SyncedBlogPostOverride>;
   lastSyncedAt?: string;
+  lastSyncAttemptAt?: string;
+  syncStatus?: BlogSyncStatus;
+  lastSyncCount?: number;
+  lastSyncError?: string;
 };
 
 export type SectionKey =
@@ -619,7 +655,7 @@ export const defaultGeneralProfile: GeneralProfileConfig = {
     "Informatics Engineering student at Universitas Trunojoyo Madura (class of 2024) specializing in UI/UX design and frontend web engineering since 2020. Experienced in crafting design systems in Figma and translating them into robust Next.js and TypeScript applications.",
     "Rooted in graphic design, multimedia, and computer hardware maintenance. Proven track record in delivering clean, responsive, and accessible web interfaces for campus organizations and freelance clients.",
   ],
-  avatarUrl: "/card-front-v2.webp",
+  avatarUrl: DEFAULT_PORTRAIT_AVATAR_URL,
   location: "Mojokerto, Jawa Timur",
   locationEn: "Mojokerto, East Java, Indonesia",
   availability: "Terbuka untuk kolaborasi & proyek freelance",
@@ -638,8 +674,8 @@ export const defaultGeneralProfile: GeneralProfileConfig = {
   ctaSecondaryLabelEn: "Career Files",
   ctaSecondaryHref: "#cv",
   aboutPersona: {
-    frontImage: "/card-front-v2.webp",
-    backImage: "/card-back-v2.webp",
+    frontImage: DEFAULT_FRONTEND_CARD_URL,
+    backImage: DEFAULT_DESIGNER_CARD_URL,
     frontLabelId: "Frontend Dev",
     frontLabelEn: "Frontend Dev",
     frontCaptionId: "Antarmuka web & rekayasa interaktif",
@@ -676,12 +712,7 @@ export const defaultProjectCategories: ProjectCategoryConfig[] = [
   { id: "pcat-both", key: "both", labelId: "IT & Design", labelEn: "IT & Design", sortOrder: 3, visible: true },
 ];
 
-export const defaultTechStackCategories: TechStackCategoryConfig[] = [
-  { key: "uiux", labelId: "UI/UX & Desain", labelEn: "UI/UX & Design", sortOrder: 1, visible: true },
-  { key: "frontend", labelId: "Frontend Web", labelEn: "Frontend Web", sortOrder: 2, visible: true },
-  { key: "visual", labelId: "Desain Grafis / Media", labelEn: "Visual & Media", sortOrder: 3, visible: true },
-  { key: "systems", labelId: "Sistem & Basis Data", labelEn: "Systems & Databases", sortOrder: 4, visible: true },
-];
+export const defaultTechStackCategories: TechStackCategoryConfig[] = DEFAULT_TECH_STACK_CATEGORIES;
 
 export const defaultProjects: Project[] = [];
 
@@ -711,7 +742,7 @@ export const defaultCvDocs: CvDocConfig[] = [
     versionLabel: "ATS v2025",
     updatedAt: "2025",
     allowDownload: true,
-    downloadFilename: "CV-ATS-ZakariaMP-Graphic-Designer.pdf",
+    downloadFilename: DEFAULT_COMBINED_CV_FILENAME,
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
     skills: ["Visual Identity Design", "Typography & Layout Systems", "Digital Campaign & Social Media", "Vector Illustration"],
@@ -741,7 +772,7 @@ export const defaultCvDocs: CvDocConfig[] = [
     versionLabel: "ATS v2025",
     updatedAt: "2025",
     allowDownload: true,
-    downloadFilename: "CV-ATS-ZakariaMP-UIUX-Designer.pdf",
+    downloadFilename: DEFAULT_COMBINED_CV_FILENAME,
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
     skills: ["Design System & Token Architecture", "Wireframing & User Flows", "High-Fidelity Interactive Prototyping", "Usability Testing & Audit"],
@@ -771,7 +802,7 @@ export const defaultCvDocs: CvDocConfig[] = [
     versionLabel: "ATS v2025",
     updatedAt: "2025",
     allowDownload: true,
-    downloadFilename: "CV-ATS-ZakariaMP-Frontend-Developer.pdf",
+    downloadFilename: DEFAULT_COMBINED_CV_FILENAME,
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
     skills: ["Next.js App Router & SSR", "React & Strict TypeScript", "Tailwind CSS & GSAP Animation", "WebGL / Three.js Physics"],
@@ -801,7 +832,7 @@ export const defaultCvDocs: CvDocConfig[] = [
     versionLabel: "ATS v2025",
     updatedAt: "2025",
     allowDownload: true,
-    downloadFilename: "CV-ATS-ZakariaMP-IT-Support.pdf",
+    downloadFilename: DEFAULT_COMBINED_CV_FILENAME,
     pageCount: 4,
     pages: ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"],
     skills: ["Hardware Troubleshooting & Assembly", "Network Diagnostics & Routing", "Linux System Administration", "Technical Documentation"],
@@ -943,6 +974,7 @@ export const defaultCertificates: CertificateItem[] = (profile.certificates || [
   date: c.date,
   credentialUrl: c.credentialUrl || "",
   category: (c.category || "design") as "design" | "frontend" | "systems" | "all",
+  verificationStatus: "unverified",
   published: true,
   sortOrder: idx + 1,
 }));
@@ -1130,7 +1162,7 @@ export const defaultSections: Record<string, SectionConfigItem> = {
   stack: { visible: true, sortOrder: 6, titleId: "Tech Stack & Alat", titleEn: "Tech Stack & Tools", descId: "Alat desain, bahasa pemrograman, framework, dan utilitas produksi.", descEn: "Design tools, programming languages, frameworks, and production utilities." },
   projects: { visible: true, sortOrder: 7, titleId: "Proyek Terpilih", titleEn: "Selected Projects", descId: "Eksplorasi produk web, antarmuka pengguna, dan rekayasa frontend.", descEn: "Web products, UI architecture, and frontend engineering explorations." },
   blog: { visible: true, sortOrder: 8, titleId: "Latest from ZekkTech Blog", titleEn: "Latest from ZekkTech Blog", descId: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.", descEn: "Notes, thoughts, and technical articles on design and web engineering.", ctaLabelId: "Semua Artikel di Blog", ctaLabelEn: "All Articles on Blog" },
-  certificates: { visible: true, sortOrder: 9, titleId: "Sertifikasi & Kredensial", titleEn: "Certifications & Credentials", descId: "Sertifikasi kompetensi profesional terverifikasi.", descEn: "Verified professional certifications and credentials." },
+  certificates: { visible: true, sortOrder: 9, titleId: "Sertifikasi & Kredensial", titleEn: "Certifications & Credentials", descId: "Daftar sertifikasi kompetensi profesional dan pelatihan yang telah diselesaikan.", descEn: "Completed professional competency certifications and training programs." },
   faq: { visible: true, sortOrder: 10, titleId: "Pertanyaan Umum", titleEn: "FAQ", descId: "Jawaban singkat mengenai alur kerja, waktu pengerjaan, dan kolaborasi.", descEn: "Quick answers regarding scope, timelines, and collaboration." },
   contact: { visible: true, sortOrder: 11, titleId: "Mulai Diskusi", titleEn: "Start a Conversation", descId: "Terbuka untuk kolaborasi proyek desain produk dan web engineering.", descEn: "Open for product design and frontend engineering collaborations." },
 };
@@ -1151,6 +1183,7 @@ export const defaultBlogConfig: BlogConfig = {
   manualPosts: [],
   syncedPosts: [],
   syncedOverrides: {},
+  syncStatus: "never",
 };
 
 export const defaultSiteConfig: SiteConfig = {
@@ -1223,10 +1256,8 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
         bio: Array.isArray(rawProfile.bio) && rawProfile.bio.length > 0 ? rawProfile.bio : defaultGeneralProfile.bio,
         bioEn: Array.isArray(rawProfile.bioEn) && rawProfile.bioEn.length > 0 ? rawProfile.bioEn : defaultGeneralProfile.bioEn,
         avatarUrl:
-          typeof rawProfile.avatarUrl === "string" &&
-          rawProfile.avatarUrl &&
-          rawProfile.avatarUrl !== "/profile.webp"
-            ? rawProfile.avatarUrl
+          typeof rawProfile.avatarUrl === "string" && rawProfile.avatarUrl.trim()
+            ? rawProfile.avatarUrl.trim()
             : defaultGeneralProfile.avatarUrl,
         location: typeof rawProfile.location === "string" ? rawProfile.location : defaultGeneralProfile.location,
         locationEn: typeof rawProfile.locationEn === "string" ? rawProfile.locationEn : defaultGeneralProfile.locationEn,
@@ -1328,12 +1359,6 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
 
   // 4. Profile Card
   const rawProfileCard = raw.profileCard ? { ...raw.profileCard } : undefined;
-  if (rawProfileCard?.avatarUrl === "/profile.webp") {
-    rawProfileCard.avatarUrl = defaultGeneralProfile.avatarUrl;
-  }
-  if (rawProfileCard?.miniAvatarUrl === "/profile.webp") {
-    rawProfileCard.miniAvatarUrl = "";
-  }
   const normalizedProfileCard: ProfileCardConfig = {
     ...defaultProfileCard,
     ...rawProfileCard,
@@ -1362,21 +1387,28 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   const normalizedProjects: Project[] = rawProjects
     .filter((p): p is Project => Boolean(p && typeof p === "object" && typeof p.id === "string"))
     .map((p, idx) => {
-      const baseSlug = slugifyProjectTitle(
-        typeof p.slug === "string" && p.slug.trim() ? p.slug : p.title || p.id,
-        `proyek-${idx + 1}`
-      );
-      let uniqueSlug = baseSlug;
-      let suffix = 2;
-      while (usedSlugs.has(uniqueSlug)) {
-        uniqueSlug = `${baseSlug}-${suffix++}`;
+      const isDraftProject = p.published === false;
+      const trimmedSlug = typeof p.slug === "string" ? p.slug.trim() : "";
+      let uniqueSlug = "";
+      if (isDraftProject) {
+        uniqueSlug = trimmedSlug;
+      } else {
+        const baseSlug = slugifyProjectTitle(
+          trimmedSlug ? trimmedSlug : p.title || p.id,
+          `proyek-${idx + 1}`
+        );
+        uniqueSlug = baseSlug;
+        let suffix = 2;
+        while (usedSlugs.has(uniqueSlug)) {
+          uniqueSlug = `${baseSlug}-${suffix++}`;
+        }
+        usedSlugs.add(uniqueSlug);
       }
-      usedSlugs.add(uniqueSlug);
 
       return {
         id: p.id,
         slug: uniqueSlug,
-        title: typeof p.title === "string" ? p.title : "Proyek",
+        title: typeof p.title === "string" ? p.title : "",
         titleEn: typeof p.titleEn === "string" ? p.titleEn : undefined,
         summary: typeof p.summary === "string" ? p.summary : undefined,
         summaryEn: typeof p.summaryEn === "string" ? p.summaryEn : undefined,
@@ -1421,9 +1453,25 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     .map((d, idx) => {
       const matchedDefault = defaultCvDocs.find((def) => def.roleKey === d.roleKey || def.id === d.id);
       const roleKey = typeof d.roleKey === "string" && d.roleKey.trim() ? d.roleKey.trim() : `role-${idx + 1}`;
-      const pages = Array.isArray(d.pages) && d.pages.length > 0
-        ? d.pages.filter((pg) => typeof pg === "string" && pg.trim())
-        : matchedDefault?.pages || ["/cv-page-1.png"];
+      const pdfUrl =
+        typeof d.pdfUrl === "string"
+          ? d.pdfUrl
+          : matchedDefault?.pdfUrl || DEFAULT_COMBINED_CV_PDF_URL;
+      const usesCombinedDefault = isDefaultCombinedCvPdfUrl(pdfUrl);
+      const explicitValidPages = Array.isArray(d.pages)
+        ? d.pages.filter((pg): pg is string => typeof pg === "string" && Boolean(pg.trim()))
+        : null;
+      const pages = usesCombinedDefault
+        ? explicitValidPages && explicitValidPages.length > 0
+          ? explicitValidPages
+          : matchedDefault?.pages || [...DEFAULT_COMBINED_CV_PAGES]
+        : explicitValidPages ?? [];
+      const thumbnailUrl =
+        typeof d.thumbnailUrl === "string"
+          ? d.thumbnailUrl
+          : usesCombinedDefault
+            ? matchedDefault?.thumbnailUrl || pages[0] || ""
+            : pages[0] || "";
 
       return {
         ...matchedDefault,
@@ -1435,12 +1483,17 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
         subtitle: typeof d.subtitle === "string" ? d.subtitle : matchedDefault?.subtitle || "",
         subtitleEn: typeof d.subtitleEn === "string" ? d.subtitleEn : matchedDefault?.subtitleEn || d.subtitle,
         color: typeof d.color === "string" && d.color ? d.color : "#0284c7",
-        pdfUrl: typeof d.pdfUrl === "string" ? d.pdfUrl : matchedDefault?.pdfUrl || "/cv-ats-zakariamp-2025.pdf",
-        thumbnailUrl: typeof d.thumbnailUrl === "string" ? d.thumbnailUrl : (matchedDefault?.thumbnailUrl || pages[0]),
+        pdfUrl,
+        thumbnailUrl,
         versionLabel: typeof d.versionLabel === "string" ? d.versionLabel : matchedDefault?.versionLabel || "ATS v2025",
         updatedAt: typeof d.updatedAt === "string" ? d.updatedAt : matchedDefault?.updatedAt || "2025",
         allowDownload: d.allowDownload !== false,
-        downloadFilename: typeof d.downloadFilename === "string" ? d.downloadFilename : matchedDefault?.downloadFilename || `CV-${roleKey}.pdf`,
+        downloadFilename:
+          typeof d.downloadFilename === "string"
+            ? d.downloadFilename
+            : usesCombinedDefault
+              ? DEFAULT_COMBINED_CV_FILENAME
+              : `CV-${roleKey}.pdf`,
         pages,
         pageCount: pages.length,
         skills: Array.isArray(d.skills) ? d.skills.filter((s) => typeof s === "string") : matchedDefault?.skills || [],
@@ -1568,60 +1621,52 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   const rawCertificates = Array.isArray(raw.certificates) ? raw.certificates : defaultCertificates;
   const normalizedCertificates: CertificateItem[] = rawCertificates
     .filter((c): c is CertificateItem => Boolean(c && typeof c === "object" && typeof c.id === "string"))
-    .map((c, idx) => ({
-      id: c.id,
-      title: typeof c.title === "string" ? c.title : "Sertifikat",
-      titleEn: typeof c.titleEn === "string" ? c.titleEn : undefined,
-      issuer: typeof c.issuer === "string" ? c.issuer : "",
-      issuerLogo: typeof c.issuerLogo === "string" ? c.issuerLogo : undefined,
-      desc: typeof c.desc === "string" ? c.desc : undefined,
-      descEn: typeof c.descEn === "string" ? c.descEn : undefined,
-      date: typeof c.date === "string" ? c.date : "",
-      credentialUrl: typeof c.credentialUrl === "string" ? c.credentialUrl : "",
-      credentialPdf: typeof c.credentialPdf === "string" ? c.credentialPdf : undefined,
-      credentialId: typeof c.credentialId === "string" ? c.credentialId : undefined,
-      issuedDate: typeof c.issuedDate === "string" ? c.issuedDate : undefined,
-      expiryDate: typeof c.expiryDate === "string" ? c.expiryDate : undefined,
-      category: typeof c.category === "string" && c.category.trim() ? c.category.trim() : "design",
-      image: typeof c.image === "string" ? c.image : undefined,
-      featured: Boolean(c.featured),
-      allowDownload: c.allowDownload !== false,
-      published: c.published !== false,
-      visible: c.visible !== false,
-      sortOrder: typeof c.sortOrder === "number" ? c.sortOrder : idx + 1,
-    }));
+    .map((c, idx) =>
+      normalizeCertificateVerification(
+        {
+          id: c.id,
+          title: typeof c.title === "string" ? c.title : "Sertifikat",
+          titleEn: typeof c.titleEn === "string" ? c.titleEn : undefined,
+          issuer: typeof c.issuer === "string" ? c.issuer : "",
+          issuerLogo: typeof c.issuerLogo === "string" ? c.issuerLogo : undefined,
+          desc: typeof c.desc === "string" ? c.desc : undefined,
+          descEn: typeof c.descEn === "string" ? c.descEn : undefined,
+          date: typeof c.date === "string" ? c.date : "",
+          credentialUrl: typeof c.credentialUrl === "string" ? c.credentialUrl : "",
+          credentialPdf: typeof c.credentialPdf === "string" ? c.credentialPdf : undefined,
+          credentialId: typeof c.credentialId === "string" ? c.credentialId : undefined,
+          issuedDate: typeof c.issuedDate === "string" ? c.issuedDate : undefined,
+          expiryDate: typeof c.expiryDate === "string" ? c.expiryDate : undefined,
+          category: typeof c.category === "string" && c.category.trim() ? c.category.trim() : "design",
+          image: typeof c.image === "string" ? c.image : undefined,
+          verificationStatus:
+            c.verificationStatus === "verified" ||
+            c.verificationStatus === "needs_reverification" ||
+            c.verificationStatus === "unverified"
+              ? c.verificationStatus
+              : "unverified",
+          verifiedAt: typeof c.verifiedAt === "string" ? c.verifiedAt : undefined,
+          verifiedEvidenceHash:
+            typeof c.verifiedEvidenceHash === "string" ? c.verifiedEvidenceHash : undefined,
+          featured: Boolean(c.featured),
+          allowDownload: c.allowDownload !== false,
+          published: c.published !== false,
+          visible: c.visible !== false,
+          sortOrder: typeof c.sortOrder === "number" ? c.sortOrder : idx + 1,
+        },
+        typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
+      )
+    );
 
   // 11. Tech Stack & Categories
-  const rawTechStackCategories = Array.isArray(raw.techStackCategories)
-    ? raw.techStackCategories
-    : defaultTechStackCategories;
-  const normalizedTechStackCategories: TechStackCategoryConfig[] = rawTechStackCategories
-    .filter((c): c is TechStackCategoryConfig => Boolean(c && typeof c === "object" && typeof c.key === "string"))
-    .map((c, idx) => ({
-      key: c.key.trim() || `group-${idx}`,
-      labelId: typeof c.labelId === "string" ? c.labelId : c.key,
-      labelEn: typeof c.labelEn === "string" ? c.labelEn : c.labelId || c.key,
-      sortOrder: typeof c.sortOrder === "number" ? c.sortOrder : idx + 1,
-      visible: c.visible !== false,
-    }));
-
-  const rawTechStack = Array.isArray(raw.techStack) ? raw.techStack : defaultTechStack;
-  const normalizedTechStack: TechStackItem[] = rawTechStack
-    .filter((t): t is TechStackItem => Boolean(t && typeof t === "object" && typeof t.id === "string"))
-    .map((t, idx) => ({
-      id: t.id,
-      name: typeof t.name === "string" ? t.name : "Tool",
-      category: typeof t.category === "string" && t.category.trim() ? t.category.trim() : "frontend",
-      icon: typeof t.icon === "string" ? t.icon : "/icons/nextjs.svg",
-      url: typeof t.url === "string" ? t.url : undefined,
-      desc: typeof t.desc === "string" ? t.desc : undefined,
-      descEn: typeof t.descEn === "string" ? t.descEn : undefined,
-      sortOrder: typeof t.sortOrder === "number" ? t.sortOrder : idx + 1,
-      visible: t.visible !== false,
-      published: t.published !== false,
-      showInMarquee: t.showInMarquee !== false,
-      showInGrid: t.showInGrid !== false,
-    }));
+  const normalizedTechStackCategories = normalizeTechStackCategories(
+    raw.techStackCategories
+  );
+  const normalizedTechStack = normalizeTechStackItems(
+    raw.techStack,
+    normalizedTechStackCategories,
+    defaultTechStack
+  );
 
   // 12. Services
   const rawServices = Array.isArray(raw.services) ? raw.services : defaultServices;
@@ -1690,11 +1735,56 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
           }))
       : [];
 
+  const normalizedSyncedPosts = normalizeBlogPostArray(rawBlog?.syncedPosts);
+  const rawSyncError =
+    typeof rawBlog?.lastSyncError === "string"
+      ? rawBlog.lastSyncError
+          .replace(/https?:\/\/[^@\s]+@/gi, "https://[redacted]@")
+          .replace(/([?&](?:token|key|secret|apikey|auth|password|sig)=)[^&\s]+/gi, "$1[redacted]")
+          .trim()
+          .slice(0, 240)
+      : "";
+  const rawLastSyncedAt =
+    typeof rawBlog?.lastSyncedAt === "string" && rawBlog.lastSyncedAt.trim()
+      ? rawBlog.lastSyncedAt.trim()
+      : undefined;
+  const rawLastAttemptAt =
+    typeof rawBlog?.lastSyncAttemptAt === "string" && rawBlog.lastSyncAttemptAt.trim()
+      ? rawBlog.lastSyncAttemptAt.trim()
+      : rawLastSyncedAt;
+  const rawModeStr = typeof rawBlog?.sourceMode === "string" ? rawBlog.sourceMode.trim() : "";
+  const normalizedSourceMode: BlogConfig["sourceMode"] =
+    rawModeStr === "manual"
+      ? "manual"
+      : rawModeStr === "sync" || rawModeStr === "synced"
+      ? "sync"
+      : "hybrid";
+  const allowedSyncStatuses: BlogSyncStatus[] = [
+    "never",
+    "syncing",
+    "success_empty",
+    "success_posts",
+    "error",
+  ];
+  const inferredSyncStatus: BlogSyncStatus = rawSyncError
+    ? "error"
+    : rawLastSyncedAt
+    ? normalizedSyncedPosts.length > 0
+      ? "success_posts"
+      : "success_empty"
+    : normalizedSyncedPosts.length > 0
+    ? "success_posts"
+    : "never";
+  const normalizedSyncStatus: BlogSyncStatus =
+    rawBlog?.syncStatus && allowedSyncStatuses.includes(rawBlog.syncStatus)
+      ? rawBlog.syncStatus
+      : inferredSyncStatus;
+
   const normalizedBlog: BlogConfig = rawBlog
     ? {
         feedUrl: typeof rawBlog.feedUrl === "string" ? rawBlog.feedUrl : defaultBlogConfig.feedUrl,
         portalUrl: typeof rawBlog.portalUrl === "string" && rawBlog.portalUrl ? rawBlog.portalUrl : (typeof rawBlog.feedUrl === "string" && rawBlog.feedUrl ? rawBlog.feedUrl : defaultBlogConfig.portalUrl),
-        sourceMode: (["hybrid", "manual", "sync"].includes(rawBlog.sourceMode || "") ? rawBlog.sourceMode : "hybrid") as BlogConfig["sourceMode"],
+        sourceMode: normalizedSourceMode,
         displayCount: typeof rawBlog.displayCount === "number" ? Math.min(Math.max(rawBlog.displayCount, 1), 12) : defaultBlogConfig.displayCount,
         visible: rawBlog.visible !== false,
         published: rawBlog.published !== false,
@@ -1705,12 +1795,19 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
         ctaLabelId: typeof rawBlog.ctaLabelId === "string" ? rawBlog.ctaLabelId : defaultBlogConfig.ctaLabelId,
         ctaLabelEn: typeof rawBlog.ctaLabelEn === "string" ? rawBlog.ctaLabelEn : defaultBlogConfig.ctaLabelEn,
         manualPosts: normalizeBlogPostArray(rawBlog.manualPosts),
-        syncedPosts: normalizeBlogPostArray(rawBlog.syncedPosts),
+        syncedPosts: normalizedSyncedPosts,
         syncedOverrides:
           rawBlog.syncedOverrides && typeof rawBlog.syncedOverrides === "object"
             ? rawBlog.syncedOverrides
             : {},
-        lastSyncedAt: typeof rawBlog.lastSyncedAt === "string" ? rawBlog.lastSyncedAt : undefined,
+        lastSyncedAt: rawLastSyncedAt,
+        lastSyncAttemptAt: rawLastAttemptAt,
+        syncStatus: normalizedSyncStatus,
+        lastSyncCount:
+          typeof rawBlog.lastSyncCount === "number" && rawBlog.lastSyncCount >= 0
+            ? Math.floor(rawBlog.lastSyncCount)
+            : normalizedSyncedPosts.length,
+        lastSyncError: rawSyncError || undefined,
       }
     : defaultBlogConfig;
 

@@ -2,6 +2,7 @@ import { getSupabaseClient, getServiceRoleClient, isSupabaseConfigured } from "@
 import { normalizeConfig, defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import {
   isLocalCmsOverrideAllowed,
+  isStrictLocalCmsStore,
   readLocalCmsDoc,
 } from "@/lib/content/local-cms-store";
 
@@ -58,7 +59,7 @@ export async function fetchPublishedContentWithMeta(): Promise<{
     }
   }
 
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || isStrictLocalCmsStore()) {
     return {
       config: defaultSiteConfig,
       provider: "default",
@@ -140,7 +141,7 @@ export async function fetchDraftOrPublishedContent(): Promise<{
     }
   }
 
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && !isStrictLocalCmsStore()) {
     try {
       const supabase = getServiceRoleClient() || getSupabaseClient();
       if (supabase) {

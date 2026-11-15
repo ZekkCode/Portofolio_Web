@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Upload, FolderSearch, Trash2, X, FileText, Search, ExternalLink } from "lucide-react";
+import { Upload, FolderSearch, Trash2, X, FileText, Search, ExternalLink, ImageOff } from "lucide-react";
 import type { SiteConfig } from "@/lib/site-store";
 import { scanReferencedMedia } from "@/lib/content/media-catalog";
 
@@ -50,8 +50,10 @@ export function MediaFieldControl({
   const [r2Items, setR2Items] = useState<R2ListItem[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [previewErrorUrl, setPreviewErrorUrl] = useState<string | null>(null);
   const isUploading = uploadingImage === fieldKey;
   const isPdf = previewShape === "pdf" || /\.pdf(\?|$)/i.test(value || "") || (value || "").startsWith("data:application/pdf");
+  const hasPreviewError = !isPdf && Boolean(value) && previewErrorUrl === value;
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -159,24 +161,51 @@ export function MediaFieldControl({
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-brand/30 bg-brand/10 text-brand">
               <FileText className="size-5" />
             </div>
+          ) : hasPreviewError ? (
+            <div
+              title="Pratinjau gambar gagal dimuat"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+              <ImageOff className="size-5" />
+            </div>
+          ) : previewShape === "square" ? (
+            <span className="inline-flex h-11 min-w-11 max-w-28 shrink-0 items-center justify-center rounded-lg border border-line/50 bg-white p-1 dark:border-white/15 dark:bg-white/95">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={value}
+                alt={label}
+                onLoad={() => {
+                  if (previewErrorUrl === value) setPreviewErrorUrl(null);
+                }}
+                onError={() => setPreviewErrorUrl(value)}
+                className="h-auto w-auto max-h-full max-w-full object-contain"
+              />
+            </span>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={value}
               alt={label}
+              onLoad={() => {
+                if (previewErrorUrl === value) setPreviewErrorUrl(null);
+              }}
+              onError={() => setPreviewErrorUrl(value)}
               className={
                 previewShape === "wide"
                   ? "h-12 w-20 shrink-0 rounded-lg border border-line/50 object-cover bg-white"
                   : previewShape === "portrait"
-                  ? "h-14 w-10 shrink-0 rounded-lg border border-line/50 object-cover bg-white"
-                  : previewShape === "avatar"
-                  ? "size-11 shrink-0 rounded-full border border-line/50 object-cover bg-white"
-                  : "size-11 shrink-0 rounded-lg border border-line/50 object-contain bg-white p-0.5"
+                  ? "h-14 w-10 shrink-0 rounded-lg border border-line/50 object-cover object-top bg-white"
+                  : "size-11 shrink-0 rounded-full border border-line/50 object-cover object-[50%_15%] bg-white"
               }
             />
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-[10px] text-ink">{value}</p>
+            {hasPreviewError && (
+              <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                Pratinjau gagal dimuat — periksa URL atau unggah ulang file
+              </p>
+            )}
             <a
               href={value}
               target="_blank"

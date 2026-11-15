@@ -3,7 +3,14 @@
 import Link from "next/link";
 import type { SiteConfig } from "@/lib/site-config";
 import type { ContentHealthReport } from "@/lib/content/types";
+import { getContentReadinessSummary } from "@/lib/content/content-health";
+import { getHealthToneClasses, type AdminTabKey } from "../admin-navigation";
 import { computeAutoStatsBreakdown, isSectionVisible } from "@/lib/content/selectors";
+import { isCertificateVerified } from "@/lib/content/certificate-verification";
+import {
+  getTechStackCategoryMasterList,
+  resolveTechStackCategoryKey,
+} from "@/lib/content/tech-stack-categories";
 import {
   FolderGit2,
   Award,
@@ -22,7 +29,6 @@ import {
   ArrowRight,
   BarChart3,
 } from "lucide-react";
-import type { AdminTabKey } from "../admin-client";
 
 interface TabOverviewProps {
   config: SiteConfig;
@@ -44,13 +50,17 @@ export function TabOverview({
 
   const certs = config.certificates || [];
   const publishedCerts = certs.filter((c) => c.published !== false && c.visible !== false);
+  const verifiedCerts = certs.filter((c) => isCertificateVerified(c));
 
   const education = config.education || [];
   const experience = config.experience || [];
   const services = config.services || [];
   const techStack = config.techStack || [];
+  const masterStackCategories = getTechStackCategoryMasterList(config.techStackCategories);
   const totalTools = techStack.length;
-  const categoriesCount = new Set(techStack.map((s) => s.category)).size;
+  const categoriesCount = new Set(
+    techStack.map((s) => resolveTechStackCategoryKey(s.category, masterStackCategories) ?? s.category)
+  ).size;
 
   const autoStats = computeAutoStatsBreakdown(config);
   const statsMode = config.stats?.mode || "auto";
@@ -62,7 +72,7 @@ export function TabOverview({
     { key: "cv" as const, label: "Folder Berkas CV" },
     { key: "journey" as const, label: "Akademik & Karier" },
     { key: "achievements" as const, label: "Prestasi & Rekognisi" },
-    { key: "certificates" as const, label: "Sertifikasi Terverifikasi" },
+    { key: "certificates" as const, label: "Sertifikasi & Kredensial" },
     { key: "stack" as const, label: "Tech Stack & Marquee" },
     { key: "projects" as const, label: "Proyek & Studi Kasus" },
     { key: "blog" as const, label: "Blog & Writing" },
@@ -88,23 +98,39 @@ export function TabOverview({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onOpenHealthModal}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
-                healthReport.canPublish
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
-                  : "border-rose-500/40 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 dark:text-rose-300"
-              }`}
-            >
-              <ShieldCheck className="size-4" />
-              <span>Integritas Konten: {healthReport.score}%</span>
-              {healthReport.errorsCount > 0 && (
-                <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] text-white">
-                  {healthReport.errorsCount} Error
-                </span>
-              )}
-            </button>
+            {(() => {
+              const readiness = getContentReadinessSummary(healthReport);
+              const toneClasses = getHealthToneClasses(readiness.tone);
+              return (
+                <button
+                  type="button"
+                  onClick={onOpenHealthModal}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${toneClasses.chip}`}
+                >
+                  <ShieldCheck className="size-4" />
+                  <span>
+                    Integritas: {healthReport.score}/100 ({readiness.badgeLabel})
+                  </span>
+                  {healthReport.errorsCount > 0 && (
+                    <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] text-white">
+                      {healthReport.errorsCount} Blocker
+                    </span>
+                  )}
+                  {healthReport.warningsCount > 0 && (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">
+                      {healthReport.warningsCount} Peringatan
+                    </span>
+                  )}
+                  {healthReport.errorsCount === 0 &&
+                    healthReport.warningsCount === 0 &&
+                    healthReport.infosCount > 0 && (
+                      <span className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] text-white">
+                        {healthReport.infosCount} Saran
+                      </span>
+                    )}
+                </button>
+              );
+            })()}
 
             <Link
               href="/admin/preview"
@@ -145,7 +171,7 @@ export function TabOverview({
           <div className="flex items-center justify-between text-muted group-hover:text-brand">
             <Award className="size-4" />
             <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-              {publishedCerts.length} Publik
+              {publishedCerts.length} Publik · {verifiedCerts.length} Terverifikasi
             </span>
           </div>
           <div className="mt-3 text-2xl font-black text-ink">{certs.length}</div>
@@ -219,9 +245,10 @@ export function TabOverview({
           <button
             type="button"
             onClick={() => onNavigateTab("general")}
-            className="text-xs font-semibold text-brand hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
           >
-            Ubah Mode di Profil -&gt;
+            <span>Ubah Mode di Profil</span>
+            <ArrowRight className="size-3.5" />
           </button>
         </div>
 
@@ -252,6 +279,39 @@ export function TabOverview({
               {statsMode === "manual" ? config.stats.organizationsCount : autoStats.organizationsCount}
             </div>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/50 bg-surface/40 px-3.5 py-2 text-[11px] text-muted dark:border-line/30 dark:bg-slate-950/40">
+          <span>
+            {statsMode === "manual" ? (
+              <>
+                Override manual aktif. Perhitungan otomatis terbaca:{" "}
+                <strong className="text-ink">
+                  {autoStats.experienceMonths} bln ({autoStats.mergedIntervals.length} interval)
+                </strong>
+              </>
+            ) : (
+              <>
+                Interval tergabung:{" "}
+                <strong className="text-ink">
+                  {autoStats.mergedIntervals.length > 0
+                    ? autoStats.mergedIntervals
+                        .map((i) => `${i.startYm} s.d. ${i.endYm} (${i.months} bln)`)
+                        .join(" · ")
+                    : "Belum ada interval valid"}
+                </strong>
+              </>
+            )}
+          </span>
+          {autoStats.excludedRecords.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab("journey")}
+              className="font-semibold text-amber-700 hover:underline dark:text-amber-300"
+            >
+              {autoStats.excludedRecords.length} record dikecualikan
+            </button>
+          )}
         </div>
       </div>
 
@@ -303,9 +363,11 @@ export function TabOverview({
           <div className="mt-3 space-y-2.5">
             <div className="flex items-center justify-between rounded-xl border border-line/60 bg-white/70 p-3 dark:border-line/40 dark:bg-slate-900/60">
               <div className="text-xs">
-                <div className="font-semibold text-ink">Skor Kesehatan</div>
+                <div className="font-semibold text-ink">
+                  {getContentReadinessSummary(healthReport).badgeLabel} ({healthReport.score}/100)
+                </div>
                 <div className="text-[11px] text-muted">
-                  {healthReport.errorsCount} error • {healthReport.warningsCount} peringatan
+                  {healthReport.errorsCount} blocker • {healthReport.warningsCount} peringatan • {healthReport.infosCount} saran
                 </div>
               </div>
               <button

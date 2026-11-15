@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  extractArrayIndexFromField,
+  type AdminNavigationTarget,
+} from "../admin-navigation";
 import type {
   SiteConfig,
   TechStackItem,
   TechStackCategoryConfig,
   ServiceItemConfig,
 } from "@/lib/site-config";
+import {
+  DEFAULT_TECH_STACK_CATEGORIES,
+  getOtherToolsCategoryLabel,
+  getTechStackCategoryLabel,
+  getTechStackCategoryMasterList,
+  renameTechStackCategoryKeyInDraft,
+  resolveTechStackCategoryMatch,
+} from "@/lib/content/tech-stack-categories";
+import { auditTechStackCategoryIssues } from "@/lib/content/content-health";
 import { MediaFieldControl } from "./MediaFieldControl";
 import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import {
@@ -39,6 +52,7 @@ interface TabExpertiseProps {
   ) => Promise<void>;
   uploadingImage: string | null;
   inputClass: string;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 const STACK_PAGE_SIZE = 15;
@@ -61,6 +75,7 @@ export function TabExpertise({
   uploadAndSet,
   uploadingImage,
   inputClass,
+  navigationTarget,
 }: TabExpertiseProps) {
   const [subTab, setSubTab] = useState<"stack" | "services">("stack");
 
@@ -77,14 +92,71 @@ export function TabExpertise({
   const [srvPage, setSrvPage] = useState(1);
 
   const [pendingDelete, setPendingDelete] = useState<DeleteImpactItem | null>(null);
+  const [catKeyDrafts, setCatKeyDrafts] = useState<Record<string, string>>({});
+  const [catKeyError, setCatKeyError] = useState<string | null>(null);
 
   const stackList = config.techStack || [];
-  const categories = config.techStackCategories || [];
+  const categories = useMemo(
+    () =>
+      Array.isArray(config.techStackCategories) && config.techStackCategories.length > 0
+        ? config.techStackCategories
+        : DEFAULT_TECH_STACK_CATEGORIES.map((c) => ({ ...c })),
+    [config.techStackCategories]
+  );
+  const masterCategories = useMemo(
+    () => getTechStackCategoryMasterList(categories),
+    [categories]
+  );
   const servicesList = config.services || [];
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "expertise") return;
+    if (navigationTarget.subTab === "stack" || navigationTarget.subTab === "services") {
+      setSubTab(navigationTarget.subTab);
+    }
+    if (navigationTarget.subTab === "stack") {
+      if (navigationTarget.field?.startsWith("techStackCategories")) {
+        setShowCatManager(true);
+        return;
+      }
+      let idx = navigationTarget.itemId
+        ? stackList.findIndex((t) => t.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "techStack");
+        if (parsed !== null && parsed >= 0 && parsed < stackList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setStackSearch("");
+        setStackCategoryFilter("all");
+        setStackStatusFilter("all");
+        setStackPage(Math.floor(idx / STACK_PAGE_SIZE) + 1);
+      }
+    } else if (navigationTarget.subTab === "services") {
+      let idx = navigationTarget.itemId
+        ? servicesList.findIndex((s) => s.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "services");
+        if (parsed !== null && parsed >= 0 && parsed < servicesList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setSrvSearch("");
+        setSrvStatusFilter("all");
+        setSrvPage(Math.floor(idx / SERVICE_PAGE_SIZE) + 1);
+      }
+    }
+  }, [navigationTarget, stackList, servicesList]);
 
   // ===================== TECH STACK CATEGORIES CRUD =====================
   const addCategory = () => {
-    const key = "cat-" + Date.now().toString().slice(-4);
+    const existingKeys = new Set(categories.map((c) => c.key.toLowerCase()));
+    let suffix = Date.now().toString().slice(-4);
+    let key = `cat-${suffix}`;
+    let counter = 1;
+    while (existingKeys.has(key.toLowerCase())) {
+      key = `cat-${suffix}-${counter++}`;
+    }
     const nextCat: TechStackCategoryConfig = {
       id: "tscat-" + Date.now(),
       key,
@@ -93,11 +165,13 @@ export function TabExpertise({
       visible: true,
       sortOrder: categories.length + 1,
     };
+    setCatKeyError(null);
     setDraft({ ...config, techStackCategories: [...categories, nextCat] });
     setStatus("Kategori tech stack ditambahkan");
   };
 
   const updateCategory = (idOrKey: string, updates: Partial<TechStackCategoryConfig>) => {
+    setCatKeyError(null);
     setDraft({
       ...config,
       techStackCategories: categories.map((c) =>
@@ -107,9 +181,39 @@ export function TabExpertise({
     setStatus("Kategori tech stack diperbarui");
   };
 
+  const commitCategoryKey = (idOrKey: string) => {
+    const pendingKey = catKeyDrafts[idOrKey];
+    if (pendingKey === undefined) return;
+    setCatKeyDrafts((prev) => {
+      const next = { ...prev };
+      delete next[idOrKey];
+      return next;
+    });
+
+    const result = renameTechStackCategoryKeyInDraft(
+      { ...config, techStackCategories: categories },
+      idOrKey,
+      pendingKey
+    );
+    if (!result.ok) {
+      setCatKeyError(result.error || "Gagal memperbarui ID kategori.");
+      return;
+    }
+    setCatKeyError(null);
+    if (result.oldKey !== result.newKey) {
+      setDraft(result.nextConfig);
+      setStatus(
+        result.migratedCount > 0
+          ? `ID kategori '${result.oldKey}' diubah menjadi '${result.newKey}' (${result.migratedCount} alat diperbarui)`
+          : `ID kategori '${result.oldKey}' diubah menjadi '${result.newKey}'`
+      );
+    }
+  };
+
   const moveCategory = (idx: number, dir: "up" | "down") => {
     const targetIdx = dir === "up" ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= categories.length) return;
+    setCatKeyError(null);
     setDraft({
       ...config,
       techStackCategories: reorderItemsWithSortOrder(categories, idx, targetIdx),
@@ -118,18 +222,23 @@ export function TabExpertise({
   };
 
   const requestDeleteCategory = (cat: TechStackCategoryConfig) => {
-    const usingTools = stackList.filter((t) => t.category === cat.key);
+    const usingTools = stackList.filter(
+      (t) => resolveTechStackCategoryMatch(t.category, masterCategories).resolvedKey === cat.key
+    );
     setPendingDelete({
       entityType: "Kategori Tech Stack",
       itemName: `${cat.labelId} (${cat.key})`,
       impacts: [
         usingTools.length > 0
-          ? `${usingTools.length} alat/teknologi masih memakai kategori '${cat.key}' (akan tetap tampil hanya jika dipindahkan ke kategori lain).`
+          ? `${usingTools.length} alat/teknologi masih memakai kategori '${cat.key}' (akan tampil di '${getOtherToolsCategoryLabel("id")}' sampai dipindahkan ke kategori lain).`
           : "Tidak ada alat yang menggunakan kategori ini.",
-        "Menghapus tab/kelompok kategori dari seksi Tech Stack publik.",
+        categories.length <= 1
+          ? "Menghapus kategori terakhir akan mengembalikan daftar ke kategori bawaan sistem."
+          : "Menghapus kelompok kategori dari seksi Tech Stack publik.",
       ],
       onConfirm: () => {
         const targetIdOrKey = cat.id || cat.key;
+        setCatKeyError(null);
         setDraft({
           ...config,
           techStackCategories: categories.filter((c) => (c.id || c.key) !== targetIdOrKey),
@@ -142,7 +251,9 @@ export function TabExpertise({
 
   // ===================== TECH STACK ITEMS CRUD =====================
   const addTechStackItem = () => {
-    const defaultCat = (categories[0]?.key || "uiux") as TechStackItem["category"];
+    const defaultCat = (
+      masterCategories[0]?.key || DEFAULT_TECH_STACK_CATEGORIES[0].key
+    ) as TechStackItem["category"];
     const newItem: TechStackItem = {
       id: "ts-" + Date.now(),
       name: "Alat / Teknologi Baru",
@@ -222,17 +333,29 @@ export function TabExpertise({
     setStatus("Urutan Tech Stack diperbarui (drag)");
   });
 
-  const categoryOptions = useMemo(() => {
-    if (categories.length > 0) {
-      return categories.map((c) => ({ value: c.key, label: c.labelId }));
-    }
-    return [
-      { value: "uiux", label: "UI/UX & Desain" },
-      { value: "frontend", label: "Frontend Web" },
-      { value: "visual", label: "Desain Grafis / Media" },
-      { value: "systems", label: "Sistem & Basis Data" },
-    ];
-  }, [categories]);
+  const categoryOptions = useMemo(
+    () =>
+      masterCategories.map((c) => ({
+        value: c.key,
+        label: getTechStackCategoryLabel(c, "id"),
+        visible: c.visible !== false,
+      })),
+    [masterCategories]
+  );
+
+  const unknownToolsCount = useMemo(
+    () =>
+      stackList.filter(
+        (item) =>
+          resolveTechStackCategoryMatch(item.category, masterCategories).resolutionType === "unknown"
+      ).length,
+    [stackList, masterCategories]
+  );
+
+  const techStackIssues = useMemo(
+    () => auditTechStackCategoryIssues(config.techStackCategories, stackList),
+    [config.techStackCategories, stackList]
+  );
 
   const isStackFiltered =
     stackSearch.trim() !== "" || stackCategoryFilter !== "all" || stackStatusFilter !== "all";
@@ -240,15 +363,22 @@ export function TabExpertise({
     const q = stackSearch.trim().toLowerCase();
     return stackList.filter((item) => {
       if (!matchesStatusFilter(item, stackStatusFilter)) return false;
-      if (stackCategoryFilter !== "all" && item.category !== stackCategoryFilter) return false;
+      const catMatch = resolveTechStackCategoryMatch(item.category, masterCategories);
+      if (stackCategoryFilter === "__unknown__") {
+        if (catMatch.resolutionType !== "unknown") return false;
+      } else if (stackCategoryFilter !== "all") {
+        if (catMatch.resolvedKey !== stackCategoryFilter) return false;
+      }
       if (!q) return true;
       return (
         item.name.toLowerCase().includes(q) ||
         item.category.toLowerCase().includes(q) ||
+        (catMatch.matchedCategory?.labelId || "").toLowerCase().includes(q) ||
+        (catMatch.matchedCategory?.labelEn || "").toLowerCase().includes(q) ||
         (item.desc || "").toLowerCase().includes(q)
       );
     });
-  }, [stackList, stackSearch, stackCategoryFilter, stackStatusFilter]);
+  }, [stackList, stackSearch, stackCategoryFilter, stackStatusFilter, masterCategories]);
 
   const stackTotalPages = Math.max(1, Math.ceil(filteredStack.length / STACK_PAGE_SIZE));
   const safeStackPage = Math.min(stackPage, stackTotalPages);
@@ -435,21 +565,54 @@ export function TabExpertise({
               </div>
 
               <div className="space-y-2">
+                {catKeyError && (
+                  <div
+                    role="alert"
+                    className="flex items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-950/30 dark:text-rose-300"
+                  >
+                    <AlertCircle className="size-3.5 shrink-0" />
+                    <span>{catKeyError}</span>
+                  </div>
+                )}
                 {categories.map((cat, idx) => {
                   const cid = cat.id || cat.key;
+                  const keyValue = catKeyDrafts[cid] ?? cat.key;
+                  const isKeyDirty = catKeyDrafts[cid] !== undefined && catKeyDrafts[cid].trim() !== cat.key;
                   return (
                   <div
                     key={cid}
-                    className="grid gap-2 sm:grid-cols-[120px_1fr_1fr_auto] items-center rounded-xl border border-line bg-white p-2.5 dark:border-line/40 dark:bg-[#0c0e17]"
+                    className="grid gap-2 sm:grid-cols-[140px_1fr_1fr_auto] items-center rounded-xl border border-line bg-white p-2.5 dark:border-line/40 dark:bg-[#0c0e17]"
                   >
-                    <input
-                      type="text"
-                      value={cat.key}
-                      onChange={(e) => updateCategory(cid, { key: e.target.value.trim() })}
-                      className={inputClass}
-                      placeholder="key unik"
-                      title="Key Kategori"
-                    />
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={keyValue}
+                        onChange={(e) =>
+                          setCatKeyDrafts((prev) => ({ ...prev, [cid]: e.target.value }))
+                        }
+                        onBlur={() => commitCategoryKey(cid)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitCategoryKey(cid);
+                          }
+                        }}
+                        className={inputClass}
+                        placeholder="key unik"
+                        title="ID Kategori (tekan Enter atau keluar kolom untuk menerapkan ke semua alat)"
+                      />
+                      {isKeyDirty && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => commitCategoryKey(cid)}
+                          className="shrink-0 rounded-md bg-brand px-2 py-1 text-[10px] font-semibold text-white hover:bg-brand-ink"
+                          title="Terapkan perubahan ID kategori"
+                        >
+                          OK
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       value={cat.labelId}
@@ -517,7 +680,16 @@ export function TabExpertise({
               setStackCategoryFilter(val);
               setStackPage(1);
             }}
-            filterOptions={[{ value: "all", label: "Semua Kategori" }, ...categoryOptions]}
+            filterOptions={[
+              { value: "all", label: "Semua Kategori" },
+              ...categoryOptions.map((c) => ({
+                value: c.value,
+                label: c.visible ? c.label : `${c.label} (Disembunyikan)`,
+              })),
+              ...(unknownToolsCount > 0
+                ? [{ value: "__unknown__", label: `Tidak Dikenal (${unknownToolsCount})` }]
+                : []),
+            ]}
             statusFilter={stackStatusFilter}
             onStatusFilterChange={(val) => {
               setStackStatusFilter(val);
@@ -526,6 +698,20 @@ export function TabExpertise({
             totalCount={stackList.length}
             filteredCount={filteredStack.length}
           />
+
+          {techStackIssues.some((issue) => issue.severity !== "info") && (
+            <div className="space-y-1.5 rounded-xl border border-amber-300/80 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-200">
+              {techStackIssues
+                .filter((issue) => issue.severity !== "info")
+                .slice(0, 4)
+                .map((issue) => (
+                  <div key={issue.id} className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{issue.message}</span>
+                  </div>
+                ))}
+            </div>
+          )}
 
           {pagedStack.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line p-8 text-center text-xs text-muted dark:border-line/40">
@@ -540,10 +726,13 @@ export function TabExpertise({
                 const linkedCount = (config.projects || []).filter((p) =>
                   (p.techIds || []).includes(tool.id)
                 ).length;
+                const catMatch = resolveTechStackCategoryMatch(tool.category, masterCategories);
+                const selectValue = catMatch.resolvedKey ?? "__unknown__";
 
                 return (
                   <div
                     key={tool.id}
+                    data-stack-tool-id={tool.id}
                     {...(!isStackFiltered ? stackDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-4 transition dark:bg-[#0c0e17] ${
                       stackDrag.dragIndex === rawIndex
@@ -558,13 +747,22 @@ export function TabExpertise({
                           <img src={tool.icon || "/icons/figma.svg"} alt={tool.name} className="size-5 object-contain" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-display text-sm font-bold text-ink">
                               {tool.name || "Alat Tanpa Nama"}
                             </h3>
-                            <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted dark:bg-slate-800">
-                              {tool.category}
-                            </span>
+                            {catMatch.matchedCategory ? (
+                              <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted dark:bg-slate-800">
+                                {getTechStackCategoryLabel(catMatch.matchedCategory, "id")} ·{" "}
+                                <code className="font-mono">{catMatch.matchedCategory.key}</code>
+                                {catMatch.matchedCategory.visible === false ? " (tersembunyi)" : ""}
+                              </span>
+                            ) : (
+                              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                                Tidak dikenal ·{" "}
+                                <code className="font-mono">{catMatch.rawKey || "(kosong)"}</code>
+                              </span>
+                            )}
                             {linkedCount > 0 && (
                               <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">
                                 Dipakai di {linkedCount} proyek
@@ -599,6 +797,54 @@ export function TabExpertise({
                       </div>
                     )}
 
+                    {catMatch.resolutionType === "unknown" && (
+                      <div
+                        role="alert"
+                        className="mt-2.5 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-300"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        <span>
+                          {catMatch.rawKey
+                            ? `ID kategori '${catMatch.rawKey}' tidak dikenali oleh master kategori dan akan tampil di '${getOtherToolsCategoryLabel("id")}' sampai dipindahkan atau didaftarkan di Kelola Kategori.`
+                            : `Alat ini belum memiliki kategori dan akan tampil di '${getOtherToolsCategoryLabel("id")}'.`}
+                        </span>
+                      </div>
+                    )}
+
+                    {catMatch.resolutionType === "alias_migrated" && catMatch.matchedCategory && (
+                      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-xs text-blue-800 dark:border-blue-500/30 dark:bg-blue-950/30 dark:text-blue-200">
+                        <span className="flex items-center gap-2">
+                          <AlertCircle className="size-3.5 shrink-0" />
+                          <span>
+                            ID lama <code className="font-mono">{catMatch.rawKey}</code> otomatis dipetakan ke{" "}
+                            <strong>{getTechStackCategoryLabel(catMatch.matchedCategory, "id")}</strong> (
+                            <code className="font-mono">{catMatch.matchedCategory.key}</code>).
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateTechStackItem(tool.id, {
+                              category: catMatch.matchedCategory!.key as TechStackItem["category"],
+                            })
+                          }
+                          className="rounded-md bg-blue-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-blue-700"
+                        >
+                          Simpan sebagai {catMatch.matchedCategory.key}
+                        </button>
+                      </div>
+                    )}
+
+                    {catMatch.matchedCategory && catMatch.matchedCategory.visible === false && (
+                      <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        <span>
+                          Kategori <strong>{getTechStackCategoryLabel(catMatch.matchedCategory, "id")}</strong>{" "}
+                          sedang disembunyikan dari grid publik (opsi Marquee tetap mengikuti pengaturan item).
+                        </span>
+                      </div>
+                    )}
+
                     <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
                         <label className="block text-xs font-semibold text-ink">Nama Alat / Teknologi *</label>
@@ -613,17 +859,27 @@ export function TabExpertise({
                       <div>
                         <label className="block text-xs font-semibold text-ink">Kategori</label>
                         <select
-                          value={tool.category}
-                          onChange={(e) =>
+                          aria-label={`Kategori ${tool.name || tool.id}`}
+                          data-tool-id={tool.id}
+                          value={selectValue}
+                          onChange={(e) => {
+                            if (e.target.value === "__unknown__") return;
                             updateTechStackItem(tool.id, {
                               category: e.target.value as TechStackItem["category"],
-                            })
-                          }
+                            });
+                          }}
                           className={`mt-1 ${inputClass}`}
                         >
+                          {catMatch.resolutionType === "unknown" && (
+                            <option value="__unknown__">
+                              {catMatch.rawKey
+                                ? `Tidak dikenal: ${catMatch.rawKey} (${getOtherToolsCategoryLabel("id")})`
+                                : `Tanpa kategori (${getOtherToolsCategoryLabel("id")})`}
+                            </option>
+                          )}
                           {categoryOptions.map((opt) => (
                             <option key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {opt.visible ? opt.label : `${opt.label} (Disembunyikan)`}
                             </option>
                           ))}
                         </select>
@@ -758,6 +1014,7 @@ export function TabExpertise({
                 return (
                   <div
                     key={srv.id}
+                    data-admin-item-id={srv.id}
                     {...(!isSrvFiltered ? serviceDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       serviceDrag.dragIndex === rawIndex

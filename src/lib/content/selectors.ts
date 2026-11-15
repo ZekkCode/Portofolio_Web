@@ -7,6 +7,25 @@ import type {
   CertificateItem,
   TechStackItem,
 } from "./types";
+import { normalizeCertificateVerification } from "./certificate-verification";
+import {
+  resolveAboutPersonaImages,
+  resolveGlobalPortrait,
+} from "./identity-images";
+import { resolveCvDocumentInfo } from "./cv-documents";
+import {
+  canonicalizeBlogUrl,
+  deduplicateBlogPosts,
+  isSafeHttpOrRelativeUrl,
+} from "./blog-sync";
+import {
+  getTechStackCategoryLabel,
+  getTechStackCategoryMasterList,
+  groupTechStackForPublicGrid,
+  resolveTechStackCategoryMatch,
+  TECH_STACK_FALLBACK_CATEGORY_KEY,
+  type TechStackGridGroup,
+} from "./tech-stack-categories";
 import {
   defaultContactSection,
   defaultCvSettings,
@@ -15,13 +34,13 @@ import {
   defaultProjectCategories,
   defaultSectionOrder,
   defaultSections,
-  defaultTechStackCategories,
   slugifyProjectTitle,
   type ContactConfig,
   type CvDocConfig,
   type CvSettingsConfig,
   type FooterConfig,
   type ManualBlogPostConfig,
+  type SyncedBlogPostOverride,
   type NavMenuItemConfig,
   type ProjectCategoryConfig,
   type SectionConfigItem,
@@ -30,23 +49,20 @@ import {
   type TechStackCategoryConfig,
 } from "@/lib/site-config";
 import { profile } from "@/lib/profile";
+import {
+  EXPERIENCE_MONTH_COUNTING_RULE_LABEL,
+  analyzeExperienceDateMigration,
+  formatExperienceYearsMetric,
+  formatMonthIndex,
+  getCurrentMonthIndex,
+  mergeExperienceIntervals,
+  resolveExperienceRecord,
+  type ExperienceDateMigrationReport,
+  type MergedExperienceInterval,
+  type ResolvedExperienceRecord,
+} from "./experience-dates";
 
 export type Locale = "id" | "en";
-
-const MONTH_NAME_MAP: Record<string, number> = {
-  jan: 1, januar: 1, januari: 1, january: 1,
-  feb: 2, februari: 2, february: 2,
-  mar: 3, maret: 3, march: 3,
-  apr: 4, april: 4,
-  may: 5, mei: 5,
-  jun: 6, juni: 6, june: 6,
-  jul: 7, juli: 7, july: 7,
-  aug: 8, agu: 8, agustus: 8, august: 8,
-  sep: 9, sept: 9, september: 9,
-  oct: 10, okt: 10, oktober: 10, october: 10,
-  nov: 11, november: 11,
-  dec: 12, des: 12, desember: 12, december: 12,
-};
 
 function sortByOrder<T extends { sortOrder?: number }>(items: T[]): T[] {
   return [...items]
@@ -73,7 +89,10 @@ export function getPublishedProfile(config?: Partial<SiteConfig>, locale: Locale
     roles: isEn ? gp?.rolesEn || gp?.roles || profile.roles : gp?.roles || profile.roles,
     heroDesc: isEn ? gp?.heroDescEn || gp?.heroDesc || profile.bio[0] : gp?.heroDesc || profile.bio[0],
     bio: isEn ? (gp?.bioEn && gp.bioEn.length > 0 ? gp.bioEn : gp?.bio || profile.bio) : gp?.bio || profile.bio,
-    avatarUrl: gp?.avatarUrl || profile.avatar,
+    avatarUrl: resolveGlobalPortrait({
+      generalProfile: gp,
+      lanyard: config?.lanyard,
+    }).url,
     location: isEn ? gp?.locationEn || gp?.location || profile.location : gp?.location || profile.location,
     availability: isEn
       ? gp?.availabilityEn || gp?.availability || "Open for collaboration"
@@ -94,8 +113,14 @@ export function getPublishedProfile(config?: Partial<SiteConfig>, locale: Locale
       : gp?.ctaSecondaryLabelId || "Folder Berkas Karir",
     ctaSecondaryHref: gp?.ctaSecondaryHref || "#cv",
     aboutPersona: {
-      frontImage: gp?.aboutPersona?.frontImage || config?.lanyard?.frontImage || "/card-front-v2.webp",
-      backImage: gp?.aboutPersona?.backImage || config?.lanyard?.backImage || "/card-back-v2.webp",
+      frontImage: resolveAboutPersonaImages({
+        generalProfile: gp,
+        lanyard: config?.lanyard,
+      }).frontImage,
+      backImage: resolveAboutPersonaImages({
+        generalProfile: gp,
+        lanyard: config?.lanyard,
+      }).backImage,
       frontLabel: isEn ? gp?.aboutPersona?.frontLabelEn || "Frontend Dev" : gp?.aboutPersona?.frontLabelId || "Frontend Dev",
       frontCaption: isEn
         ? gp?.aboutPersona?.frontCaptionEn || "Web interfaces & interactive engineering"
@@ -270,11 +295,13 @@ export function getPublishedCertificates(
     published = published.filter((c) => c.category === category);
   }
 
-  return published.map((c) => ({
-    ...c,
-    title: isEn && c.titleEn ? c.titleEn : c.title,
-    desc: isEn && c.descEn ? c.descEn : c.desc,
-  }));
+  return published.map((c) =>
+    normalizeCertificateVerification({
+      ...c,
+      title: isEn && c.titleEn ? c.titleEn : c.title,
+      desc: isEn && c.descEn ? c.descEn : c.desc,
+    })
+  );
 }
 
 /**
@@ -284,17 +311,11 @@ export function getPublishedTechStackCategories(
   config?: Partial<SiteConfig>,
   locale: Locale = "id"
 ): Array<TechStackCategoryConfig & { label: string }> {
-  const isEn = locale === "en";
-  const list =
-    config?.techStackCategories && config.techStackCategories.length > 0
-      ? config.techStackCategories
-      : defaultTechStackCategories;
-
-  return sortByOrder(list)
+  return getTechStackCategoryMasterList(config?.techStackCategories)
     .filter((c) => c.visible !== false)
     .map((c) => ({
       ...c,
-      label: isEn ? c.labelEn || c.labelId : c.labelId,
+      label: getTechStackCategoryLabel(c, locale),
     }));
 }
 
@@ -305,10 +326,17 @@ export function getPublishedTechStack(
 ): TechStackItem[] {
   const isEn = options?.locale === "en";
   const list = Array.isArray(config?.techStack) ? config.techStack : [];
+  const masterCategories = getTechStackCategoryMasterList(config?.techStackCategories);
 
-  let published = sortByOrder(list).filter(
-    (s) => s.published !== false && s.visible !== false
-  );
+  let published = sortByOrder(list)
+    .filter((s) => s.published !== false && s.visible !== false)
+    .map((s) => {
+      const match = resolveTechStackCategoryMatch(s.category, masterCategories);
+      return {
+        ...s,
+        category: match.resolvedKey ?? match.rawKey,
+      };
+    });
 
   if (options?.marqueeOnly) {
     published = published.filter((s) => s.showInMarquee !== false);
@@ -317,13 +345,33 @@ export function getPublishedTechStack(
     published = published.filter((s) => s.showInGrid !== false);
   }
   if (category && category !== "all") {
-    published = published.filter((s) => s.category === category);
+    const trimmedFilter = category.trim();
+    if (trimmedFilter.toLowerCase() === TECH_STACK_FALLBACK_CATEGORY_KEY) {
+      published = published.filter(
+        (s) => resolveTechStackCategoryMatch(s.category, masterCategories).resolutionType === "unknown"
+      );
+    } else {
+      const resolvedFilter =
+        resolveTechStackCategoryMatch(trimmedFilter, masterCategories).resolvedKey ?? trimmedFilter;
+      published = published.filter(
+        (s) => resolveTechStackCategoryMatch(s.category, masterCategories).resolvedKey === resolvedFilter
+      );
+    }
   }
 
   return published.map((s) => ({
     ...s,
     desc: isEn && s.descEn ? s.descEn : s.desc,
   }));
+}
+
+export function getPublishedTechStackGridGroups(
+  config?: Partial<SiteConfig>,
+  locale: Locale = "id",
+  otherLabelOverride?: string
+): TechStackGridGroup[] {
+  const gridTools = getPublishedTechStack(config, undefined, { gridOnly: true, locale });
+  return groupTechStackForPublicGrid(config, gridTools, locale, otherLabelOverride);
 }
 
 /**
@@ -392,11 +440,13 @@ export function getPublishedCvDocs(
 ): CvDocConfig[] {
   const isEn = locale === "en";
   const list = Array.isArray(config?.cvDocs) ? config.cvDocs : [];
-  const globalAllowDownload = config?.cvSettings?.allowDownload !== false;
+  const publishedDocs = sortByOrder(list).filter(
+    (doc) => doc.published !== false && doc.visible !== false
+  );
 
-  return sortByOrder(list)
-    .filter((doc) => doc.published !== false && doc.visible !== false)
-    .map((doc) => ({
+  return publishedDocs.map((doc) => {
+    const resolved = resolveCvDocumentInfo(doc, publishedDocs, config?.cvSettings);
+    return {
       ...doc,
       title: isEn && doc.titleEn ? doc.titleEn : doc.title,
       subtitle: isEn && doc.subtitleEn ? doc.subtitleEn : doc.subtitle,
@@ -406,8 +456,13 @@ export function getPublishedCvDocs(
         isEn && doc.responsibilitiesEn && doc.responsibilitiesEn.length > 0
           ? doc.responsibilitiesEn
           : doc.responsibilities,
-      allowDownload: globalAllowDownload && doc.allowDownload !== false,
-    }));
+      pages: resolved.previewPages,
+      thumbnailUrl: resolved.thumbnailUrl,
+      pageCount: resolved.previewPages.length,
+      downloadFilename: resolved.downloadFilename,
+      allowDownload: resolved.allowDownload,
+    };
+  });
 }
 
 export function getPublishedCvSettings(
@@ -478,6 +533,26 @@ function parseBlogDateMs(raw?: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function findSyncedOverrideForPost(
+  post: ManualBlogPostConfig,
+  overrides: Record<string, SyncedBlogPostOverride>,
+  portalUrl?: string
+): SyncedBlogPostOverride | undefined {
+  if (post.id && overrides[post.id]) return overrides[post.id];
+  if (post.url && overrides[post.url]) return overrides[post.url];
+
+  const canonPortal = canonicalizeBlogUrl(portalUrl);
+  const canonUrl = canonicalizeBlogUrl(post.url);
+  if (canonUrl && canonUrl !== canonPortal && canonUrl !== "/") {
+    if (overrides[canonUrl]) return overrides[canonUrl];
+    for (const [key, ov] of Object.entries(overrides)) {
+      if (!ov) continue;
+      if (canonicalizeBlogUrl(key) === canonUrl) return ov;
+    }
+  }
+  return undefined;
+}
+
 export function mergeBlogPostsWithOverrides(
   config?: Partial<SiteConfig>,
   externalSyncedPosts?: ManualBlogPostConfig[],
@@ -489,14 +564,22 @@ export function mergeBlogPostsWithOverrides(
     return [];
   }
 
-  const mode = blog.sourceMode || "hybrid";
+  const rawMode = (blog.sourceMode as string | undefined) || "hybrid";
+  const mode: "hybrid" | "manual" | "sync" =
+    rawMode === "manual" ? "manual" : rawMode === "sync" || rawMode === "synced" ? "sync" : "hybrid";
   const overrides = blog.syncedOverrides || {};
+  const portalUrl = blog.portalUrl || blog.feedUrl || "";
 
-  const manual: PublishedBlogPostItem[] =
+  type SortableBlogPost = PublishedBlogPostItem & {
+    _explicitOrder: number | null;
+    _tieOrder: number;
+  };
+
+  const manual: SortableBlogPost[] =
     mode === "sync"
       ? []
       : sortByOrder(blog.manualPosts || [])
-          .filter((p) => p.published !== false && p.visible !== false)
+          .filter((p) => p.published !== false && p.visible !== false && isSafeHttpOrRelativeUrl(p.url))
           .map((p, idx) => ({
             id: p.id,
             slug: p.slug || slugifyProjectTitle(p.title, `post-${idx + 1}`),
@@ -511,53 +594,75 @@ export function mergeBlogPostsWithOverrides(
             featured: Boolean(p.featured),
             pinned: Boolean(p.pinned),
             source: "manual",
+            _explicitOrder:
+              mode === "manual" && typeof p.sortOrder === "number" && Number.isFinite(p.sortOrder)
+                ? p.sortOrder
+                : null,
+            _tieOrder: typeof p.sortOrder === "number" && Number.isFinite(p.sortOrder) ? p.sortOrder : idx + 1,
           }));
 
   const rawSynced =
-    externalSyncedPosts && externalSyncedPosts.length > 0
-      ? externalSyncedPosts
-      : blog.syncedPosts || [];
+    externalSyncedPosts !== undefined ? externalSyncedPosts : blog.syncedPosts || [];
 
-  const synced: PublishedBlogPostItem[] =
+  const synced: SortableBlogPost[] =
     mode === "manual"
       ? []
       : rawSynced
           .filter((p) => {
             if (p.published === false || p.visible === false) return false;
-            const ov = overrides[p.id] || overrides[p.url];
+            if (!isSafeHttpOrRelativeUrl(p.url)) return false;
+            const ov = findSyncedOverrideForPost(p, overrides, portalUrl);
             return !ov?.hidden;
           })
           .map((p, idx) => {
-            const ov = overrides[p.id] || overrides[p.url] || {};
+            const ov = findSyncedOverrideForPost(p, overrides, portalUrl);
+            const explicitOrder =
+              typeof ov?.sortOrder === "number" && Number.isFinite(ov.sortOrder)
+                ? ov.sortOrder
+                : null;
             return {
               id: p.id,
               slug: p.slug || slugifyProjectTitle(p.title, `sync-post-${idx + 1}`),
-              title: isEn ? ov.titleEn || p.titleEn || ov.title || p.title : ov.title || p.title,
+              title: isEn ? ov?.titleEn || p.titleEn || ov?.title || p.title : ov?.title || p.title,
               excerpt: isEn
-                ? ov.excerptEn || p.excerptEn || ov.excerpt || p.excerpt
-                : ov.excerpt || p.excerpt,
-              coverImage: ov.coverImage || p.coverImage,
+                ? ov?.excerptEn || p.excerptEn || ov?.excerpt || p.excerpt
+                : ov?.excerpt || p.excerpt,
+              coverImage: ov?.coverImage || p.coverImage,
               coverAlt: p.coverAlt,
               url: p.url,
-              category: ov.category || p.category || "Blog",
+              category: ov?.category || p.category || "Blog",
               date: p.date,
               readTime: p.readTime,
-              featured: typeof ov.featured === "boolean" ? ov.featured : Boolean(p.featured),
-              pinned: Boolean(ov.pinned),
+              featured: typeof ov?.featured === "boolean" ? ov.featured : Boolean(p.featured),
+              pinned: typeof ov?.pinned === "boolean" ? ov.pinned : Boolean(p.pinned),
               source: "sync",
+              _explicitOrder: explicitOrder,
+              _tieOrder: explicitOrder ?? 100_000 + idx,
             };
           });
 
-  const combined = [...manual, ...synced].sort((a, b) => {
+  // Deduplikasi lintas manual & sinkron menggunakan URL/slug/ID kanonis (manual diprioritaskan)
+  const deduped = deduplicateBlogPosts([...manual, ...synced], portalUrl);
+
+  const sorted = deduped.sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    const aHasExplicit = a._explicitOrder !== null;
+    const bHasExplicit = b._explicitOrder !== null;
+    if (aHasExplicit && bHasExplicit && a._explicitOrder !== b._explicitOrder) {
+      return (a._explicitOrder as number) - (b._explicitOrder as number);
+    }
+    if (aHasExplicit !== bHasExplicit) {
+      return aHasExplicit ? -1 : 1;
+    }
     const da = parseBlogDateMs(a.date);
     const db = parseBlogDateMs(b.date);
-    return db - da;
+    if (db !== da) return db - da;
+    return a._tieOrder - b._tieOrder;
   });
 
   const limit = Math.min(Math.max(blog.displayCount || 4, 1), 12);
-  return combined.slice(0, limit);
+  return sorted.slice(0, limit).map(({ _explicitOrder: _eo, _tieOrder: _to, ...pub }) => pub);
 }
 
 /**
@@ -650,63 +755,8 @@ export function getPublishedSeo(config?: Partial<SiteConfig>, locale: Locale = "
 /**
  * 13. Anti-Slop Stats Engine Terpublikasi (Dynamic & Interval-Merged)
  */
-function parseDateToMonthIndex(dateStr?: string, fallbackIsEnd = false): number | null {
-  if (!dateStr || typeof dateStr !== "string") return null;
-  const lower = dateStr.trim().toLowerCase();
-  if (!lower) return null;
-
-  if (
-    lower.includes("sekarang") ||
-    lower.includes("present") ||
-    lower.includes("current") ||
-    lower.includes("aktif")
-  ) {
-    const now = new Date();
-    return now.getFullYear() * 12 + now.getMonth();
-  }
-
-  // ISO YYYY-MM or YYYY-MM-DD
-  const isoMatch = /^(\d{4})-(\d{1,2})/.exec(lower);
-  if (isoMatch) {
-    const year = Number(isoMatch[1]);
-    const month = Math.min(Math.max(Number(isoMatch[2]), 1), 12);
-    return year * 12 + (month - 1);
-  }
-
-  // Month Name + Year (e.g. "Januari 2024", "Sept 2025")
-  const tokens = lower.split(/[\s,/-]+/).filter(Boolean);
-  let foundMonth: number | null = null;
-  let foundYear: number | null = null;
-  for (const tok of tokens) {
-    if (foundMonth === null && MONTH_NAME_MAP[tok]) {
-      foundMonth = MONTH_NAME_MAP[tok];
-    }
-    if (/^\d{4}$/.test(tok)) {
-      foundYear = Number(tok);
-    }
-  }
-  if (foundYear !== null) {
-    const month = foundMonth ?? (fallbackIsEnd ? 12 : 1);
-    return foundYear * 12 + (month - 1);
-  }
-
-  return null;
-}
-
-function parseExperienceInterval(exp: ExperienceItem): [number, number] | null {
-  const nowIdx = new Date().getFullYear() * 12 + new Date().getMonth();
-  let start = parseDateToMonthIndex(exp.startDate, false);
-  let end = exp.current ? nowIdx : parseDateToMonthIndex(exp.endDate, true);
-
-  if (start === null && exp.period) {
-    const parts = exp.period.split(/[\u2013\u2014–—-]+|to|s\.d\.|sd/i).map((p) => p.trim());
-    if (parts[0]) start = parseDateToMonthIndex(parts[0], false);
-    if (parts[1]) end = parseDateToMonthIndex(parts[1], true);
-  }
-
-  if (start === null) return null;
-  if (end === null || end < start) end = exp.current ? nowIdx : start;
-  return [start, end];
+export interface StatsComputationOptions {
+  now?: Date;
 }
 
 export interface AutoStatsBreakdown {
@@ -718,59 +768,59 @@ export interface AutoStatsBreakdown {
   experienceMonths: number;
   experienceYears: string;
   overlappingRule: "merge_intervals" | "since_year";
+  monthCountingRule: string;
+  asOfMonth: string;
+  totalExperienceRecords: number;
+  includedRecords: ResolvedExperienceRecord[];
+  excludedRecords: ResolvedExperienceRecord[];
+  mergedIntervals: MergedExperienceInterval[];
+  needsReviewCount: number;
+  migrationSummary: Pick<
+    ExperienceDateMigrationReport,
+    "alreadyStructuredCount" | "migratableCount" | "flaggedCount"
+  >;
 }
 
-export function computeAutoStatsBreakdown(config?: Partial<SiteConfig>): AutoStatsBreakdown {
+export function computeAutoStatsBreakdown(
+  config?: Partial<SiteConfig>,
+  options?: StatsComputationOptions
+): AutoStatsBreakdown {
+  const now = options?.now ?? new Date();
+  const nowIdx = getCurrentMonthIndex(now);
+  const asOfMonth = formatMonthIndex(nowIdx);
+
   const publishedProjects = getPublishedProjects(config);
   const publishedCerts = getPublishedCertificates(config);
   const publishedAchievements = getPublishedAchievements(config);
-  const publishedExp = getPublishedExperience(config);
+  const allExperience = sortByOrder(
+    Array.isArray(config?.experience) ? config.experience : []
+  );
+
+  const resolvedRecords = allExperience.map((exp) => resolveExperienceRecord(exp, now));
+  const includedRecords = resolvedRecords.filter((r) => r.includedInStats);
+  const excludedRecords = resolvedRecords.filter((r) => !r.includedInStats);
 
   const uniqueOrgsSet = new Set<string>();
-  const intervals: Array<[number, number]> = [];
-
-  for (const exp of publishedExp) {
-    const groupKey = (exp.orgGroup || exp.org || "").trim();
-    if (groupKey) {
-      uniqueOrgsSet.add(groupKey.toLowerCase());
-    }
-    const interval = parseExperienceInterval(exp);
-    if (interval) {
-      intervals.push(interval);
+  for (const rec of resolvedRecords) {
+    if (rec.countedInOrganizations && rec.orgGroupKey) {
+      uniqueOrgsSet.add(rec.orgGroupKey);
     }
   }
 
-  // Merge overlapping month intervals so concurrent roles don't double-count years
-  let mergedMonths = 0;
-  if (intervals.length > 0) {
-    intervals.sort((a, b) => a[0] - b[0]);
-    const merged: Array<[number, number]> = [intervals[0]];
-    for (let i = 1; i < intervals.length; i++) {
-      const [s, e] = intervals[i];
-      const last = merged[merged.length - 1];
-      if (s <= last[1] + 1) {
-        last[1] = Math.max(last[1], e);
-      } else {
-        merged.push([s, e]);
-      }
-    }
-    mergedMonths = merged.reduce((sum, [s, e]) => sum + Math.max(1, e - s + 1), 0);
-  }
+  const { mergedIntervals, mergedMonths } = mergeExperienceIntervals(includedRecords);
 
   const rule = config?.stats?.overlappingRule || "merge_intervals";
-  const currentYear = new Date().getFullYear();
+  const currentYear = now.getFullYear();
   const baseSinceYear = config?.stats?.sinceYear || Number(config?.generalProfile?.since) || 2020;
 
-  let experienceYears = "0";
-  if (rule === "since_year") {
-    const diff = Math.max(1, currentYear - baseSinceYear);
-    experienceYears = `${diff}+`;
-  } else if (mergedMonths > 0) {
-    const yearsFloor = Math.max(1, Math.floor(mergedMonths / 12));
-    experienceYears = `${yearsFloor}+`;
-  } else if (publishedExp.length > 0) {
-    experienceYears = "1+";
-  }
+  const experienceYears = formatExperienceYearsMetric({
+    mergedMonths,
+    rule,
+    currentYear,
+    baseSinceYear,
+  });
+
+  const migrationReport = analyzeExperienceDateMigration(allExperience);
 
   const includeAch = Boolean(config?.stats?.includeAchievementsInCerts);
   const certsCount = includeAch
@@ -786,10 +836,25 @@ export function computeAutoStatsBreakdown(config?: Partial<SiteConfig>): AutoSta
     experienceMonths: mergedMonths,
     experienceYears,
     overlappingRule: rule,
+    monthCountingRule: EXPERIENCE_MONTH_COUNTING_RULE_LABEL,
+    asOfMonth,
+    totalExperienceRecords: resolvedRecords.length,
+    includedRecords,
+    excludedRecords,
+    mergedIntervals,
+    needsReviewCount: resolvedRecords.filter((r) => r.needsReview).length,
+    migrationSummary: {
+      alreadyStructuredCount: migrationReport.alreadyStructuredCount,
+      migratableCount: migrationReport.migratableCount,
+      flaggedCount: migrationReport.flaggedCount,
+    },
   };
 }
 
-export function getPublishedStats(config?: Partial<SiteConfig>): {
+export function getPublishedStats(
+  config?: Partial<SiteConfig>,
+  options?: StatsComputationOptions
+): {
   projectsCount: number;
   certificatesCount: number;
   experienceYears: string;
@@ -809,7 +874,7 @@ export function getPublishedStats(config?: Partial<SiteConfig>): {
     };
   }
 
-  const auto = computeAutoStatsBreakdown(config);
+  const auto = computeAutoStatsBreakdown(config, options);
   return {
     projectsCount: auto.projectsCount,
     certificatesCount: auto.certificatesCount,

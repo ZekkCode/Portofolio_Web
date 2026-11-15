@@ -13,7 +13,17 @@ import {
   type SiteConfig,
 } from "@/lib/site-store";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
-import { auditContentHealth } from "@/lib/content/content-health";
+import {
+  evaluatePublishReadiness,
+  getContentReadinessSummary,
+} from "@/lib/content/content-health";
+import type { ContentHealthIssue } from "@/lib/content/types";
+import {
+  getHealthToneClasses,
+  resolveIssueNavigationTarget,
+  type AdminNavigationTarget,
+  type AdminTabKey,
+} from "./admin-navigation";
 import CvPreviewModal, { type RoleKey } from "@/components/cv-preview-modal";
 import {
   ArrowLeft,
@@ -51,17 +61,7 @@ import { TabMaintenance } from "./components/tab-maintenance";
 import { ModalRevisions } from "./components/modal-revisions";
 import { ModalHealth } from "./components/modal-health";
 
-export type AdminTabKey =
-  | "overview"
-  | "general"
-  | "journey"
-  | "works"
-  | "expertise"
-  | "credentials"
-  | "content"
-  | "media"
-  | "appearance"
-  | "maintenance";
+export type { AdminTabKey };
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface/60 px-3.5 py-2 text-xs text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand dark:border-line/60 dark:bg-slate-900/60 dark:focus:bg-[#0c0e17] transition";
@@ -147,8 +147,56 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     }
   }, [draft, storedConfig]);
 
-  // Real-time Health Audit
-  const healthReport = useMemo(() => auditContentHealth(config), [config]);
+  // Real-time Unified Health & Schema Audit
+  const healthReport = useMemo(() => evaluatePublishReadiness(config), [config]);
+  const readinessSummary = useMemo(
+    () => getContentReadinessSummary(healthReport),
+    [healthReport]
+  );
+  const [navigationTarget, setNavigationTarget] = useState<AdminNavigationTarget | null>(null);
+
+  const handleNavigateToIssue = (issue: ContentHealthIssue) => {
+    const resolved = resolveIssueNavigationTarget(issue);
+    if (!resolved) return;
+    setTab(resolved.tab);
+    setNavigationTarget({ ...resolved, nonce: Date.now() });
+    setShowHealthModal(false);
+  };
+
+  useEffect(() => {
+    if (!navigationTarget || tab !== navigationTarget.tab) return;
+    const esc = (val: string) =>
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(val)
+        : val.replace(/"/g, '\\"');
+
+    const timer = window.setTimeout(() => {
+      let el: HTMLElement | null = null;
+      if (navigationTarget.field) {
+        el = document.querySelector(`[data-admin-field="${esc(navigationTarget.field)}"]`);
+      }
+      if (!el && navigationTarget.itemId) {
+        el =
+          document.querySelector(`[data-admin-item-id="${esc(navigationTarget.itemId)}"]`) ||
+          document.querySelector(`[data-admin-cert-id="${esc(navigationTarget.itemId)}"]`) ||
+          document.querySelector(`[data-stack-tool-id="${esc(navigationTarget.itemId)}"]`);
+      }
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-brand", "ring-offset-2");
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        el.focus({ preventScroll: true });
+      } else {
+        const focusable = el.querySelector<HTMLElement>("input, textarea, select");
+        focusable?.focus({ preventScroll: true });
+      }
+      window.setTimeout(() => {
+        el?.classList.remove("ring-2", "ring-brand", "ring-offset-2");
+      }, 2200);
+    }, 90);
+
+    return () => window.clearTimeout(timer);
+  }, [navigationTarget, tab]);
 
   // Warn before closing tab with unsaved changes
   useEffect(() => {
@@ -251,9 +299,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     setIsSavingDraft(true);
     setStatus("Menyimpan draf ke server...");
     try {
-      const res = await saveCloudDraft(config, {
-        expectedUpdatedAt: serverUpdatedAt ?? undefined,
-      });
+      const res = await saveCloudDraft(config);
       if (res.success) {
         setStatus("Draf berhasil disimpan (belum dipublikasikan ke pengunjung)");
       } else {
@@ -310,9 +356,6 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
     const publishedSnapshot = config;
     try {
-      // Immediate local persistence & cross-tab sync (also required by scripts/check.mjs)
-      writeConfig(publishedSnapshot);
-
       const res = await publishCloudConfig(publishedSnapshot, {
         expectedUpdatedAt: forceOverwrite ? undefined : (serverUpdatedAt ?? undefined),
         forceOverwrite,
@@ -333,15 +376,34 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           setServerUpdatedAt(res.updatedAt);
         }
         setDraft((prev) => (prev === publishedSnapshot ? null : prev));
-        setStatus(
-          res.provider === "local-cms-store"
+        const baseMsg =
+          res.provider === "local-cms-store" || res.provider === "local-store"
             ? "Berhasil dipublikasikan ke mode lokal CMS!"
-            : "Berhasil dipublikasikan ke seluruh situs publik!"
+            : "Berhasil dipublikasikan ke seluruh situs publik!";
+        setStatus(
+          healthReport.warningsCount > 0
+            ? `${baseMsg} (Catatan: masih ada ${healthReport.warningsCount} peringatan kelengkapan)`
+            : baseMsg
         );
+      } else if (
+        res.httpStatus === 400 ||
+        res.httpStatus === 422 ||
+        (res.details && res.details.length > 0) ||
+        res.health
+      ) {
+        const errs =
+          res.details && res.details.length > 0
+            ? res.details
+            : [res.message || "Publikasi ditolak oleh validasi server."];
+        setValidationErrors(errs);
+        if (res.health) setShowHealthModal(true);
+        setStatus(`Publikasi ditolak: ${errs[0]}`);
       } else {
+        writeConfig(publishedSnapshot);
         setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron server"})`);
       }
     } catch {
+      writeConfig(publishedSnapshot);
       setStatus("Tersimpan lokal (gagal menghubungi endpoint publikasi)");
     } finally {
       setIsSaving(false);
@@ -493,15 +555,15 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             <button
               type="button"
               onClick={() => setShowHealthModal(true)}
+              data-testid="admin-header-health-btn"
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                healthReport.canPublish
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                getHealthToneClasses(readinessSummary.tone).chip
               }`}
-              title="Periksa kesehatan dan integritas data konten"
+              title={`${readinessSummary.badgeLabel}: ${readinessSummary.headline}`}
             >
               <ShieldCheck className="size-3.5" />
-              <span>{healthReport.score}%</span>
+              <span>{healthReport.score}/100</span>
+              <span className="hidden sm:inline opacity-85">• {readinessSummary.badgeLabel}</span>
             </button>
 
             {/* Simpan Draf Button */}
@@ -688,6 +750,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             inputClass={inputClass}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -699,6 +762,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             inputClass={inputClass}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -710,6 +774,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             inputClass={inputClass}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -722,6 +787,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadingImage={uploadingImage}
             inputClass={inputClass}
             setPreviewCvRole={setPreviewCvRole}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -733,6 +799,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             inputClass={inputClass}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -754,6 +821,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             inputClass={inputClass}
+            navigationTarget={navigationTarget}
           />
         )}
 
@@ -780,6 +848,8 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           isOpen={true}
           initialRole={previewCvRole}
           onClose={() => setPreviewCvRole(null)}
+          configOverride={config}
+          includeDrafts={true}
         />
       )}
 
@@ -787,10 +857,40 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
       <ModalRevisions
         isOpen={showRevisionsModal}
         onClose={() => setShowRevisionsModal(false)}
-        onRestore={(restored) => {
+        onRestore={(restored, target, meta) => {
+          if (target === "publish") {
+            setDraft(null);
+            writeConfig(restored);
+            if (typeof window !== "undefined") {
+              try {
+                if (meta?.updatedAt) {
+                  window.localStorage.setItem("zekk:site:v1:timestamp", meta.updatedAt);
+                }
+                window.localStorage.removeItem("zekk:site:v1:draft");
+              } catch {
+                // ignore storage errors
+              }
+            }
+            if (meta?.updatedAt) {
+              setServerUpdatedAt(meta.updatedAt);
+            }
+            setStatus(
+              `Revisi ${meta?.revisionId || ""} berhasil dipulihkan dan dipublikasikan ke situs aktif.`
+            );
+            return;
+          }
+
           setDraft(restored);
-          writeConfig(restored);
-          setStatus("Versi berhasil dipulihkan dan diterapkan di editor");
+          if (typeof window !== "undefined") {
+            try {
+              window.localStorage.setItem("zekk:site:v1:draft", JSON.stringify(restored));
+            } catch {
+              // ignore storage errors
+            }
+          }
+          setStatus(
+            `Revisi ${meta?.revisionId || ""} dimuat ke draf editor & server (produksi tidak diubah). Klik Simpan untuk mempublikasikan.`
+          );
         }}
       />
 
@@ -799,6 +899,8 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
         isOpen={showHealthModal}
         onClose={() => setShowHealthModal(false)}
         config={config}
+        report={healthReport}
+        onNavigateToIssue={handleNavigateToIssue}
       />
     </div>
   );

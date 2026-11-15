@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -90,6 +91,7 @@ export async function createPresignedUrl(
     expiresIn?: number;
     contentType?: string;
     downloadFilename?: string;
+    disposition?: "inline" | "attachment";
   }
 ): Promise<string | null> {
   const config = getR2Config();
@@ -98,17 +100,42 @@ export async function createPresignedUrl(
   const key = extractR2Key(keyOrUrl, config.bucketName);
   if (!key) return null;
 
+  const disposition = options?.disposition === "attachment" ? "attachment" : "inline";
   const client = getR2Client();
   const command = new GetObjectCommand({
     Bucket: config.bucketName,
     Key: key,
     ...(options?.contentType ? { ResponseContentType: options.contentType } : {}),
     ...(options?.downloadFilename
-      ? { ResponseContentDisposition: `inline; filename="${options.downloadFilename}"` }
+      ? { ResponseContentDisposition: `${disposition}; filename="${options.downloadFilename}"` }
       : {}),
   });
 
   return getSignedUrl(client, command, { expiresIn: options?.expiresIn ?? 900 });
+}
+
+/**
+ * Memastikan objek tersedia di bucket Cloudflare R2 sebelum disajikan.
+ */
+export async function r2ObjectExists(keyOrUrl: string): Promise<boolean> {
+  const config = getR2Config();
+  if (!config) return false;
+
+  const key = extractR2Key(keyOrUrl, config.bucketName);
+  if (!key) return false;
+
+  try {
+    const client = getR2Client();
+    await client.send(
+      new HeadObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+      })
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

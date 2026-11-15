@@ -13,6 +13,7 @@ import {
   mergeBlogPostsWithOverrides,
   isSectionVisible,
 } from "@/lib/content/selectors";
+import { isCertificateVerified } from "@/lib/content/certificate-verification";
 
 export interface KnowledgeMatch {
   reply: string;
@@ -241,6 +242,7 @@ export function queryBuddyKnowledge(
   // 8. Certifications & Achievements
   if (/sertifikat|sertifikasi|certificate|credential|prestasi|achievement|award|juara|penghargaan|berapa sertifikat/i.test(query)) {
     const certsCount = pubCerts.length;
+    const verifiedCertsCount = pubCerts.filter((c) => isCertificateVerified(c)).length;
     const achCount = pubAchievements.length;
     const sampleCerts = pubCerts.slice(0, 3).map((c) => `${c.title} (${c.issuer})`).join(", ");
     const sampleAch = pubAchievements.slice(0, 2).map((a) => `${a.title} (${a.organizer})`).join(", ");
@@ -248,7 +250,7 @@ export function queryBuddyKnowledge(
     if (certsCount === 0 && achCount === 0) {
       return {
         reply: isEn
-          ? `There are no verified certificates or awards currently published.`
+          ? `There are no certificates or awards currently published.`
           : `Saat ini belum ada sertifikat atau penghargaan terpublikasi yang ditampilkan.`,
         action: "idle",
       };
@@ -257,8 +259,16 @@ export function queryBuddyKnowledge(
     const partsId: string[] = [];
     const partsEn: string[] = [];
     if (certsCount > 0) {
-      partsId.push(`${certsCount} sertifikat terpublikasi (${sampleCerts})`);
-      partsEn.push(`${certsCount} published certificate(s) (${sampleCerts})`);
+      const statusSummaryId =
+        verifiedCertsCount > 0
+          ? `${verifiedCertsCount} di antaranya memiliki bukti terverifikasi`
+          : "bukti pemeriksaan masih berstatus belum diperiksa";
+      const statusSummaryEn =
+        verifiedCertsCount > 0
+          ? `${verifiedCertsCount} with verified proof`
+          : "evidence checks pending";
+      partsId.push(`${certsCount} sertifikat terpublikasi (${statusSummaryId}: ${sampleCerts})`);
+      partsEn.push(`${certsCount} published certificate(s) (${statusSummaryEn}: ${sampleCerts})`);
     }
     if (achCount > 0) {
       partsId.push(`${achCount} pencapaian/penghargaan (${sampleAch})`);

@@ -28,9 +28,10 @@ import {
   getPublishedSeo,
   getPublishedStats,
   getPublishedTechStack,
-  getPublishedTechStackCategories,
+  getPublishedTechStackGridGroups,
   isSectionVisible,
 } from "@/lib/content/selectors";
+import { getOtherToolsCategoryLabel } from "@/lib/content/tech-stack-categories";
 import { ArrowRight, Mail } from "lucide-react";
 import { AcademicJourneySection } from "@/components/academic-journey-section";
 import { AchievementsSection } from "@/components/achievements-section";
@@ -282,14 +283,6 @@ function Stack() {
   const config = useSiteConfig();
 
   const sectionMeta = getPublishedSectionMeta(config, "stack", locale);
-  const stackCategories = useMemo(
-    () => getPublishedTechStackCategories(config, locale),
-    [config, locale]
-  );
-  const gridToolsAll = useMemo(
-    () => getPublishedTechStack(config, undefined, { gridOnly: true, locale }),
-    [config, locale]
-  );
   const marqueeTools = useMemo(
     () => getPublishedTechStack(config, undefined, { marqueeOnly: true, locale }),
     [config, locale]
@@ -312,27 +305,15 @@ function Stack() {
     return () => observer.disconnect();
   }, []);
 
-  const disciplines = useMemo(() => {
-    const grouped = stackCategories
-      .map((cat) => ({
-        key: cat.key,
-        category: cat.label,
-        tools: gridToolsAll.filter((s) => s.category === cat.key),
-      }))
-      .filter((d) => d.tools.length > 0);
-
-    // Include tools whose category isn't in standard category list if any
-    const knownKeys = new Set(stackCategories.map((c) => c.key));
-    const orphans = gridToolsAll.filter((s) => !knownKeys.has(s.category));
-    if (orphans.length > 0) {
-      grouped.push({
-        key: "other",
-        category: locale === "en" ? "Other Tools" : "Perangkat Lainnya",
-        tools: orphans,
-      });
-    }
-    return grouped;
-  }, [stackCategories, gridToolsAll, locale]);
+  const disciplines = useMemo(
+    () =>
+      getPublishedTechStackGridGroups(
+        config,
+        locale,
+        t("stack.otherTitle", getOtherToolsCategoryLabel(locale))
+      ),
+    [config, locale, t]
+  );
 
   const marqueeSeed = marqueeTools.length > 0 ? marqueeTools : [];
   const stackRow1 = useMemo(
@@ -376,6 +357,7 @@ function Stack() {
                 {disciplines.map((item) => (
                   <div
                     key={item.key}
+                    data-stack-category={item.key}
                     className="flex flex-col justify-between rounded-xl border border-line/80 bg-white p-5 sm:p-6 dark:border-line/60 dark:bg-[#111422]"
                   >
                     <div>

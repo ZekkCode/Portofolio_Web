@@ -16,6 +16,7 @@ import {
   getPublishedCvSettings,
   getPublishedSectionMeta,
 } from "@/lib/content/selectors";
+import { resolveCvDocumentInfo, summarizeCvCollection } from "@/lib/content/cv-documents";
 import { ArrowUpRight, FileText } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -39,8 +40,11 @@ export interface CvPageInfo {
   roleKey: string;
   title: string;
   subtitle: string;
-  image: string;
+  image?: string;
   color: string;
+  hasPdf: boolean;
+  isSharedPdf: boolean;
+  downloadFilename: string;
 }
 
 /**
@@ -107,13 +111,26 @@ export function StaticCvFolder({
                     {p.subtitle}
                   </p>
                 </div>
-                <div className="relative mt-2.5 h-16 sm:h-20 w-full rounded-md overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.image}
-                    alt={p.title}
-                    className="size-full object-cover object-top opacity-85"
-                  />
+                <div className="relative mt-2.5 h-16 sm:h-20 w-full rounded-md overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center">
+                  {p.image ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.image}
+                        alt={p.title}
+                        className="size-full object-cover object-top opacity-85"
+                      />
+                    </>
+                  ) : (
+                    <div className="px-2 text-center">
+                      <span className="block text-[9px] font-mono font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[170px]">
+                        {p.hasPdf ? p.downloadFilename : "PDF Belum Tersedia"}
+                      </span>
+                      <span className="block text-[8px] text-slate-400 mt-0.5">
+                        {p.hasPdf ? "Pratinjau Dokumen PDF" : "Slot PDF Kosong"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -207,20 +224,54 @@ export function CvFolderSection() {
     setModalOpen(true);
   };
 
+  const cvSummary = useMemo(
+    () => summarizeCvCollection(cvDocs, config?.cvSettings),
+    [cvDocs, config?.cvSettings]
+  );
+
   const cvPages: CvPageInfo[] = useMemo(() => {
-    return cvDocs.map((doc, idx) => ({
-      page: idx + 1,
-      roleKey: doc.roleKey,
-      title: doc.title,
-      subtitle: doc.subtitle || doc.description || "",
-      image: doc.thumbnailUrl || doc.pages?.[0] || "/cv-page-1.png",
-      color: doc.color || "#1b45c4",
-    }));
-  }, [cvDocs]);
+    return cvDocs.map((doc, idx) => {
+      const resolved =
+        cvSummary.resolutionsById[doc.id] ||
+        resolveCvDocumentInfo(doc, cvDocs, config?.cvSettings);
+      return {
+        page: idx + 1,
+        roleKey: doc.roleKey,
+        title: doc.title,
+        subtitle: doc.subtitle || doc.description || "",
+        image: resolved.thumbnailUrl || undefined,
+        color: doc.color || "#1b45c4",
+        hasPdf: resolved.hasPdf,
+        isSharedPdf: resolved.isSharedPdf,
+        downloadFilename: resolved.downloadFilename,
+      };
+    });
+  }, [cvDocs, cvSummary, config?.cvSettings]);
 
   const folderItems: FolderEntry[] = useMemo(() => {
     return cvPages.map((item) => ({
       image: item.image,
+      content: item.image ? undefined : (
+        <div className="flex h-full w-full flex-col justify-between p-2 text-left bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+          <div className="flex items-center justify-between gap-1">
+            <span className="font-mono text-[7px] font-bold uppercase tracking-wider text-brand dark:text-sky-300">
+              {item.hasPdf ? "PDF" : "Kosong"}
+            </span>
+            <span
+              className="size-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: item.color }}
+            />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-[9px] font-bold leading-tight text-slate-900 dark:text-white line-clamp-2">
+              {item.title}
+            </p>
+            <p className="font-mono text-[7px] text-slate-500 dark:text-slate-400 truncate">
+              {item.hasPdf ? item.downloadFilename : "Belum ada berkas"}
+            </p>
+          </div>
+        </div>
+      ),
       title: item.title,
       description: item.subtitle,
       alt: `Curriculum Vitae - ${item.title}`,
@@ -301,6 +352,13 @@ export function CvFolderSection() {
           {cvSettings.folderHint && (
             <p className="mt-4 text-center text-xs text-muted">
               {cvSettings.folderHint}
+            </p>
+          )}
+          {cvSummary.allShareSinglePdf && cvSummary.sharedGroups[0] && (
+            <p className="mt-1.5 text-center text-[11px] text-muted/85">
+              {locale === "en"
+                ? `All listed roles currently open the same combined CV file (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`
+                : `Semua peran di atas membuka satu berkas CV gabungan (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`}
             </p>
           )}
         </div>

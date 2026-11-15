@@ -1,13 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { defaultCvDocs, type CvDocConfig, type CvSettingsConfig } from "@/lib/site-config";
-import { fetchPublishedContent } from "@/lib/content/public-content";
-import { createPresignedUrl, isR2Configured, getR2Config, extractR2Key } from "@/lib/r2";
+import { verifyAdminRequest } from "@/lib/auth-server";
+import {
+  DEFAULT_COMBINED_CV_PDF_URL,
+  isDefaultCombinedCvPdfUrl,
+  isSafeCvAssetUrl,
+  resolveCvDocumentInfo,
+  sanitizeCvDownloadFilename,
+} from "@/lib/content/cv-documents";
+import {
+  fetchDraftOrPublishedContent,
+  fetchPublishedContent,
+} from "@/lib/content/public-content";
+import {
+  createPresignedUrl,
+  extractR2Key,
+  getR2Config,
+  getR2ObjectStream,
+  isR2Configured,
+  r2ObjectExists,
+} from "@/lib/r2";
+import {
+  defaultCvDocs,
+  type CvDocConfig,
+  type CvSettingsConfig,
+} from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
-// Allowlist nama berkas PDF/aset CV lokal yang sah
+// Allowlist berkas CV bawaan yang ada di /public
 const ALLOWED_LOCAL_FILES = new Set([
   "cv-ats-zakariamp-2025.pdf",
   "cv-page-1.png",
@@ -18,51 +40,81 @@ const ALLOWED_LOCAL_FILES = new Set([
 
 const ALLOWED_EXTENSIONS = new Set([".pdf", ".png", ".jpg", ".jpeg", ".webp"]);
 
+const NO_STORE_CACHE = "private, no-store, max-age=0";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Range, Authorization",
   "Access-Control-Expose-Headers": "Content-Length, Content-Range, Content-Disposition",
   "X-Content-Type-Options": "nosniff",
+  "Cache-Control": NO_STORE_CACHE,
 };
+
+function normalizeRelativePublicPath(inputPath: string): string {
+  const clean = inputPath.split("?")[0].split("#")[0].replace(/\0/g, "").trim();
+  return clean.replace(/^([a-zA-Z]:)?[/\\]+/, "").replace(/\\/g, "/");
+}
 
 /**
  * Validasi path filesystem lokal secara ketat:
  * 1. Mencegah Path Traversal (../, absolute paths, null bytes)
  * 2. Memastikan berkas hanya berada di dalam folder public/
- * 3. Memeriksa ekstensi dan nama berkas dalam allowlist
+ * 3. Mengizinkan berkas bawaan allowlist ATAU path PDF lokal yang memang terdaftar pada CV terpublikasi
  */
-async function resolveSafeLocalFile(inputPath: string): Promise<{ fullPath: string; ext: string; filename: string } | null> {
+async function resolveSafeLocalFile(
+  inputPath: string,
+  allowedConfiguredPaths: Set<string>
+): Promise<{
+  fullPath: string;
+  ext: string;
+  filename: string;
+  relativeUrlPath: string;
+} | null> {
   if (!inputPath || typeof inputPath !== "string") return null;
 
-  // Hapus query params atau hash jika ada
   const clean = inputPath.split("?")[0].split("#")[0].replace(/\0/g, "").trim();
+  if (!clean || clean.startsWith("//")) return null;
+
   const normalized = path.normalize(clean).replace(/^([a-zA-Z]:)?[/\\]+/, "");
+  if (!normalized || normalized.startsWith("..")) return null;
 
   const publicDir = path.resolve(process.cwd(), "public");
   const fullPath = path.resolve(publicDir, normalized);
 
-  // Verifikasi path relatif tidak melompat keluar dari publicDir
   const rel = path.relative(publicDir, fullPath);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
     return null;
   }
 
   const filename = path.basename(fullPath);
   const ext = path.extname(fullPath).toLowerCase();
+  const relPosix = rel.replace(/\\/g, "/");
 
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     return null;
   }
 
-  // Jika nama berkas ada di allowlist langsung diizinkan
-  if (ALLOWED_LOCAL_FILES.has(filename.toLowerCase())) {
-    try {
-      const s = await stat(fullPath);
-      if (s.isFile()) return { fullPath, ext, filename };
-    } catch {
-      return null;
+  const isStaticAllowed = ALLOWED_LOCAL_FILES.has(filename.toLowerCase());
+  const isConfigAllowed =
+    ext === ".pdf" && allowedConfiguredPaths.has(relPosix.toLowerCase());
+
+  if (!isStaticAllowed && !isConfigAllowed) {
+    return null;
+  }
+
+  try {
+    const s = await stat(fullPath);
+    if (s.isFile()) {
+      return {
+        fullPath,
+        ext,
+        filename,
+        relativeUrlPath: relPosix,
+      };
     }
+  } catch {
+    return null;
   }
 
   return null;
@@ -74,8 +126,11 @@ async function resolveSafeLocalFile(inputPath: string): Promise<{ fullPath: stri
 function isAllowedR2Url(url: string): boolean {
   if (!url || typeof url !== "string") return false;
 
-  // Path internal R2 key atau rute proxy backend
-  if (url.startsWith("cv/") || url.startsWith("/api/r2-file")) {
+  if (
+    url.startsWith("cv/") ||
+    url.startsWith("/api/r2-file") ||
+    url.startsWith("r2://")
+  ) {
     return true;
   }
 
@@ -83,7 +138,6 @@ function isAllowedR2Url(url: string): boolean {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
 
-    // Izinkan custom public domain R2 yang terkonfigurasi di env
     const r2Cfg = getR2Config();
     if (r2Cfg?.publicDomain) {
       const allowedHost = new URL(r2Cfg.publicDomain).hostname.toLowerCase();
@@ -98,23 +152,57 @@ function isAllowedR2Url(url: string): boolean {
   return false;
 }
 
-async function getStoredCvState(identifier?: string | null): Promise<{
+async function getStoredCvState(
+  identifier: string | null,
+  includeDrafts: boolean
+): Promise<{
   doc: CvDocConfig;
+  pool: CvDocConfig[];
   cvSettings?: CvSettingsConfig;
-}> {
-  const config = await fetchPublishedContent();
-  const visibleDocs = (config.cvDocs && config.cvDocs.length > 0 ? config.cvDocs : defaultCvDocs).filter(
-    (d) => d.published !== false && d.visible !== false
-  );
-  const pool = visibleDocs.length > 0 ? visibleDocs : defaultCvDocs;
+} | null> {
+  const config = includeDrafts
+    ? (await fetchDraftOrPublishedContent()).config
+    : await fetchPublishedContent();
 
-  if (identifier) {
-    const cleanId = identifier.toLowerCase().trim();
-    const match = pool.find((d) => d.roleKey.toLowerCase() === cleanId || d.id.toLowerCase() === cleanId);
-    if (match) return { doc: match, cvSettings: config.cvSettings };
+  const sourceDocs = Array.isArray(config.cvDocs) ? config.cvDocs : defaultCvDocs;
+  const pool = includeDrafts
+    ? sourceDocs
+    : sourceDocs.filter((d) => d.published !== false && d.visible !== false);
+
+  if (pool.length === 0) {
+    return null;
   }
 
-  return { doc: pool[0], cvSettings: config.cvSettings };
+  const cleanId = identifier ? identifier.toLowerCase().trim() : "";
+  if (cleanId && cleanId !== "all" && cleanId !== "combined") {
+    const match = pool.find(
+      (d) =>
+        d.roleKey.toLowerCase() === cleanId || d.id.toLowerCase() === cleanId
+    );
+    if (!match) {
+      return null;
+    }
+    return { doc: match, pool, cvSettings: config.cvSettings };
+  }
+
+  const primary =
+    pool.find((d) => Boolean(typeof d.pdfUrl === "string" && d.pdfUrl.trim())) ||
+    pool[0];
+
+  return { doc: primary, pool, cvSettings: config.cvSettings };
+}
+
+function decodeBase64Pdf(dataUri: string): Buffer | null {
+  const commaIdx = dataUri.indexOf(",");
+  if (commaIdx < 0) return null;
+  const base64Part = dataUri.slice(commaIdx + 1).trim();
+  if (!base64Part) return null;
+  try {
+    const buf = Buffer.from(base64Part, "base64");
+    return buf.length > 0 ? buf : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function OPTIONS() {
@@ -126,6 +214,11 @@ export async function OPTIONS() {
 
 export async function HEAD(request: NextRequest) {
   const getRes = await GET(request);
+  try {
+    await getRes.body?.cancel();
+  } catch {
+    // Abaikan kegagalan membatalkan stream respons HEAD
+  }
   return new NextResponse(null, {
     status: getRes.status,
     headers: getRes.headers,
@@ -134,87 +227,197 @@ export async function HEAD(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const identifier = searchParams.get("role") || searchParams.get("docId") || searchParams.get("id");
+  const identifier =
+    searchParams.get("role") || searchParams.get("docId") || searchParams.get("id");
   const wantsDownload = searchParams.get("download") === "1";
   const wantsJson =
     request.headers.get("accept")?.includes("application/json") ||
     searchParams.get("format") === "json";
 
-  const { doc, cvSettings } = await getStoredCvState(identifier);
+  let includeDrafts = false;
+  if (searchParams.get("includeDrafts") === "1") {
+    const auth = await verifyAdminRequest(request);
+    includeDrafts = auth.isAuthenticated;
+  }
 
-  // Respect CMS download lock setting when download=1 is requested
-  const allowDownload =
-    cvSettings?.allowDownload !== false && doc?.allowDownload !== false;
-  if (wantsDownload && !allowDownload) {
+  const stored = await getStoredCvState(identifier, includeDrafts);
+  if (!stored) {
+    return NextResponse.json(
+      { error: "Dokumen CV untuk peran yang diminta tidak ditemukan atau belum dipublikasikan." },
+      { status: 404, headers: CORS_HEADERS }
+    );
+  }
+
+  const { doc, pool, cvSettings } = stored;
+
+  // Tegakkan izin unduh global maupun per dokumen
+  const permissionAllowed =
+    includeDrafts ||
+    (cvSettings?.allowDownload !== false && doc?.allowDownload !== false);
+  if (wantsDownload && !permissionAllowed) {
     return NextResponse.json(
       { error: "Unduhan dokumen CV saat ini dinonaktifkan oleh administrator." },
       { status: 403, headers: CORS_HEADERS }
     );
   }
 
-  const targetPdf = (doc?.pdfUrl || "/cv-ats-zakariamp-2025.pdf").trim();
-  const safeFilename = doc?.downloadFilename
-    ? doc.downloadFilename.replace(/[^a-zA-Z0-9._-]/g, "_")
-    : doc?.title
-    ? `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`
-    : "CV-ATS-ZakariaMP-2025.pdf";
+  const resolved = resolveCvDocumentInfo(doc, pool, cvSettings);
+  if (!resolved.hasPdf) {
+    return NextResponse.json(
+      { error: "Berkas PDF CV untuk peran ini belum tersedia." },
+      { status: 404, headers: CORS_HEADERS }
+    );
+  }
 
-  // 1. Jika dokumen berada di Cloudflare R2
+  const targetPdf = resolved.pdfUrl;
+  const safeFilename = sanitizeCvDownloadFilename(resolved.downloadFilename);
+  const disposition = wantsDownload ? "attachment" : "inline";
+
+  // 1. Data URI PDF base64 (mis. unggahan fallback lokal tanpa R2)
+  if (targetPdf.toLowerCase().startsWith("data:application/pdf")) {
+    const pdfBuffer = decodeBase64Pdf(targetPdf);
+    if (!pdfBuffer) {
+      return NextResponse.json(
+        { error: "Berkas PDF CV tidak valid atau rusak." },
+        { status: 404, headers: CORS_HEADERS }
+      );
+    }
+
+    if (wantsJson) {
+      return NextResponse.json(
+        {
+          url: `/api/cv-pdf?role=${encodeURIComponent(doc.roleKey)}${
+            wantsDownload ? "&download=1" : ""
+          }`,
+          filename: safeFilename,
+        },
+        { headers: CORS_HEADERS }
+      );
+    }
+
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `${disposition}; filename="${safeFilename}"`,
+        "Content-Length": String(pdfBuffer.length),
+        "Content-Security-Policy":
+          "default-src 'none'; object-src 'self'; frame-ancestors 'self'",
+      },
+    });
+  }
+
+  // 2. Dokumen pada Cloudflare R2
   if (isAllowedR2Url(targetPdf) && isR2Configured()) {
     try {
-      const config = getR2Config();
-      const key = extractR2Key(targetPdf, config?.bucketName);
+      const r2Config = getR2Config();
+      const key = extractR2Key(targetPdf, r2Config?.bucketName);
 
-      // Buat presigned URL dengan kedaluwarsa singkat (15 menit)
-      const signedUrl = await createPresignedUrl(key, {
-        expiresIn: 900,
-        contentType: "application/pdf",
-        downloadFilename: wantsDownload ? safeFilename : undefined,
-      });
+      if (!key) {
+        return NextResponse.json(
+          { error: "Referensi berkas PDF di penyimpanan R2 tidak valid." },
+          { status: 404, headers: CORS_HEADERS }
+        );
+      }
 
-      if (signedUrl) {
-        if (wantsJson) {
+      const exists = await r2ObjectExists(key);
+      if (!exists) {
+        return NextResponse.json(
+          { error: "Berkas PDF CV tidak ditemukan di penyimpanan R2." },
+          { status: 404, headers: CORS_HEADERS }
+        );
+      }
+
+      if (wantsJson) {
+        const signedUrl = await createPresignedUrl(key, {
+          expiresIn: 900,
+          contentType: "application/pdf",
+          downloadFilename: safeFilename,
+          disposition,
+        });
+        if (signedUrl) {
           return NextResponse.json(
             { url: signedUrl, filename: safeFilename },
             { headers: CORS_HEADERS }
           );
         }
-        return NextResponse.redirect(signedUrl, 302);
       }
-    } catch (err) {
-      console.error("[api/cv-pdf] Gagal membuat presigned R2 URL:", err);
-    }
-  }
 
-  // 2. Jika dokumen adalah rute proxy backend internal
-  if (targetPdf.startsWith("/api/r2-file")) {
-    const proxyUrl = wantsDownload ? `${targetPdf}&download=1` : targetPdf;
-    if (wantsJson) {
+      const rangeHeader = request.headers.get("range") || undefined;
+      const object = await getR2ObjectStream(key, { range: rangeHeader });
+      if (!object) {
+        return NextResponse.json(
+          { error: "Berkas PDF CV tidak ditemukan di penyimpanan R2." },
+          { status: 404, headers: CORS_HEADERS }
+        );
+      }
+
+      const streamHeaders: Record<string, string> = {
+        ...CORS_HEADERS,
+        "Content-Type": object.contentType || "application/pdf",
+        "Content-Disposition": `${disposition}; filename="${safeFilename}"`,
+        "Accept-Ranges": "bytes",
+        "Content-Security-Policy":
+          "default-src 'none'; object-src 'self'; frame-ancestors 'self'",
+      };
+      if (object.contentLength !== undefined) {
+        streamHeaders["Content-Length"] = String(object.contentLength);
+      }
+      if (object.contentRange) {
+        streamHeaders["Content-Range"] = object.contentRange;
+      }
+      if (object.eTag) {
+        streamHeaders["ETag"] = object.eTag;
+      }
+
+      return new NextResponse(object.stream, {
+        status: object.status,
+        headers: streamHeaders,
+      });
+    } catch (err) {
+      console.error("[api/cv-pdf] Gagal mengambil berkas dari R2:", err);
       return NextResponse.json(
-        { url: proxyUrl, filename: safeFilename },
-        { headers: CORS_HEADERS }
+        { error: "Gagal mengakses berkas PDF CV dari penyimpanan." },
+        { status: 500, headers: CORS_HEADERS }
       );
     }
-    return NextResponse.redirect(new URL(proxyUrl, request.url).toString(), 302);
   }
 
-  // 3. Fallback menyajikan berkas PDF lokal yang divalidasi secara aman
-  const safeFile = await resolveSafeLocalFile(targetPdf);
-  if (!safeFile) {
-    // Fallback darurat ke berkas default ATS jika targetPdf tidak lolos
-    const defaultFile = await resolveSafeLocalFile("cv-ats-zakariamp-2025.pdf");
-    if (!defaultFile) {
+  // 3. Rute proxy R2 ketika R2 tidak terkonfigurasi -> jujur kembalikan 404
+  if (targetPdf.startsWith("/api/r2-file") || targetPdf.startsWith("r2://") || targetPdf.startsWith("cv/")) {
+    return NextResponse.json(
+      { error: "Berkas PDF CV berada di R2, tetapi penyimpanan objek belum aktif." },
+      { status: 404, headers: CORS_HEADERS }
+    );
+  }
+
+  // 4. Berkas lokal di bawah public/
+  const isLocalCandidate =
+    targetPdf.startsWith("/") || isDefaultCombinedCvPdfUrl(targetPdf);
+  if (isLocalCandidate) {
+    const allowedConfiguredPaths = new Set<string>([
+      normalizeRelativePublicPath(targetPdf).toLowerCase(),
+    ]);
+    const safeFile = await resolveSafeLocalFile(targetPdf, allowedConfiguredPaths);
+
+    if (!safeFile) {
       return NextResponse.json(
-        { error: "Berkas PDF CV tidak ditemukan." },
+        { error: "Berkas PDF CV yang dirujuk tidak ditemukan di server." },
         { status: 404, headers: CORS_HEADERS }
       );
     }
 
     try {
-      const fileBuffer = await readFile(/*turbopackIgnore: true*/ defaultFile.fullPath);
+      const fileBuffer = await readFile(/*turbopackIgnore: true*/ safeFile.fullPath);
+      const contentType =
+        safeFile.ext === ".pdf"
+          ? "application/pdf"
+          : `image/${safeFile.ext.replace(".", "")}`;
+
       if (wantsJson) {
         return NextResponse.json(
-          { url: "/cv-ats-zakariamp-2025.pdf", filename: "CV-ATS-ZakariaMP-2025.pdf" },
+          { url: `/${safeFile.relativeUrlPath}`, filename: safeFilename },
           { headers: CORS_HEADERS }
         );
       }
@@ -223,48 +426,37 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           ...CORS_HEADERS,
-          "Content-Type": "application/pdf",
-          "Content-Disposition": wantsDownload
-            ? 'attachment; filename="CV-ATS-ZakariaMP-2025.pdf"'
-            : 'inline; filename="CV-ATS-ZakariaMP-2025.pdf"',
-          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+          "Content-Type": contentType,
+          "Content-Disposition": `${disposition}; filename="${safeFilename}"`,
+          "Content-Length": String(fileBuffer.length),
+          "Content-Security-Policy":
+            "default-src 'none'; object-src 'self'; frame-ancestors 'self'",
         },
       });
-    } catch {
+    } catch (err) {
+      console.error("[api/cv-pdf] Gagal membaca berkas lokal:", err);
       return NextResponse.json(
-        { error: "Gagal membaca berkas CV." },
-        { status: 500, headers: CORS_HEADERS }
+        { error: "Berkas PDF CV tidak dapat dibaca." },
+        { status: 404, headers: CORS_HEADERS }
       );
     }
   }
 
-  try {
-    const fileBuffer = await readFile(/*turbopackIgnore: true*/ safeFile.fullPath);
-    const contentType = safeFile.ext === ".pdf" ? "application/pdf" : `image/${safeFile.ext.replace(".", "")}`;
-
+  // 5. URL eksternal aman (https:// / http://)
+  if (isSafeCvAssetUrl(targetPdf, { allowDataPdf: false })) {
     if (wantsJson) {
       return NextResponse.json(
-        { url: `/${safeFile.filename}`, filename: safeFile.filename },
+        { url: targetPdf, filename: safeFilename },
         { headers: CORS_HEADERS }
       );
     }
-
-    return new NextResponse(fileBuffer, {
-      status: 200,
-      headers: {
-        ...CORS_HEADERS,
-        "Content-Type": contentType,
-        "Content-Disposition": wantsDownload
-          ? `attachment; filename="${safeFile.filename}"`
-          : `inline; filename="${safeFile.filename}"`,
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
-      },
-    });
-  } catch (err) {
-    console.error("[api/cv-pdf] Gagal membaca berkas lokal:", err);
-    return NextResponse.json(
-      { error: "Berkas PDF CV tidak ditemukan." },
-      { status: 404, headers: CORS_HEADERS }
-    );
+    return NextResponse.redirect(targetPdf, 302);
   }
+
+  return NextResponse.json(
+    { error: "Berkas PDF CV tidak valid atau tidak tersedia." },
+    { status: 404, headers: CORS_HEADERS }
+  );
 }
+
+export { DEFAULT_COMBINED_CV_PDF_URL };

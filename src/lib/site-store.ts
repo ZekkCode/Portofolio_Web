@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useSyncExternalStore } from "react";
+import type { ContentHealthReport } from "@/lib/content/types";
 import {
   defaultSiteConfig,
   defaultLanyard,
@@ -42,11 +43,13 @@ import {
   type ExperienceItem,
   type AchievementItem,
   type CertificateItem,
+  type CertificateVerificationStatus,
   type TechStackItem,
   type ServiceItemConfig,
   type FaqItemConfig,
   type ManualBlogPostConfig,
   type SyncedBlogPostOverride,
+  type BlogSyncStatus,
   type BlogConfig,
   type SectionKey,
   type SectionConfigItem,
@@ -100,11 +103,13 @@ export type {
   ExperienceItem,
   AchievementItem,
   CertificateItem,
+  CertificateVerificationStatus,
   TechStackItem,
   ServiceItemConfig,
   FaqItemConfig,
   ManualBlogPostConfig,
   SyncedBlogPostOverride,
+  BlogSyncStatus,
   BlogConfig,
   SectionKey,
   SectionConfigItem,
@@ -271,6 +276,7 @@ export const publishCloudConfig = async (
   options?: { expectedUpdatedAt?: string; forceOverwrite?: boolean }
 ): Promise<{
   success: boolean;
+  httpStatus?: number;
   provider?: string;
   version?: number;
   updatedAt?: string;
@@ -279,6 +285,7 @@ export const publishCloudConfig = async (
   serverConfig?: SiteConfig;
   message?: string;
   details?: string[];
+  health?: ContentHealthReport;
 }> => {
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -318,6 +325,7 @@ export const publishCloudConfig = async (
     }
     return {
       success: Boolean(data.success),
+      httpStatus: res.status,
       provider: data.provider,
       version: data.version,
       updatedAt: data.updatedAt,
@@ -326,6 +334,7 @@ export const publishCloudConfig = async (
       serverConfig: data.serverConfig,
       message: data.message || data.error,
       details: data.details,
+      health: data.health,
     };
   } catch (error) {
     return {

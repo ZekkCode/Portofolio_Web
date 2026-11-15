@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  DEFAULT_DESIGNER_CARD_URL,
+  DEFAULT_FRONTEND_CARD_URL,
+  resolveLanyardImages,
+} from "@/lib/content/identity-images";
+
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -19,8 +25,8 @@ interface StaticLanyardCardProps {
  */
 export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticLanyardCardProps) {
   const [showBack, setShowBack] = useState(false);
-  const frontSrc = frontImage || "/card-front-v2.webp";
-  const backSrc = backImage || frontImage || "/card-back-v2.webp";
+  const frontSrc = frontImage || DEFAULT_FRONTEND_CARD_URL;
+  const backSrc = backImage || DEFAULT_DESIGNER_CARD_URL;
   const cardImage = showBack ? backSrc : frontSrc;
 
   return (
@@ -108,8 +114,8 @@ export function LanyardStage({ className = "" }: { className?: string }) {
       {showStaticOverlay && (
         <div className={shouldUnmount3D ? "h-full w-full" : "absolute inset-0 z-10 h-full w-full"}>
           <StaticLanyardCard
-            frontImage={lanyard.frontImage || undefined}
-            backImage={lanyard.backImage || undefined}
+            frontImage={resolveLanyardImages({ lanyard }).frontImage}
+            backImage={resolveLanyardImages({ lanyard }).backImage}
             strapColor={lanyard.strapColor || undefined}
           />
         </div>
@@ -118,8 +124,8 @@ export function LanyardStage({ className = "" }: { className?: string }) {
         <div className={contextLost ? "h-full w-full opacity-0 pointer-events-none" : "h-full w-full"}>
           <DynamicLanyard
             {...lanyard}
-            frontImage={lanyard.frontImage || undefined}
-            backImage={lanyard.backImage || undefined}
+            frontImage={resolveLanyardImages({ lanyard }).frontImage}
+            backImage={resolveLanyardImages({ lanyard }).backImage}
             strapImage={lanyard.strapImage || undefined}
             onInitFailed={() => setInitFailed(true)}
             onContextLost={() => setContextLost(true)}

@@ -4,10 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, ChevronLeft, ChevronRight, FileText, RotateCcw, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  FileWarning,
+  Layers,
+  Lock,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { useLenis } from "lenis/react";
 import { useSiteConfig } from "@/lib/site-store";
 import { getPublishedCvDocs, getPublishedCvSettings } from "@/lib/content/selectors";
+import { resolveCvDocumentInfo, summarizeCvCollection } from "@/lib/content/cv-documents";
+import type { CvDocConfig, SiteConfig } from "@/lib/site-config";
 import type { PaperCrumpleProps } from "@/components/paper-crumple";
 
 const PaperCrumple = dynamic<PaperCrumpleProps>(
@@ -115,36 +127,68 @@ interface CvPreviewModalProps {
   isOpen: boolean;
   initialRole?: RoleKey;
   onClose: () => void;
+  configOverride?: Partial<SiteConfig>;
+  includeDrafts?: boolean;
 }
 
-export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPreviewModalProps) {
+export function CvPreviewModal({
+  isOpen,
+  initialRole = "all",
+  onClose,
+  configOverride,
+  includeDrafts = false,
+}: CvPreviewModalProps) {
   const { i18n } = useTranslation();
   const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
-  const config = useSiteConfig();
+  const storeConfig = useSiteConfig();
+  const config = configOverride ?? storeConfig;
   const lenis = useLenis();
 
-  const docs = useMemo(() => getPublishedCvDocs(config, locale), [config, locale]);
+  const docs = useMemo<CvDocConfig[]>(() => {
+    if (!includeDrafts) {
+      return getPublishedCvDocs(config, locale);
+    }
+    const isEn = locale === "en";
+    const rawList = Array.isArray(config?.cvDocs) ? [...config.cvDocs] : [];
+    rawList.sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+    return rawList.map((doc) => ({
+      ...doc,
+      title: isEn && doc.titleEn ? doc.titleEn : doc.title,
+      subtitle: isEn && doc.subtitleEn ? doc.subtitleEn : doc.subtitle,
+      description: isEn && doc.descriptionEn ? doc.descriptionEn : doc.description,
+      summary: isEn && doc.summaryEn ? doc.summaryEn : doc.summary || doc.description,
+      responsibilities:
+        isEn && doc.responsibilitiesEn && doc.responsibilitiesEn.length > 0
+          ? doc.responsibilitiesEn
+          : doc.responsibilities,
+    }));
+  }, [config, locale, includeDrafts]);
+
   const cvSettings = useMemo(() => getPublishedCvSettings(config, locale), [config, locale]);
+  const collectionSummary = useMemo(
+    () => summarizeCvCollection(docs, config?.cvSettings),
+    [docs, config?.cvSettings]
+  );
 
   const resolveInitialState = useCallback(
     (role: RoleKey) => {
       if (docs.length === 0) return { docKey: "frontend", pageIdx: 0 };
       const targetDoc =
-        role === "all"
-          ? docs[0]
-          : docs.find((d) => d.roleKey === role) || docs[0];
-      const pages =
-        targetDoc.pages && targetDoc.pages.length > 0
-          ? targetDoc.pages
-          : [targetDoc.thumbnailUrl || "/cv-page-1.png"];
+        role === "all" || role === "combined"
+          ? docs.find((d) => Boolean(d.pdfUrl?.trim())) || docs[0]
+          : docs.find((d) => d.roleKey === role || d.id === role) || docs[0];
+      const info =
+        collectionSummary.resolutionsById[targetDoc.id] ||
+        resolveCvDocumentInfo(targetDoc, docs, config?.cvSettings);
+      const pages = info.previewPages;
       let initialPage = 0;
-      if (role !== "all" && targetDoc.thumbnailUrl) {
-        const matchIdx = pages.indexOf(targetDoc.thumbnailUrl);
+      if (role !== "all" && role !== "combined" && info.thumbnailUrl && pages.length > 0) {
+        const matchIdx = pages.indexOf(info.thumbnailUrl);
         if (matchIdx >= 0) initialPage = matchIdx;
       }
       return { docKey: targetDoc.roleKey, pageIdx: initialPage };
     },
-    [docs]
+    [docs, collectionSummary, config?.cvSettings]
   );
 
   const [activeRole, setActiveRole] = useState<RoleKey>(() => resolveInitialState(initialRole).docKey);
@@ -154,6 +198,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const [crumpleResetKey, setCrumpleResetKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [viewport, setViewport] = useState({ w: 1200, h: 800 });
+  const [unavailableMap, setUnavailableMap] = useState<Record<string, boolean>>({});
   const [hasWebGL] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -227,31 +272,100 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   }, [onClose]);
 
   const currentDoc =
-    docs.find((d) => d.roleKey === activeRole) ||
+    docs.find((d) => d.roleKey === activeRole || d.id === activeRole) ||
     docs[0] ||
     null;
 
-  const fallbackDetail = ROLE_DETAILS[activeRole] || ROLE_DETAILS.frontend;
+  const currentInfo = useMemo(() => {
+    if (!currentDoc) return null;
+    return (
+      collectionSummary.resolutionsById[currentDoc.id] ||
+      resolveCvDocumentInfo(currentDoc, docs, config?.cvSettings)
+    );
+  }, [currentDoc, collectionSummary, docs, config?.cvSettings]);
 
-  const pagesList = useMemo(() => {
-    if (currentDoc?.pages && currentDoc.pages.length > 0) return currentDoc.pages;
-    if (currentDoc?.thumbnailUrl) return [currentDoc.thumbnailUrl];
-    return ["/cv-page-1.png", "/cv-page-2.png", "/cv-page-3.png", "/cv-page-4.png"];
-  }, [currentDoc]);
+  const fallbackDetail = ROLE_DETAILS[activeRole] || ROLE_DETAILS.frontend;
+  const pagesList = useMemo(
+    () => (currentInfo ? currentInfo.previewPages : []),
+    [currentInfo]
+  );
 
   const totalPages = pagesList.length;
   const safePageIdx = Math.min(Math.max(currentPage, 0), Math.max(0, totalPages - 1));
 
   const switchRole = (roleKey: string) => {
     setActiveRole(roleKey);
-    const target = docs.find((d) => d.roleKey === roleKey);
-    if (target?.thumbnailUrl && target.pages?.length) {
-      const thumbPos = target.pages.indexOf(target.thumbnailUrl);
+    const target = docs.find((d) => d.roleKey === roleKey || d.id === roleKey);
+    const info = target
+      ? collectionSummary.resolutionsById[target.id] ||
+        resolveCvDocumentInfo(target, docs, config?.cvSettings)
+      : null;
+    if (info?.previewMode === "images" && info.thumbnailUrl && info.previewPages.length > 0) {
+      const thumbPos = info.previewPages.indexOf(info.thumbnailUrl);
       setCurrentPage(thumbPos >= 0 ? thumbPos : 0);
     } else {
       setCurrentPage(0);
     }
   };
+
+  const effectiveKey = currentDoc?.roleKey || activeRole || "frontend";
+  const isDraftOverride = Boolean(includeDrafts && configOverride);
+  const inlineEndpointUrl = `/api/cv-pdf?role=${encodeURIComponent(effectiveKey)}${
+    includeDrafts ? "&includeDrafts=1" : ""
+  }`;
+  const downloadEndpointUrl = `/api/cv-pdf?role=${encodeURIComponent(effectiveKey)}&download=1${
+    includeDrafts ? "&includeDrafts=1" : ""
+  }`;
+
+  const directLocalOrR2Url =
+    isDraftOverride &&
+    currentInfo?.hasPdf &&
+    (currentInfo.pdfUrl.startsWith("/api/r2-file") ||
+      (currentInfo.pdfUrl.startsWith("/") && !currentInfo.pdfUrl.startsWith("//")))
+      ? currentInfo.pdfUrl
+      : "";
+
+  const previewTargetUrl = directLocalOrR2Url || inlineEndpointUrl;
+  const downloadTargetUrl =
+    isDraftOverride && directLocalOrR2Url
+      ? directLocalOrR2Url.startsWith("/api/r2-file")
+        ? `${directLocalOrR2Url}${directLocalOrR2Url.includes("?") ? "&" : "?"}download=1`
+        : directLocalOrR2Url
+      : downloadEndpointUrl;
+  const pdfCheckKey = currentDoc && currentInfo?.hasPdf ? `${currentDoc.id}::${currentInfo.pdfUrl}::${previewTargetUrl}` : "";
+
+  useEffect(() => {
+    if (!isOpen || !currentInfo?.hasPdf || !pdfCheckKey) return;
+    const rawPdf = currentInfo.pdfUrl.trim();
+    // Lewati HEAD probe jika sumbernya data URI (inline PDF) atau URL eksternal cross-origin
+    if (rawPdf.toLowerCase().startsWith("data:") || /^https?:\/\//i.test(rawPdf)) {
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(previewTargetUrl, {
+      method: "HEAD",
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (res.status === 404) {
+          setUnavailableMap((prev) => ({ ...prev, [pdfCheckKey]: true }));
+        } else if (res.ok) {
+          setUnavailableMap((prev) => {
+            if (!prev[pdfCheckKey]) return prev;
+            const next = { ...prev };
+            delete next[pdfCheckKey];
+            return next;
+          });
+        }
+      })
+      .catch(() => {
+        // Biarkan pratinjau berjalan normal saat jaringan sementara terputus
+      });
+
+    return () => controller.abort();
+  }, [isOpen, currentInfo, pdfCheckKey, previewTargetUrl]);
 
   const prevPage = useCallback(() => {
     setCurrentPage((p) => Math.max(0, p - 1));
@@ -318,19 +432,48 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
   const paperWidth = Math.round(Math.min(maxW, maxH / 1.414));
   const paperHeight = Math.round(paperWidth * 1.414);
 
-  const effectiveKey = currentDoc?.roleKey || activeRole || "frontend";
-  const storedPdfUrl = currentDoc?.pdfUrl?.trim() || "";
-  const isDirectHttpR2 =
-    /^https?:\/\//i.test(storedPdfUrl) &&
-    !storedPdfUrl.includes(".r2.cloudflarestorage.com") &&
-    !storedPdfUrl.startsWith("/api/r2-file");
-
-  const pdfHref = isDirectHttpR2
-    ? storedPdfUrl
-    : `/api/cv-pdf?role=${encodeURIComponent(effectiveKey)}`;
+  const isMissingOnDisk = Boolean(pdfCheckKey && unavailableMap[pdfCheckKey]);
+  const isPdfMissing = !currentDoc || !currentInfo || !currentInfo.hasPdf || isMissingOnDisk;
+  const activePreviewMode = isPdfMissing ? "missing" : currentInfo.previewMode;
 
   const currentTitle = currentDoc?.title || fallbackDetail.title;
-  const canDownload = currentDoc ? currentDoc.allowDownload !== false : cvSettings.allowDownload !== false;
+  const permissionEnabled = includeDrafts
+    ? Boolean(currentInfo?.hasPdf && !isMissingOnDisk)
+    : Boolean(currentInfo?.allowDownload && !isMissingOnDisk);
+  const canDownload = permissionEnabled && !isPdfMissing;
+
+  const isDownloadLockedByPolicy = Boolean(
+    currentInfo?.hasPdf &&
+      !isMissingOnDisk &&
+      !includeDrafts &&
+      (cvSettings.allowDownload === false || currentDoc?.allowDownload === false)
+  );
+
+  const isExternalHttpPdf = Boolean(
+    currentInfo?.hasPdf &&
+      /^https?:\/\//i.test(currentInfo.pdfUrl) &&
+      !currentInfo.pdfUrl.includes(".r2.cloudflarestorage.com")
+  );
+  const pdfEmbedUrl = isDraftOverride && currentInfo?.pdfUrl.startsWith("data:")
+    ? ""
+    : previewTargetUrl;
+
+  const sharedStatusText =
+    currentInfo && currentInfo.hasPdf && !isPdfMissing
+      ? currentInfo.isSharedPdf
+        ? locale === "en"
+          ? `Combined CV (${currentInfo.downloadFilename}) shared across: ${[
+              currentTitle,
+              ...currentInfo.sharedWithTitles,
+            ].join(", ")}`
+          : `CV Gabungan (${currentInfo.downloadFilename}) dipakai bersama peran: ${[
+              currentTitle,
+              ...currentInfo.sharedWithTitles,
+            ].join(", ")}`
+        : locale === "en"
+          ? `Role PDF: ${currentInfo.downloadFilename}`
+          : `Berkas khusus peran: ${currentInfo.downloadFilename}`
+      : "";
 
   return createPortal(
     <div
@@ -348,62 +491,79 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
 
       {/* Top Floating Bar */}
       <div
-        className={`fixed top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none transition-opacity duration-200 ${
+        className={`fixed top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-30 flex flex-wrap items-start justify-between gap-2 pointer-events-none transition-opacity duration-200 ${
           isDragging ? "opacity-0" : "opacity-100"
         }`}
       >
-        {/* Role Switcher Pills / Title */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-black/55 p-1 backdrop-blur-md shadow-md">
-          {docs.length > 1 ? (
-            docs.map((doc) => {
-              const selected = doc.roleKey === currentDoc?.roleKey;
-              return (
-                <button
-                  key={doc.id}
-                  type="button"
-                  onClick={() => switchRole(doc.roleKey)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    selected
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <span
-                    className="size-2 rounded-full shrink-0"
-                    style={{ backgroundColor: doc.color || "#1b45c4" }}
-                  />
-                  <span className="truncate max-w-[130px] sm:max-w-none">{doc.title}</span>
-                </button>
-              );
-            })
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-1 text-white text-xs font-semibold">
-              <span
-                className="size-2 rounded-full shrink-0"
-                style={{ backgroundColor: currentDoc?.color || fallbackDetail.color }}
-              />
-              <span>{currentTitle}</span>
-            </div>
-          )}
+        <div className="pointer-events-auto flex flex-col gap-1.5 max-w-full">
+          {/* Role Switcher Pills / Title */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-black/60 p-1 backdrop-blur-md shadow-md">
+            {docs.length > 1 ? (
+              docs.map((doc) => {
+                const selected = doc.roleKey === currentDoc?.roleKey;
+                const docRes = collectionSummary.resolutionsById[doc.id];
+                const docNoPdf = docRes && !docRes.hasPdf;
+                return (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => switchRole(doc.roleKey)}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      selected
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span
+                      className="size-2 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: docNoPdf
+                          ? "#94a3b8"
+                          : doc.color || "#1b45c4",
+                      }}
+                    />
+                    <span className="truncate max-w-[130px] sm:max-w-none">{doc.title}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1 text-white text-xs font-semibold">
+                <span
+                  className="size-2 rounded-full shrink-0"
+                  style={{ backgroundColor: currentDoc?.color || fallbackDetail.color }}
+                />
+                <span>{currentTitle}</span>
+              </div>
+            )}
 
-          {(currentDoc?.versionLabel || currentDoc?.updatedAt) && (
-            <span className="hidden md:inline-flex items-center px-2 font-mono text-[10px] text-white/70">
-              {[currentDoc.versionLabel, currentDoc.updatedAt].filter(Boolean).join(" · ")}
-            </span>
+            {(currentDoc?.versionLabel || currentDoc?.updatedAt) && (
+              <span className="hidden md:inline-flex items-center px-2 font-mono text-[10px] text-white/70">
+                {[currentDoc.versionLabel, currentDoc.updatedAt].filter(Boolean).join(" · ")}
+              </span>
+            )}
+          </div>
+
+          {sharedStatusText && (
+            <div className="inline-flex w-fit max-w-[92vw] items-center gap-1.5 rounded-xl border border-white/15 bg-black/55 px-3 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
+              <Layers className="size-3.5 shrink-0 text-sky-300" />
+              <span className="truncate">{sharedStatusText}</span>
+            </div>
           )}
         </div>
 
         {/* Actions: Flatten & Close */}
         <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCrumpleResetKey((k) => k + 1)}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-            title={locale === "en" ? "Flatten Paper" : "Ratakan Lembar Kertas"}
-          >
-            <RotateCcw className="size-3.5" />
-            <span className="hidden sm:inline">{locale === "en" ? "Flatten" : "Ratakan"}</span>
-          </button>
+          {activePreviewMode === "images" && (
+            <button
+              type="button"
+              onClick={() => setCrumpleResetKey((k) => k + 1)}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md transition-all duration-150 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              title={locale === "en" ? "Flatten Paper" : "Ratakan Lembar Kertas"}
+            >
+              <RotateCcw className="size-3.5" />
+              <span className="hidden sm:inline">{locale === "en" ? "Flatten" : "Ratakan"}</span>
+            </button>
+          )}
 
           <button
             ref={closeButtonRef}
@@ -417,43 +577,81 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
         </div>
       </div>
 
-      {/* Center Interactive Paper */}
-      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-        {hasWebGL && !reducedMotion ? (
-          <PaperCrumple
-            className="pointer-events-auto h-full w-full"
-            src={pagesList[safePageIdx]}
-            alt={`Curriculum Vitae ${currentTitle} Halaman ${safePageIdx + 1}`}
-            width={paperWidth}
-            height={paperHeight}
-            releaseBehavior="restore"
-            crumpleAmount={0.85}
-            crumpleDuration={0.55}
-            releaseDuration={0.4}
-            foldCount={6}
-            foldSharpness={0.6}
-            wrinkleDepth={0.65}
-            creaseStrength={0.18}
-            paperColor="#ffffff"
-            paperTexture={0.06}
-            shadow={true}
-            shadowOpacity={0.12}
-            draggable={true}
-            returnToOrigin={true}
-            resetKey={crumpleResetKey}
-            onStateChange={(state) => {
-              setIsDragging(state === "holding");
-            }}
-          />
-        ) : (
-          <div className="relative flex items-center justify-center p-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+      {/* Center Interactive Paper / Live PDF / Missing State */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center px-4">
+        {activePreviewMode === "images" && pagesList[safePageIdx] ? (
+          hasWebGL && !reducedMotion ? (
+            <PaperCrumple
+              className="pointer-events-auto h-full w-full"
               src={pagesList[safePageIdx]}
               alt={`Curriculum Vitae ${currentTitle} Halaman ${safePageIdx + 1}`}
-              style={{ width: paperWidth, height: paperHeight }}
-              className="rounded-lg shadow-2xl object-contain bg-white pointer-events-none"
+              width={paperWidth}
+              height={paperHeight}
+              releaseBehavior="restore"
+              crumpleAmount={0.85}
+              crumpleDuration={0.55}
+              releaseDuration={0.4}
+              foldCount={6}
+              foldSharpness={0.6}
+              wrinkleDepth={0.65}
+              creaseStrength={0.18}
+              paperColor="#ffffff"
+              paperTexture={0.06}
+              shadow={true}
+              shadowOpacity={0.12}
+              draggable={true}
+              returnToOrigin={true}
+              resetKey={crumpleResetKey}
+              onStateChange={(state) => {
+                setIsDragging(state === "holding");
+              }}
             />
+          ) : (
+            <div className="relative flex items-center justify-center p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={pagesList[safePageIdx]}
+                alt={`Curriculum Vitae ${currentTitle} Halaman ${safePageIdx + 1}`}
+                style={{ width: paperWidth, height: paperHeight }}
+                className="rounded-lg shadow-2xl object-contain bg-white pointer-events-none"
+              />
+            </div>
+          )
+        ) : activePreviewMode === "pdf-embed" && !isExternalHttpPdf && pdfEmbedUrl ? (
+          <div className="pointer-events-auto w-full max-w-3xl h-[68vh] sm:h-[74vh] mt-6 overflow-hidden rounded-2xl border border-white/20 bg-slate-950/90 shadow-2xl">
+            <iframe
+              key={`${currentDoc?.id || effectiveKey}-${pdfEmbedUrl}`}
+              src={pdfEmbedUrl}
+              title={`Pratinjau PDF ${currentTitle}`}
+              className="h-full w-full border-0 bg-white"
+            />
+          </div>
+        ) : activePreviewMode === "pdf-embed" ? (
+          <div className="pointer-events-auto max-w-md rounded-2xl border border-white/20 bg-black/75 p-6 text-center text-white backdrop-blur-md shadow-xl">
+            <FileText className="mx-auto mb-3 size-9 text-sky-300" />
+            <p className="text-sm font-semibold">{currentTitle}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-white/75">
+              {locale === "en"
+                ? `Document ready (${currentInfo?.downloadFilename}). Preview opens via the PDF button below.`
+                : `Dokumen siap (${currentInfo?.downloadFilename}). Buka berkas PDF langsung melalui tombol di bawah.`}
+            </p>
+          </div>
+        ) : (
+          <div
+            role="status"
+            className="pointer-events-auto max-w-md rounded-2xl border border-amber-300/30 bg-black/80 p-6 text-center text-white backdrop-blur-md shadow-xl"
+          >
+            <FileWarning className="mx-auto mb-3 size-9 text-amber-300" />
+            <p className="text-sm font-semibold">
+              {locale === "en"
+                ? "CV PDF Unavailable"
+                : "Berkas PDF CV Belum Tersedia"}
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-white/75">
+              {locale === "en"
+                ? `No downloadable PDF document is currently attached or found for "${currentTitle}".`
+                : `Berkas PDF CV untuk peran "${currentTitle}" belum terpasang atau tidak ditemukan di penyimpanan.`}
+            </p>
           </div>
         )}
       </div>
@@ -464,7 +662,7 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           isDragging ? "opacity-0" : "opacity-100"
         }`}
       >
-        {totalPages > 1 ? (
+        {activePreviewMode === "images" && totalPages > 1 ? (
           <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-black/60 px-2.5 py-1.5 backdrop-blur-md text-white select-none">
             <button
               type="button"
@@ -494,10 +692,10 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
           <div />
         )}
 
-        {canDownload && (
+        {canDownload && currentInfo ? (
           <a
-            href={pdfHref}
-            download={currentDoc?.downloadFilename || undefined}
+            href={downloadTargetUrl}
+            download={currentInfo.downloadFilename}
             target="_blank"
             rel="noopener noreferrer"
             className="pointer-events-auto inline-flex min-h-[44px] h-11 items-center gap-2 rounded-xl border border-brand-light/30 bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
@@ -506,7 +704,19 @@ export function CvPreviewModal({ isOpen, initialRole = "all", onClose }: CvPrevi
             <span>{cvSettings.downloadLabel || "Buka PDF"}</span>
             <ArrowUpRight className="size-3.5 text-white/80" />
           </a>
-        )}
+        ) : isDownloadLockedByPolicy ? (
+          <div
+            role="status"
+            className="pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-white/20 bg-black/70 px-4 py-2 text-xs font-medium text-white/85 backdrop-blur-md"
+          >
+            <Lock className="size-3.5 text-amber-300 shrink-0" />
+            <span>
+              {locale === "en"
+                ? "PDF download disabled by owner"
+                : "Unduhan PDF dinonaktifkan oleh pemilik"}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>,
     document.body

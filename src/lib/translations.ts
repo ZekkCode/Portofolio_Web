@@ -1,3 +1,5 @@
+import { TECH_STACK_FALLBACK_CATEGORY_LABEL } from "@/lib/content/tech-stack-categories";
+
 export const translations = {
   id: {
     nav: {
@@ -69,8 +71,12 @@ export const translations = {
       title: "Sertifikasi",
       desc: "Kredensial dan program pelatihan resmi yang telah diselesaikan.",
       verifiedBadge: "Terverifikasi",
+      uncheckedBadge: "Belum Diperiksa",
+      needsRecheckBadge: "Perlu Periksa Ulang",
       viewCredential: "Lihat Bukti",
-      verifiedOffline: "Kredensial Fisik Terarsip",
+      openLink: "Buka Tautan Bukti",
+      noEvidenceNote: "Bukti belum dilampirkan",
+      restrictedProofNote: "Lampiran dibatasi",
       filterAll: "Semua Kategori",
       filterDesign: "Desain & UX",
       filterFrontend: "Frontend & Web",
@@ -120,10 +126,7 @@ export const translations = {
     stack: {
       title: "Peralatan Harian",
       desc: "Perangkat lunak dan teknologi yang digunakan secara reguler.",
-      uiuxTitle: "UI/UX & Desain Produk",
-      frontendTitle: "Frontend Web Development",
-      visualTitle: "Desain Grafis & Multimedia",
-      systemsTitle: "Sistem IT & Database",
+      otherTitle: TECH_STACK_FALLBACK_CATEGORY_LABEL.id,
     },
     projects: {
       title: "Proyek Pilihan",
@@ -270,8 +273,12 @@ export const translations = {
       title: "Certifications",
       desc: "Official credentials and technical courses completed across design and engineering.",
       verifiedBadge: "Verified",
+      uncheckedBadge: "Unchecked",
+      needsRecheckBadge: "Needs Re-review",
       viewCredential: "View Proof",
-      verifiedOffline: "Archived Physical Credential",
+      openLink: "Open Proof Link",
+      noEvidenceNote: "No evidence attached",
+      restrictedProofNote: "Restricted attachment",
       filterAll: "All Categories",
       filterDesign: "Design & UX",
       filterFrontend: "Frontend & Web",
@@ -321,10 +328,7 @@ export const translations = {
     stack: {
       title: "Daily Tech Stack",
       desc: "Software and technologies used in daily work.",
-      uiuxTitle: "UI/UX & Product Design",
-      frontendTitle: "Frontend Web Development",
-      visualTitle: "Graphic Design & Multimedia",
-      systemsTitle: "IT Systems & Database",
+      otherTitle: TECH_STACK_FALLBACK_CATEGORY_LABEL.en,
     },
     projects: {
       title: "Selected Projects",

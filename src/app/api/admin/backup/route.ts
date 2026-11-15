@@ -3,14 +3,18 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
-import { auditContentHealth } from "@/lib/content/content-health";
-import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
-import { recordNewRevision } from "@/lib/content/revisions";
+import {
+  evaluatePublishReadiness,
+  getContentReadinessSummary,
+} from "@/lib/content/content-health";
+import {
+  createDefaultRevisionAdapter,
+  publishConfigWithRevision,
+} from "@/lib/content/revisions";
 import {
   fetchPublishedContent,
   invalidatePublishedContentCache,
 } from "@/lib/content/public-content";
-import { isLocalCmsOverrideAllowed, writeLocalCmsDoc } from "@/lib/content/local-cms-store";
 
 export async function GET(request: Request) {
   const auth = await verifyAdminRequest(request);
@@ -78,48 +82,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const validConfig = normalizeConfig(configCandidate as Partial<SiteConfig>);
-  const health = auditContentHealth(validConfig);
+  const rawCandidate = configCandidate as Partial<SiteConfig>;
+  const validConfig = normalizeConfig(rawCandidate);
+  const health = evaluatePublishReadiness(validConfig, rawCandidate);
+  const readiness = getContentReadinessSummary(health);
 
   if (target === "publish" && !health.canPublish) {
+    const errorMsgs = health.issues
+      .filter((i) => i.severity === "error")
+      .map((i) => `[${i.section}] ${i.message}`);
     return NextResponse.json(
       {
         error: "Publikasi langsung ditolak: Berkas cadangan memiliki kesalahan integritas data kritis.",
+        details: errorMsgs,
         health,
+        readiness,
       },
       { status: 422 }
     );
   }
 
-  const useLocal =
-    !isSupabaseConfigured() ||
-    process.env.LOCAL_CMS_STORE === "1" ||
-    (!process.env.VERCEL && !getServiceRoleClient());
-
   const editor = auth.userEmail || "admin";
   const now = new Date().toISOString();
 
   if (target === "publish") {
-    await recordNewRevision(validConfig, editor, "Impor cadangan JSON (Dipublikasikan)");
+    const pubRes = await publishConfigWithRevision({
+      config: { ...validConfig, updatedAt: now },
+      editor,
+      summary: "Impor cadangan JSON (Dipublikasikan)",
+    });
 
-    if (useLocal && isLocalCmsOverrideAllowed()) {
-      await writeLocalCmsDoc("current", validConfig);
-    } else {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
-      if (!supabase) {
-        return NextResponse.json({ error: "Klien database tidak tersedia" }, { status: 500 });
-      }
-      const { error: upsertErr } = await supabase.from("site_config").upsert(
-        { id: "current", config: validConfig, updated_at: now },
-        { onConflict: "id" }
+    if (!pubRes.success) {
+      return NextResponse.json(
+        { error: pubRes.error, code: pubRes.code },
+        { status: 500 }
       );
-      if (upsertErr) {
-        if (isLocalCmsOverrideAllowed()) {
-          await writeLocalCmsDoc("current", validConfig);
-        } else {
-          return NextResponse.json({ error: "Gagal menyimpan konfigurasi ke database" }, { status: 500 });
-        }
-      }
     }
 
     invalidatePublishedContentCache();
@@ -135,37 +132,34 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       target: "publish",
+      provider: pubRes.provider,
+      version: pubRes.version,
+      revisionId: pubRes.revisionId,
+      updatedAt: pubRes.updatedAt,
       message: "Cadangan berhasil diimpor dan dipublikasikan ke seluruh situs.",
-      config: validConfig,
+      config: { ...validConfig, updatedAt: pubRes.updatedAt },
       health,
+      readiness,
     });
   } else {
-    if (useLocal && isLocalCmsOverrideAllowed()) {
-      await writeLocalCmsDoc("draft", validConfig);
-    } else {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
-      if (!supabase) {
-        return NextResponse.json({ error: "Klien database tidak tersedia" }, { status: 500 });
-      }
-      const { error: draftErr } = await supabase.from("site_config").upsert(
-        { id: "draft", config: validConfig, updated_at: now },
-        { onConflict: "id" }
+    const adapter = createDefaultRevisionAdapter();
+    const draftRes = await adapter.writeDoc("draft", { ...validConfig, updatedAt: now }, now);
+    if (!draftRes.ok) {
+      return NextResponse.json(
+        { error: `Gagal menyimpan draf ke penyimpanan: ${draftRes.error}` },
+        { status: 500 }
       );
-      if (draftErr) {
-        if (isLocalCmsOverrideAllowed()) {
-          await writeLocalCmsDoc("draft", validConfig);
-        } else {
-          return NextResponse.json({ error: "Gagal menyimpan draf ke database" }, { status: 500 });
-        }
-      }
     }
 
     return NextResponse.json({
       success: true,
       target: "draft",
+      provider: adapter.provider,
+      updatedAt: draftRes.updatedAt,
       message: "Cadangan berhasil diimpor sebagai Draf. Silakan tinjau sebelum dipublikasikan.",
       config: validConfig,
       health,
+      readiness,
     });
   }
 }

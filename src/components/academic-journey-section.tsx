@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SectionTitle } from "@/components/section-title";
 import { ScrollReveal } from "@/components/parallax";
+import { InstitutionLogo } from "@/components/institution-logo";
 import { useSiteConfig, type EducationItem } from "@/lib/site-store";
 import { getPublishedEducation, getPublishedSectionMeta } from "@/lib/content/selectors";
 import {
@@ -358,14 +359,6 @@ export function AcademicJourneySection() {
               : edu.focus || [];
           const statusLabel =
             currentLang === "en" && edu.statusEn ? edu.statusEn : edu.status;
-          const initials = (edu.institution || "ED")
-            .split(/\s+/)
-            .filter(Boolean)
-            .map((w) => w[0])
-            .slice(0, 3)
-            .join("")
-            .toUpperCase();
-
           const logoScale = prefersReducedMotion
             ? 1
             : isActive
@@ -386,28 +379,16 @@ export function AcademicJourneySection() {
             >
               {/* Card Header: Institution First, Clean Logo & Understated Status */}
               <div className="flex items-start gap-3.5">
-                {edu.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={edu.logo}
-                    alt={`Logo ${edu.institution}`}
-                    className="size-10 shrink-0 object-contain transition-transform duration-300"
-                    style={{
-                      transform: `scale(${logoScale})`,
-                    }}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <span
-                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-line/60 font-mono text-[11px] font-bold tracking-tight text-muted transition-transform duration-300 select-none dark:border-line/40"
-                    style={{
-                      transform: `scale(${logoScale})`,
-                    }}
-                  >
-                    {initials}
-                  </span>
-                )}
+                <InstitutionLogo
+                  src={edu.logo}
+                  name={edu.institution}
+                  fallbackCode="ED"
+                  size="md"
+                  className="transition-transform duration-300"
+                  style={{
+                    transform: `scale(${logoScale})`,
+                  }}
+                />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">

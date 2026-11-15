@@ -4,7 +4,11 @@ import { useState, useRef } from "react";
 import type { SiteConfig } from "@/lib/site-config";
 import type { ContentHealthReport } from "@/lib/content/types";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
-import { auditContentHealth } from "@/lib/content/content-health";
+import {
+  auditContentHealth,
+  getContentReadinessSummary,
+} from "@/lib/content/content-health";
+import { getHealthToneClasses } from "../admin-navigation";
 import {
   Download,
   Upload,
@@ -75,10 +79,11 @@ export function TabMaintenance({
 
         const valid = configObj as SiteConfig;
         const health = auditContentHealth(valid);
+        const readiness = getContentReadinessSummary(health);
 
         setImportCandidate(valid);
         setCandidateHealth(health);
-        setStatus("Berkas cadangan berhasil dibaca & siap diterapkan");
+        setStatus(`Berkas terbaca: ${readiness.badgeLabel} (Skor ${health.score}/100)`);
       } catch {
         setCandidateErrors(["Berkas bukan format JSON yang valid."]);
         setStatus("Gagal membaca berkas JSON");
@@ -223,71 +228,99 @@ export function TabMaintenance({
               </div>
             </label>
           ) : (
-            <div className="rounded-xl border border-line/60 bg-white/70 p-4 text-xs space-y-3 dark:border-line/40 dark:bg-slate-900/60">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-ink">Berkas Terbaca</span>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                  Valid
-                </span>
-              </div>
+            (() => {
+              const candidateReadiness = candidateHealth
+                ? getContentReadinessSummary(candidateHealth)
+                : null;
+              const candidateTone = candidateReadiness
+                ? getHealthToneClasses(candidateReadiness.tone)
+                : null;
+              const blockedForPublish = Boolean(
+                importTarget === "publish" && candidateHealth && !candidateHealth.canPublish
+              );
 
-              {candidateHealth && (
-                <div className="text-[11px] text-muted">
-                  Skor Kesehatan Konten:{" "}
-                  <strong className="text-ink">{candidateHealth.score}%</strong> (
-                  {candidateHealth.errorsCount} error, {candidateHealth.warningsCount} peringatan)
+              return (
+                <div className="rounded-xl border border-line/60 bg-white/70 p-4 text-xs space-y-3 dark:border-line/40 dark:bg-slate-900/60">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-ink">Berkas Terbaca</span>
+                    {candidateReadiness && candidateTone && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${candidateTone.pill}`}
+                      >
+                        {candidateReadiness.badgeLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  {candidateHealth && candidateReadiness && (
+                    <div className="space-y-1 text-[11px] text-muted">
+                      <div>
+                        Skor Kesehatan Konten:{" "}
+                        <strong className="text-ink">{candidateHealth.score}/100</strong> (
+                        {candidateHealth.errorsCount} blocker, {candidateHealth.warningsCount} peringatan,{" "}
+                        {candidateHealth.infosCount} saran)
+                      </div>
+                      <p>{candidateReadiness.headline}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 pt-2 border-t border-line/40">
+                    <span className="text-[11px] font-semibold text-muted">Tujuan Penerapan:</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                        <input
+                          type="radio"
+                          name="importTarget"
+                          value="draft"
+                          checked={importTarget === "draft"}
+                          onChange={() => setImportTarget("draft")}
+                          className="text-brand"
+                        />
+                        <span>Sebagai Draf (Aman)</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                        <input
+                          type="radio"
+                          name="importTarget"
+                          value="publish"
+                          checked={importTarget === "publish"}
+                          onChange={() => setImportTarget("publish")}
+                          className="text-brand"
+                        />
+                        <span>Publikasikan Langsung</span>
+                      </label>
+                    </div>
+                    {blockedForPublish && (
+                      <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                        Publikasi langsung diblokir karena terdapat {candidateHealth?.errorsCount} blocker error. Pilih &quot;Sebagai Draf&quot; atau perbaiki file terlebih dahulu.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleApplyImport}
+                      disabled={importing || blockedForPublish}
+                      className="flex-1 rounded-xl bg-emerald-600 py-2 text-center text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {importing ? "Memproses..." : "Terapkan Cadangan"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportCandidate(null);
+                        setCandidateHealth(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="rounded-xl border border-line px-3 py-2 text-xs font-semibold text-muted hover:text-ink"
+                    >
+                      Batal
+                    </button>
+                  </div>
                 </div>
-              )}
-
-              <div className="space-y-1.5 pt-2 border-t border-line/40">
-                <span className="text-[11px] font-semibold text-muted">Tujuan Penerapan:</span>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-                    <input
-                      type="radio"
-                      name="importTarget"
-                      value="draft"
-                      checked={importTarget === "draft"}
-                      onChange={() => setImportTarget("draft")}
-                      className="text-brand"
-                    />
-                    <span>Sebagai Draf (Aman)</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-                    <input
-                      type="radio"
-                      name="importTarget"
-                      value="publish"
-                      checked={importTarget === "publish"}
-                      onChange={() => setImportTarget("publish")}
-                      className="text-brand"
-                    />
-                    <span>Publikasikan Langsung</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleApplyImport}
-                  disabled={importing}
-                  className="flex-1 rounded-xl bg-emerald-600 py-2 text-center text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {importing ? "Memproses..." : "Terapkan Cadangan"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImportCandidate(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="rounded-xl border border-line px-3 py-2 text-xs font-semibold text-muted hover:text-ink"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
+              );
+            })()
           )}
 
           {candidateErrors.length > 0 && (
@@ -343,19 +376,27 @@ export function TabMaintenance({
               <div>
                 <h3 className="text-sm font-bold text-ink">Pemeriksa Kesehatan Konten</h3>
                 <p className="text-xs text-muted">
-                  Audit otomatis untuk mendeteksi tautan rusak, gambar hilang, atau ketidaklengkapan teks.
+                  Audit otomatis untuk memeriksa kelengkapan field, validitas skema URL, konsistensi bukti sertifikat/CV, serta blocker publikasi.
                 </p>
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onOpenHealthModal}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-white/80 py-2.5 text-xs font-semibold text-ink shadow-sm transition hover:bg-surface dark:border-line/40 dark:bg-slate-900/80"
-          >
-            <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Buka Laporan Kesehatan Konten ({healthReport.score}%)</span>
-          </button>
+          {(() => {
+            const readiness = getContentReadinessSummary(healthReport);
+            const toneClasses = getHealthToneClasses(readiness.tone);
+            return (
+              <button
+                type="button"
+                onClick={onOpenHealthModal}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-white/80 py-2.5 text-xs font-semibold text-ink shadow-sm transition hover:bg-surface dark:border-line/40 dark:bg-slate-900/80"
+              >
+                <ShieldCheck className={`size-4 ${toneClasses.iconText}`} />
+                <span>
+                  Buka Laporan Kesehatan Konten ({healthReport.score}/100 • {readiness.badgeLabel})
+                </span>
+              </button>
+            );
+          })()}
         </div>
       </div>
 

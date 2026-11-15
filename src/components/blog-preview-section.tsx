@@ -9,11 +9,13 @@ import {
   BLOG_HOME_URL,
   type BlogPost,
 } from "@/lib/blog-feed";
+import type { BlogSyncStatus } from "@/lib/site-config";
+import { isSafeHttpOrRelativeUrl, resolveBlogSyncMeta } from "@/lib/content/blog-sync";
 import {
   getPublishedSectionMeta,
   mergeBlogPostsWithOverrides,
 } from "@/lib/content/selectors";
-import { ArrowRight, ArrowUpRight, Calendar, Newspaper } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Calendar, Loader2, Newspaper } from "lucide-react";
 
 export function BlogPreviewSection() {
   const { t, i18n } = useTranslation();
@@ -25,52 +27,84 @@ export function BlogPreviewSection() {
   const { blog } = config;
   const secMeta = getPublishedSectionMeta(config, "blog", locale);
 
-  const [externalSynced, setExternalSynced] = useState<BlogPost[]>([]);
+  const resolvedMeta = resolveBlogSyncMeta(blog);
+  const effectiveMode = resolvedMeta.sourceMode;
+
+  const [externalSynced, setExternalSynced] = useState<BlogPost[] | undefined>(undefined);
+  const [isLoadingFeed, setIsLoadingFeed] = useState<boolean>(
+    () => blog?.visible !== false && blog?.published !== false && effectiveMode !== "manual"
+  );
+  const [syncFetchStatus, setSyncFetchStatus] = useState<BlogSyncStatus>(resolvedMeta.status);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (blog?.visible === false || blog?.published === false) return;
-    if (blog?.sourceMode === "manual") return;
+    if (effectiveMode === "manual") {
+      setIsLoadingFeed(false);
+      setExternalSynced(undefined);
+      setSyncFetchStatus(resolvedMeta.status);
+      return;
+    }
 
     let active = true;
+    setIsLoadingFeed(true);
+
     async function loadLatestPosts() {
       try {
         const res = await fetch("/api/blog-feed?rawSync=1", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          if (active && Array.isArray(data)) {
-            setExternalSynced(data);
+        const data = await res.json();
+        if (!active) return;
+
+        if (Array.isArray(data)) {
+          setExternalSynced(data);
+          setSyncFetchStatus(data.length > 0 ? "success_posts" : "success_empty");
+          return;
+        }
+
+        if (data && typeof data === "object") {
+          const nextStatus = (data.status as BlogSyncStatus | undefined) || (data.ok ? "success_posts" : "error");
+          setSyncFetchStatus(nextStatus);
+          if (data.ok && Array.isArray(data.posts)) {
+            setExternalSynced(data.posts);
+          } else {
+            // Kegagalan sync tidak boleh menimpa/menghapus cache artikel sinkron terakhir
+            setExternalSynced(undefined);
           }
         }
       } catch {
-        // Fallback to stored syncedPosts / manualPosts in config
+        if (active) {
+          setSyncFetchStatus("error");
+          setExternalSynced(undefined);
+        }
+      } finally {
+        if (active) {
+          setIsLoadingFeed(false);
+        }
       }
     }
     void loadLatestPosts();
     return () => {
       active = false;
     };
-  }, [blog?.visible, blog?.published, blog?.sourceMode, blog?.feedUrl, blog?.displayCount]);
+  }, [blog?.visible, blog?.published, effectiveMode, blog?.feedUrl, blog?.displayCount, resolvedMeta.status]);
 
   const posts = useMemo(() => {
-    const asConfig = externalSynced.map((p, idx) => ({
-      id: p.id || p.slug,
-      slug: p.slug,
-      title: p.title,
-      excerpt: p.excerpt,
-      coverImage: p.coverImage,
-      url: p.url,
-      category: p.category,
-      date: p.publishedAt,
-      published: true,
-      visible: true,
-      sortOrder: idx + 1,
-    }));
-    return mergeBlogPostsWithOverrides(
-      config,
-      asConfig.length > 0 ? asConfig : undefined,
-      locale
-    );
+    const asConfig =
+      externalSynced !== undefined
+        ? externalSynced.map((p, idx) => ({
+            id: p.id || p.slug || `sync-${idx + 1}`,
+            slug: p.slug || `sync-${idx + 1}`,
+            title: p.title,
+            excerpt: p.excerpt,
+            coverImage: p.coverImage,
+            url: p.url,
+            category: p.category,
+            date: p.publishedAt,
+            published: true,
+            visible: true,
+          }))
+        : undefined;
+    return mergeBlogPostsWithOverrides(config, asConfig, locale);
   }, [config, externalSynced, locale]);
 
   if (blog?.visible === false || blog?.published === false) {
@@ -91,13 +125,81 @@ export function BlogPreviewSection() {
     secMeta.desc ||
     t("blog.desc", "Notes, thoughts, and technical articles on design and web engineering.");
 
-  const blogUrl = blog?.portalUrl || blog?.feedUrl || BLOG_HOME_URL;
+  const rawBlogUrl = blog?.portalUrl || blog?.feedUrl || BLOG_HOME_URL;
+  const blogUrl = isSafeHttpOrRelativeUrl(rawBlogUrl) ? rawBlogUrl : BLOG_HOME_URL;
   const ctaLabel =
     (isEn ? blog?.ctaLabelEn : blog?.ctaLabelId) ||
     t("blog.allPostsBtn", "Lihat Semua Artikel");
   const displayHost = blogUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const mdSeeAllSpan = posts.length % 2 === 0 ? "md:col-span-2" : "md:col-span-1";
   const lgSeeAllSpan = ["lg:col-span-3", "lg:col-span-2", "lg:col-span-1"][posts.length % 3];
+
+  const renderEmptyOrStatusState = () => {
+    if (isLoadingFeed && effectiveMode !== "manual") {
+      return (
+        <div
+          role="status"
+          aria-live="polite"
+          data-blog-state="loading"
+          className="rounded-2xl border border-line/60 bg-white/60 p-10 text-center text-xs text-muted dark:border-line/40 dark:bg-[#111422]/60 flex flex-col items-center justify-center gap-2.5"
+        >
+          <Loader2 className="size-5 animate-spin text-brand dark:text-blue-400" />
+          <span>
+            {isEn ? "Syncing latest articles from blog feed..." : "Memuat artikel terbaru dari sumber blog..."}
+          </span>
+        </div>
+      );
+    }
+
+    if (effectiveMode !== "manual" && syncFetchStatus === "error") {
+      return (
+        <div
+          data-blog-state="error"
+          className="rounded-2xl border border-amber-500/30 bg-amber-50/70 p-8 sm:p-10 text-center text-xs text-muted dark:border-amber-500/25 dark:bg-amber-950/20 flex flex-col items-center gap-3"
+        >
+          <p className="text-ink font-semibold text-sm">
+            {isEn ? "Blog feed could not be loaded right now." : "Feed blog belum dapat dimuat saat ini."}
+          </p>
+          <p className="max-w-md leading-relaxed">
+            {isEn
+              ? "External feed synchronization encountered an error and no cached articles are stored yet. You can read articles directly on the blog portal."
+              : "Sinkronisasi feed eksternal mengalami kendala dan belum ada cache artikel tersimpan. Anda tetap dapat membaca artikel langsung melalui portal blog."}
+          </p>
+          <a
+            href={blogUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-1.5 text-xs font-semibold text-ink hover:border-brand/50 transition-colors dark:bg-[#111422] dark:border-line/60"
+          >
+            <span>{ctaLabel}</span>
+            <ArrowUpRight className="size-3.5" />
+          </a>
+        </div>
+      );
+    }
+
+    if (effectiveMode !== "manual" && syncFetchStatus === "never") {
+      return (
+        <div
+          data-blog-state="never"
+          className="rounded-2xl border border-line/60 bg-white/60 p-10 text-center text-xs text-muted dark:border-line/40 dark:bg-[#111422]/60"
+        >
+          {isEn
+            ? "Blog feed has not been synced yet and no manual articles are published."
+            : "Sumber blog belum pernah disinkronkan dan belum ada artikel manual yang dipublikasikan."}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        data-blog-state={syncFetchStatus === "success_empty" ? "empty" : "manual-empty"}
+        className="rounded-2xl border border-line/60 bg-white/60 p-10 text-center text-xs text-muted dark:border-line/40 dark:bg-[#111422]/60"
+      >
+        {isEn ? "No blog articles are displayed right now." : "Belum ada artikel yang dipublikasikan saat ini."}
+      </div>
+    );
+  };
 
   return (
     <section
@@ -123,9 +225,7 @@ export function BlogPreviewSection() {
         </div>
 
         {posts.length === 0 ? (
-          <div className="rounded-2xl border border-line/60 bg-white/60 p-10 text-center text-xs text-muted dark:border-line/40 dark:bg-[#111422]/60">
-            {isEn ? "No blog articles are displayed right now." : "Belum ada artikel blog yang ditampilkan."}
-          </div>
+          renderEmptyOrStatusState()
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {posts.map((post) => {

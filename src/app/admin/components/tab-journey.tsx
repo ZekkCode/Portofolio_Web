@@ -1,7 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  extractArrayIndexFromField,
+  type AdminNavigationTarget,
+} from "../admin-navigation";
 import type { SiteConfig, EducationItem, ExperienceItem } from "@/lib/site-store";
+import {
+  analyzeExperienceDateMigration,
+  applyNonDestructiveExperienceDateMigration,
+  resolveExperienceRecord,
+} from "@/lib/content/experience-dates";
+import { InstitutionLogo } from "@/components/institution-logo";
 import { MediaFieldControl } from "./MediaFieldControl";
 import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import {
@@ -33,6 +43,7 @@ interface TabJourneyProps {
   ) => Promise<void>;
   uploadingImage: string | null;
   inputClass: string;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 const PAGE_SIZE = 10;
@@ -54,6 +65,7 @@ export function TabJourney({
   uploadAndSet,
   uploadingImage,
   inputClass,
+  navigationTarget,
 }: TabJourneyProps) {
   const [subTab, setSubTab] = useState<"education" | "experience">("education");
 
@@ -71,6 +83,41 @@ export function TabJourney({
 
   const educationList = config.education || [];
   const experienceList = config.experience || [];
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "journey") return;
+    if (navigationTarget.subTab === "education" || navigationTarget.subTab === "experience") {
+      setSubTab(navigationTarget.subTab);
+    }
+    if (navigationTarget.subTab === "education") {
+      let idx = navigationTarget.itemId
+        ? educationList.findIndex((e) => e.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "education");
+        if (parsed !== null && parsed >= 0 && parsed < educationList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setEduSearch("");
+        setEduStatusFilter("all");
+        setEduPage(Math.floor(idx / PAGE_SIZE) + 1);
+      }
+    } else if (navigationTarget.subTab === "experience") {
+      let idx = navigationTarget.itemId
+        ? experienceList.findIndex((e) => e.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "experience");
+        if (parsed !== null && parsed >= 0 && parsed < experienceList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setExpSearch("");
+        setExpTypeFilter("all");
+        setExpStatusFilter("all");
+        setExpPage(Math.floor(idx / PAGE_SIZE) + 1);
+      }
+    }
+  }, [navigationTarget, educationList, experienceList]);
 
   // ===================== EDUCATION CRUD =====================
   const addEducation = () => {
@@ -219,7 +266,7 @@ export function TabJourney({
       orgUrl: "",
       logo: "",
       type: "work",
-      period: `${now.getFullYear()} - Sekarang`,
+      period: `${ym} - Sekarang`,
       startDate: ym,
       endDate: "",
       current: true,
@@ -325,6 +372,26 @@ export function TabJourney({
     () => Array.from(orgGroupCounts.values()).filter((g) => g.count > 1),
     [orgGroupCounts]
   );
+
+  const experienceDiagnostics = useMemo(() => {
+    const map = new Map(
+      experienceList.map((exp) => [exp.id, resolveExperienceRecord(exp)])
+    );
+    const migrationReport = analyzeExperienceDateMigration(experienceList);
+    return { map, migrationReport };
+  }, [experienceList]);
+
+  const applySafeDateMigration = () => {
+    const { nextConfig, changedIds, report } = applyNonDestructiveExperienceDateMigration(config);
+    if (changedIds.length === 0) {
+      setStatus("Tidak ada periode teks eksak yang siap dimigrasi");
+      return;
+    }
+    setDraft(nextConfig);
+    setStatus(
+      `${changedIds.length} tanggal terstruktur diisi dari periode eksak (${report.flaggedCount} ditandai perlu tinjauan manual)`
+    );
+  };
 
   const isExpFiltered =
     expSearch.trim() !== "" || expTypeFilter !== "all" || expStatusFilter !== "all";
@@ -446,6 +513,7 @@ export function TabJourney({
                 return (
                   <div
                     key={edu.id}
+                    data-admin-item-id={edu.id}
                     {...(!isEduFiltered ? eduDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       eduDrag.dragIndex === rawIndex
@@ -455,18 +523,14 @@ export function TabJourney({
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3 dark:border-line/40">
                       <div className="flex items-center gap-2.5">
-                        {edu.logo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={edu.logo}
-                            alt={edu.institution}
-                            className="size-8 rounded-lg border border-line object-contain bg-white p-0.5 dark:border-line/40"
-                          />
-                        ) : (
-                          <div className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface text-muted dark:border-line/40">
-                            <GraduationCap className="size-4" />
-                          </div>
-                        )}
+                        <InstitutionLogo
+                          src={edu.logo}
+                          name={edu.institution}
+                          fallbackCode="ED"
+                          fallbackIcon={<GraduationCap className="size-4" />}
+                          size="xs"
+                          loading="eager"
+                        />
                         <div>
                           <h3 className="font-display text-sm font-bold text-ink">
                             {edu.institution || "Institusi Tanpa Nama"}
@@ -943,6 +1007,48 @@ export function TabJourney({
             </div>
           )}
 
+          {/* Non-destructive Structured Date Migration & Review Banner */}
+          {(experienceDiagnostics.migrationReport.migratableCount > 0 ||
+            experienceDiagnostics.migrationReport.flaggedCount > 0) && (
+            <div className="space-y-2 rounded-xl border border-amber-300/70 bg-amber-50/70 p-4 text-xs dark:border-amber-500/30 dark:bg-amber-950/20">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <p className="font-semibold text-ink">
+                      Audit Tanggal Pengalaman:{" "}
+                      {experienceDiagnostics.migrationReport.alreadyStructuredCount} terstruktur,{" "}
+                      {experienceDiagnostics.migrationReport.migratableCount} siap dimigrasi otomatis,{" "}
+                      {experienceDiagnostics.migrationReport.flaggedCount} perlu tinjauan manual.
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted">
+                      Migrasi hanya mengisi tanggal terstruktur (YYYY-MM) dari periode teks yang pasti dan tidak menebak format ambigu (seperti tahun saja).
+                    </p>
+                  </div>
+                </div>
+                {experienceDiagnostics.migrationReport.migratableCount > 0 && (
+                  <button
+                    type="button"
+                    data-testid="migrate-safe-exp-dates"
+                    onClick={applySafeDateMigration}
+                    className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-ink"
+                  >
+                    Isi Tanggal Aman ke Draf ({experienceDiagnostics.migrationReport.migratableCount})
+                  </button>
+                )}
+              </div>
+              {experienceDiagnostics.migrationReport.flaggedForReview.length > 0 && (
+                <ul className="space-y-1 border-t border-amber-300/50 pt-2 text-[11px] text-amber-900 dark:border-amber-500/20 dark:text-amber-200">
+                  {experienceDiagnostics.migrationReport.flaggedForReview.map((item) => (
+                    <li key={item.id}>
+                      <strong>{item.org || item.role || item.id}:</strong> {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {pagedExperience.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line p-8 text-center text-xs text-muted dark:border-line/40">
               {experienceList.length === 0
@@ -955,12 +1061,13 @@ export function TabJourney({
                 const rawIndex = experienceList.findIndex((e) => e.id === exp.id);
                 const groupKey = (exp.orgGroup || exp.org || "").trim().toLowerCase();
                 const groupCount = groupKey ? orgGroupCounts.get(groupKey)?.count || 1 : 1;
-                const hasDateIssue =
-                  !exp.current && exp.startDate && exp.endDate && exp.startDate > exp.endDate;
+                const resolvedDate = experienceDiagnostics.map.get(exp.id);
+                const hasDateIssue = Boolean(resolvedDate?.needsReview);
 
                 return (
                   <div
                     key={exp.id}
+                    data-admin-item-id={exp.id}
                     {...(!isExpFiltered ? expDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       expDrag.dragIndex === rawIndex
@@ -970,18 +1077,14 @@ export function TabJourney({
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3 dark:border-line/40">
                       <div className="flex flex-wrap items-center gap-2.5">
-                        {exp.logo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={exp.logo}
-                            alt={exp.org}
-                            className="size-8 rounded-lg border border-line object-contain bg-white p-0.5 dark:border-line/40"
-                          />
-                        ) : (
-                          <div className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface text-muted dark:border-line/40">
-                            <Briefcase className="size-4" />
-                          </div>
-                        )}
+                        <InstitutionLogo
+                          src={exp.logo}
+                          name={exp.org}
+                          fallbackCode="ORG"
+                          fallbackIcon={<Briefcase className="size-4" />}
+                          size="xs"
+                          loading="eager"
+                        />
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-display text-sm font-bold text-ink">
@@ -994,7 +1097,24 @@ export function TabJourney({
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-muted">{exp.period}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+                            <span>{exp.period}</span>
+                            {resolvedDate && (
+                              <span
+                                className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                                  resolvedDate.includedInStats
+                                    ? resolvedDate.dateSource === "structured"
+                                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                      : "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                                    : "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                                }`}
+                              >
+                                {resolvedDate.includedInStats
+                                  ? `${resolvedDate.months} bln (${resolvedDate.dateSource === "structured" ? "terstruktur" : "fallback teks"})`
+                                  : `Tidak dihitung: ${resolvedDate.exclusionReason}`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1022,7 +1142,9 @@ export function TabJourney({
                         <span>
                           {!exp.role?.trim() || !exp.org?.trim()
                             ? "Jabatan dan nama organisasi/perusahaan wajib diisi."
-                            : `Tanggal mulai (${exp.startDate}) lebih akhir dibanding tanggal selesai (${exp.endDate}).`}
+                            : resolvedDate?.exclusionDetail ||
+                              resolvedDate?.reviewHint ||
+                              `Perlu pemeriksaan tanggal (${exp.startDate || exp.period}).`}
                         </span>
                       </div>
                     )}

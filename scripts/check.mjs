@@ -208,8 +208,12 @@ try {
   assert.equal(await typeInto('input[type="range"]', "0.85", 0), true, "slider tidak ditemukan");
   await sleep(300);
   assert.equal(await click("Simpan"), true, "tombol Simpan tidak ditemukan");
-  await sleep(400);
-  const saved = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").lanyard?.cornerRadius`);
+  let saved = null;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    saved = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").lanyard?.cornerRadius`);
+    if (saved === 0.85) break;
+    await sleep(200);
+  }
   assert.equal(saved, 0.85, "nilai slider tidak tersimpan");
   console.log("ok  admin: ubah slider lalu Simpan menulis localStorage");
 
@@ -220,30 +224,65 @@ try {
   await sleep(300);
   const after = await evaluate(`document.querySelectorAll("textarea").length`);
   assert.equal(after, before + 1, "tambah proyek tidak menambah baris");
+  const isDraftDefault = await evaluate(`(() => {
+    const btns = [...document.querySelectorAll("button")].filter((b) => {
+      const txt = b.textContent.trim();
+      return txt === "Draf" || txt === "Publik";
+    });
+    return btns.length > 0 && btns[btns.length - 1].textContent.trim() === "Draf";
+  })()`);
+  assert.equal(isDraftDefault, true, "proyek baru harus berstatus Draf secara default");
   const titleIndex = await evaluate(`(() => {
     const inputs = [...document.querySelectorAll('label')].filter((l) => l.textContent.includes('Judul')).map((l) => l.querySelector('input'));
     return [...document.querySelectorAll('input')].indexOf(inputs[inputs.length - 1]);
   })()`);
   await typeInto("input", "Proyek Cek Otomatis", titleIndex);
   await sleep(200);
-  await click("Simpan");
-  await sleep(400);
-  const stored = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").projects ?? []`);
+  assert.equal(await click("Simpan Draf"), true, "tombol Simpan Draf tidak ditemukan");
+  let draftStored = [];
+  for (let attempt = 0; attempt < 20; attempt++) {
+    draftStored = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1:draft") ?? "{}").projects ?? []`);
+    if (draftStored.some((project) => project.title === "Proyek Cek Otomatis" && project.published === false)) {
+      break;
+    }
+    await sleep(200);
+  }
   assert.ok(
-    stored.some((project) => project.title === "Proyek Cek Otomatis"),
-    "proyek baru tidak tersimpan"
+    draftStored.some((project) => project.title === "Proyek Cek Otomatis" && project.published === false),
+    "proyek draf baru tidak tersimpan ke draf"
   );
-  console.log("ok  admin: tambah proyek tersimpan");
+  console.log("ok  admin: proyek baru berstatus draf dan tersimpan via Simpan Draf");
+
+  const toggledToPublic = await evaluate(`(() => {
+    const draftBtns = [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "Draf");
+    const lastBtn = draftBtns[draftBtns.length - 1];
+    if (!lastBtn) return false;
+    lastBtn.click();
+    return true;
+  })()`);
+  assert.equal(toggledToPublic, true, "tombol status Draf tidak ditemukan");
+  await sleep(250);
+  const inlineErrorsVisible = await evaluate(`document.querySelectorAll('[role="alert"]').length > 0`);
+  assert.equal(inlineErrorsVisible, true, "validasi inline tidak muncul saat proyek belum lengkap diubah ke Publik");
+  assert.equal(await click("Simpan"), true, "tombol Simpan tidak ditemukan");
+  await sleep(400);
+  const publishedStored = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").projects ?? []`);
+  assert.equal(
+    publishedStored.some((project) => project.title === "Proyek Cek Otomatis"),
+    false,
+    "proyek placeholder tanpa cover ditolak publikasi"
+  );
+  console.log("ok  admin: publikasi placeholder tanpa cover ditolak dengan error inline");
 
   await goto("/", 2500);
   assert.equal(
     await evaluate(`document.body.innerText.includes("Proyek Cek Otomatis")`),
-    true,
-    "proyek baru tidak muncul di halaman utama"
+    false,
+    "proyek draf/placeholder tidak boleh muncul di halaman utama"
   );
-  console.log("ok  home: membaca config tersimpan");
+  console.log("ok  home: draf/placeholder tidak tampil publik");
 
-  await evaluate(`localStorage.removeItem("zekk:site:v1")`);
+  await evaluate(`localStorage.removeItem("zekk:site:v1"); localStorage.removeItem("zekk:site:v1:draft")`);
   console.log("\nSemua cek lulus.");
 } finally {
   ws?.close();

@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  extractArrayIndexFromField,
+  type AdminNavigationTarget,
+} from "../admin-navigation";
 import type {
   SiteConfig,
   CertificateItem,
@@ -30,7 +34,31 @@ import {
   Star,
   AlertCircle,
   Lock,
+  ShieldCheck,
+  Clock,
+  RotateCcw,
+  Info,
+  Layers,
 } from "lucide-react";
+import { auditCertificateVerificationIssues } from "@/lib/content/content-health";
+import {
+  applyCertificateUpdate,
+  hasCertificateEvidence,
+  resolveCertificateVerificationStatus,
+  type CertificateVerificationStatus,
+} from "@/lib/content/certificate-verification";
+import {
+  DEFAULT_COMBINED_CV_FILENAME,
+  DEFAULT_COMBINED_CV_PAGES,
+  DEFAULT_COMBINED_CV_PDF_URL,
+  LEGACY_COMBINED_ROLE_FILENAMES,
+  deriveFilenameFromCvPdfUrl,
+  isDefaultCombinedCvPdfUrl,
+  isLegacyCombinedCvPageUrl,
+  resolveCvDocumentInfo,
+  stripLegacyCombinedCvPages,
+  summarizeCvCollection,
+} from "@/lib/content/cv-documents";
 
 interface TabCredentialsProps {
   config: SiteConfig;
@@ -45,6 +73,7 @@ interface TabCredentialsProps {
   uploadingImage: string | null;
   inputClass: string;
   setPreviewCvRole: (role: RoleKey | null) => void;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 const PAGE_SIZE = 12;
@@ -67,6 +96,7 @@ export function TabCredentials({
   uploadingImage,
   inputClass,
   setPreviewCvRole,
+  navigationTarget,
 }: TabCredentialsProps) {
   const [subTab, setSubTab] = useState<"certificates" | "achievements" | "cv">("certificates");
 
@@ -74,6 +104,9 @@ export function TabCredentials({
   const [certSearch, setCertSearch] = useState("");
   const [certCategoryFilter, setCertCategoryFilter] = useState("all");
   const [certStatusFilter, setCertStatusFilter] = useState<"all" | "published" | "draft" | "hidden">("all");
+  const [certVerificationFilter, setCertVerificationFilter] = useState<
+    "all" | CertificateVerificationStatus
+  >("all");
   const [certPage, setCertPage] = useState(1);
 
   const [achSearch, setAchSearch] = useState("");
@@ -89,7 +122,65 @@ export function TabCredentials({
   const certList = config.certificates || [];
   const achList = config.achievements || [];
   const cvList = config.cvDocs || [];
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "credentials") return;
+    const targetSub = navigationTarget.subTab;
+    if (targetSub === "certificates" || targetSub === "achievements" || targetSub === "cv") {
+      setSubTab(targetSub);
+    }
+
+    if (targetSub === "certificates") {
+      let idx = navigationTarget.itemId
+        ? certList.findIndex((c) => c.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "certificates");
+        if (parsed !== null && parsed >= 0 && parsed < certList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setCertSearch("");
+        setCertCategoryFilter("all");
+        setCertStatusFilter("all");
+        setCertVerificationFilter("all");
+        setCertPage(Math.floor(idx / PAGE_SIZE) + 1);
+      }
+    } else if (targetSub === "achievements") {
+      let idx = navigationTarget.itemId
+        ? achList.findIndex((a) => a.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "achievements");
+        if (parsed !== null && parsed >= 0 && parsed < achList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setAchSearch("");
+        setAchCategoryFilter("all");
+        setAchStatusFilter("all");
+        setAchPage(Math.floor(idx / PAGE_SIZE) + 1);
+      }
+    } else if (targetSub === "cv") {
+      setCvSearch("");
+      setCvStatusFilter("all");
+    }
+  }, [navigationTarget, certList, achList]);
   const cvSettings: CvSettingsConfig = config.cvSettings || { allowDownload: true };
+  const cvSummary = useMemo(
+    () => summarizeCvCollection(cvList, cvSettings),
+    [cvList, cvSettings]
+  );
+
+  const certVerificationIssuesById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof auditCertificateVerificationIssues>>();
+    const issues = auditCertificateVerificationIssues(certList);
+    issues.forEach((issue) => {
+      if (!issue.itemId) return;
+      const list = map.get(issue.itemId) || [];
+      list.push(issue);
+      map.set(issue.itemId, list);
+    });
+    return map;
+  }, [certList]);
 
   // ===================== CERTIFICATES CRUD =====================
   const addCertificate = () => {
@@ -108,6 +199,7 @@ export function TabCredentials({
       desc: "",
       descEn: "",
       category: "design",
+      verificationStatus: "unverified",
       featured: false,
       allowDownload: true,
       published: true,
@@ -118,22 +210,46 @@ export function TabCredentials({
     setCertSearch("");
     setCertCategoryFilter("all");
     setCertStatusFilter("all");
+    setCertVerificationFilter("all");
     setCertPage(Math.max(1, Math.ceil(nextList.length / PAGE_SIZE)));
     setDraft({ ...config, certificates: nextList });
-    setStatus("Sertifikat baru ditambahkan ke draft");
+    setStatus("Sertifikat baru ditambahkan ke draft (status: Belum Diperiksa)");
   };
 
   const updateCertificate = (id: string, updates: Partial<CertificateItem>) => {
+    const existing = certList.find((c) => c.id === id);
+    if (!existing) return;
+
+    const { next, transition } = applyCertificateUpdate(
+      existing,
+      updates,
+      new Date().toISOString()
+    );
+    const nextList = certList.map((c) => (c.id === id ? next : c));
+
     setDraft({
       ...config,
-      certificates: certList.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      certificates: nextList,
     });
-    setStatus("Data sertifikat diperbarui");
+
+    if (transition === "invalidated_removed") {
+      setStatus("Bukti sertifikat dihapus — status terverifikasi lama dibatalkan.");
+    } else if (transition === "invalidated_changed") {
+      setStatus("Bukti sertifikat berubah — status terverifikasi dibatalkan, perlu pemeriksaan ulang.");
+    } else if (transition === "blocked_no_evidence") {
+      setStatus("Penandaan terverifikasi ditolak: lampirkan minimal URL, PDF, atau gambar bukti.");
+    } else if (transition === "verified") {
+      setStatus("Sertifikat ditandai terverifikasi berdasarkan bukti yang diperiksa.");
+    } else if (transition === "unverified") {
+      setStatus("Status verifikasi sertifikat disetel ke Belum Diperiksa.");
+    } else {
+      setStatus("Data sertifikat diperbarui");
+    }
   };
 
   const requestDeleteCertificate = (cert: CertificateItem) => {
     setPendingDelete({
-      entityType: "Sertifikat Terverifikasi",
+      entityType: "Sertifikat",
       itemName: cert.title || cert.id,
       impacts: [
         "Menghapus kartu kredensial dari seksi Sertifikasi publik.",
@@ -169,12 +285,21 @@ export function TabCredentials({
   });
 
   const isCertFiltered =
-    certSearch.trim() !== "" || certCategoryFilter !== "all" || certStatusFilter !== "all";
+    certSearch.trim() !== "" ||
+    certCategoryFilter !== "all" ||
+    certStatusFilter !== "all" ||
+    certVerificationFilter !== "all";
   const filteredCerts = useMemo(() => {
     const q = certSearch.trim().toLowerCase();
     return certList.filter((c) => {
       if (!matchesStatusFilter(c, certStatusFilter)) return false;
       if (certCategoryFilter !== "all" && c.category !== certCategoryFilter) return false;
+      if (
+        certVerificationFilter !== "all" &&
+        resolveCertificateVerificationStatus(c) !== certVerificationFilter
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         c.title.toLowerCase().includes(q) ||
@@ -183,7 +308,7 @@ export function TabCredentials({
         c.date.toLowerCase().includes(q)
       );
     });
-  }, [certList, certSearch, certCategoryFilter, certStatusFilter]);
+  }, [certList, certSearch, certCategoryFilter, certStatusFilter, certVerificationFilter]);
 
   const certTotalPages = Math.max(1, Math.ceil(filteredCerts.length / PAGE_SIZE));
   const safeCertPage = Math.min(certPage, certTotalPages);
@@ -307,9 +432,9 @@ export function TabCredentials({
       title: "Peran Karier Baru",
       subtitle: "Fokus & Keahlian Utama",
       color: "#1b45c4",
-      pdfUrl: "/cv-ats-zakariamp-2025.pdf",
-      thumbnailUrl: "/cv-page-1.png",
-      pages: ["/cv-page-1.png"],
+      pdfUrl: DEFAULT_COMBINED_CV_PDF_URL,
+      thumbnailUrl: DEFAULT_COMBINED_CV_PAGES[0],
+      pages: [...DEFAULT_COMBINED_CV_PAGES],
       skills: [],
       tools: [],
       responsibilities: [],
@@ -317,7 +442,7 @@ export function TabCredentials({
       versionLabel: "v2025.1",
       updatedAt: new Date().toISOString().slice(0, 10),
       allowDownload: true,
-      downloadFilename: `CV-Zakaria-${newKey}.pdf`,
+      downloadFilename: DEFAULT_COMBINED_CV_FILENAME,
       published: true,
       visible: true,
       sortOrder: cvList.length + 1,
@@ -329,9 +454,63 @@ export function TabCredentials({
   const updateCvDoc = (id: string, updates: Partial<CvDocConfig>) => {
     setDraft({
       ...config,
-      cvDocs: cvList.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+      cvDocs: cvList.map((d) => {
+        if (d.id !== id) return d;
+        const next: CvDocConfig = { ...d, ...updates };
+
+        if (updates.pdfUrl !== undefined && updates.pdfUrl !== d.pdfUrl) {
+          const nextPdf = updates.pdfUrl.trim();
+          if (!nextPdf) {
+            next.pages = stripLegacyCombinedCvPages(d.pages);
+            if (isLegacyCombinedCvPageUrl(d.thumbnailUrl)) {
+              next.thumbnailUrl = "";
+            }
+          } else if (isDefaultCombinedCvPdfUrl(nextPdf)) {
+            if (!Array.isArray(d.pages) || d.pages.length === 0) {
+              next.pages = [...DEFAULT_COMBINED_CV_PAGES];
+            }
+            if (!d.thumbnailUrl) {
+              next.thumbnailUrl = DEFAULT_COMBINED_CV_PAGES[0];
+            }
+            const currentFn = (d.downloadFilename || "").trim();
+            if (!currentFn || LEGACY_COMBINED_ROLE_FILENAMES.has(currentFn)) {
+              next.downloadFilename = DEFAULT_COMBINED_CV_FILENAME;
+            }
+          } else {
+            next.pages = stripLegacyCombinedCvPages(d.pages);
+            if (isLegacyCombinedCvPageUrl(d.thumbnailUrl)) {
+              next.thumbnailUrl = next.pages[0] || "";
+            }
+            const currentFn = (d.downloadFilename || "").trim();
+            if (
+              !currentFn ||
+              currentFn === DEFAULT_COMBINED_CV_FILENAME ||
+              LEGACY_COMBINED_ROLE_FILENAMES.has(currentFn)
+            ) {
+              const derived = deriveFilenameFromCvPdfUrl(nextPdf);
+              if (derived) next.downloadFilename = derived;
+            }
+          }
+          next.pageCount = next.pages?.length || 0;
+        }
+
+        return next;
+      }),
     });
     setStatus("Dokumen CV diperbarui di draft");
+  };
+
+  const clearStaleCvPages = (doc: CvDocConfig) => {
+    const cleanedPages = stripLegacyCombinedCvPages(doc.pages);
+    const cleanedThumb = isLegacyCombinedCvPageUrl(doc.thumbnailUrl)
+      ? cleanedPages[0] || ""
+      : doc.thumbnailUrl;
+    updateCvDoc(doc.id, {
+      pages: cleanedPages,
+      thumbnailUrl: cleanedThumb,
+      pageCount: cleanedPages.length,
+    });
+    setStatus(`Halaman preview lama pada '${doc.title || doc.roleKey}' dibersihkan`);
   };
 
   const requestDeleteCvDoc = (doc: CvDocConfig) => {
@@ -447,10 +626,10 @@ export function TabCredentials({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-base font-bold text-ink">
-                Manajemen Sertifikat Terverifikasi
+                Manajemen Sertifikat & Kredensial
               </h2>
               <p className="text-xs text-muted">
-                Kelola sertifikat, logo lembaga penerbit, masa berlaku, preview gambar/PDF, dan kontrol unduh
+                Kelola sertifikat, lampiran bukti (URL/PDF/gambar), serta pisahkan status publikasi dari pemeriksaan bukti.
               </p>
             </div>
             <button
@@ -490,6 +669,43 @@ export function TabCredentials({
             filteredCount={filteredCerts.length}
           />
 
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="font-semibold text-muted">Filter Pemeriksaan Bukti:</span>
+            {(
+              [
+                { key: "all", label: `Semua (${certList.length})` },
+                {
+                  key: "verified",
+                  label: `Terverifikasi (${certList.filter((c) => resolveCertificateVerificationStatus(c) === "verified").length})`,
+                },
+                {
+                  key: "unverified",
+                  label: `Belum Diperiksa (${certList.filter((c) => resolveCertificateVerificationStatus(c) === "unverified").length})`,
+                },
+                {
+                  key: "needs_reverification",
+                  label: `Perlu Periksa Ulang (${certList.filter((c) => resolveCertificateVerificationStatus(c) === "needs_reverification").length})`,
+                },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  setCertVerificationFilter(opt.key);
+                  setCertPage(1);
+                }}
+                className={`rounded-lg border px-2.5 py-1 font-medium transition ${
+                  certVerificationFilter === opt.key
+                    ? "border-brand bg-brand/10 text-brand dark:bg-blue-500/15 dark:text-blue-300"
+                    : "border-line/70 text-muted hover:text-ink dark:border-line/40"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {pagedCerts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line p-8 text-center text-xs text-muted dark:border-line/40">
               {certList.length === 0
@@ -500,10 +716,15 @@ export function TabCredentials({
             <div className="space-y-4">
               {pagedCerts.map((cert) => {
                 const rawIndex = certList.findIndex((c) => c.id === cert.id);
+                const resolvedVerification = resolveCertificateVerificationStatus(cert);
+                const hasEvidence = hasCertificateEvidence(cert);
+                const itemIssues = certVerificationIssuesById.get(cert.id) || [];
+                const itemErrors = itemIssues.filter((i) => i.severity === "error");
 
                 return (
                   <div
                     key={cert.id}
+                    data-admin-cert-id={cert.id}
                     {...(!isCertFiltered ? certDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       certDrag.dragIndex === rawIndex
@@ -522,9 +743,50 @@ export function TabCredentials({
                           />
                         )}
                         <div>
-                          <h3 className="font-display text-sm font-bold text-ink">
-                            {cert.title || "Sertifikat Tanpa Judul"}
-                          </h3>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h3 className="font-display text-sm font-bold text-ink">
+                              {cert.title || "Sertifikat Tanpa Judul"}
+                            </h3>
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                                cert.published === false
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                                  : cert.visible === false
+                                    ? "bg-slate-500/15 text-slate-600 dark:text-slate-300"
+                                    : "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                              }`}
+                            >
+                              {cert.published === false
+                                ? "Draf"
+                                : cert.visible === false
+                                  ? "Tersembunyi"
+                                  : "Publik"}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                                resolvedVerification === "verified"
+                                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                                  : resolvedVerification === "needs_reverification"
+                                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                                    : "bg-slate-500/10 text-muted dark:bg-slate-800 dark:text-slate-300"
+                              }`}
+                            >
+                              {resolvedVerification === "verified" ? (
+                                <ShieldCheck className="size-3" />
+                              ) : resolvedVerification === "needs_reverification" ? (
+                                <RotateCcw className="size-3" />
+                              ) : (
+                                <Clock className="size-3" />
+                              )}
+                              <span>
+                                {resolvedVerification === "verified"
+                                  ? "Terverifikasi"
+                                  : resolvedVerification === "needs_reverification"
+                                    ? "Perlu Periksa Ulang"
+                                    : "Belum Diperiksa"}
+                              </span>
+                            </span>
+                          </div>
                           <p className="text-[11px] text-muted">
                             {cert.issuer} · {cert.date}
                           </p>
@@ -568,6 +830,102 @@ export function TabCredentials({
                         <span>Judul sertifikat dan nama penerbit wajib diisi.</span>
                       </div>
                     )}
+
+                    {itemErrors.length > 0 && (
+                      <div
+                        role="alert"
+                        className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-800 dark:text-rose-200"
+                      >
+                        <div className="space-y-0.5">
+                          {itemErrors.map((err) => (
+                            <p key={err.id}>{err.message}</p>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateCertificate(cert.id, { verificationStatus: "unverified" })
+                          }
+                          className="rounded-lg border border-rose-500/40 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-white dark:bg-slate-900 dark:text-rose-300"
+                        >
+                          Reset Status Verifikasi
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Status Pemeriksaan Bukti (Independen dari Publikasi) */}
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line/70 bg-surface/50 px-3.5 py-2.5 dark:border-line/40 dark:bg-slate-900/40">
+                      <div className="space-y-0.5 text-[11px]">
+                        <p className="font-semibold text-ink">
+                          Pemeriksaan Bukti:{" "}
+                          {resolvedVerification === "verified" ? (
+                            <span className="text-emerald-700 dark:text-emerald-400">
+                              Terverifikasi Admin
+                            </span>
+                          ) : resolvedVerification === "needs_reverification" ? (
+                            <span className="text-amber-700 dark:text-amber-400">
+                              Perlu Pemeriksaan Ulang
+                            </span>
+                          ) : hasEvidence ? (
+                            <span className="text-ink">Bukti Tersedia · Belum Diperiksa</span>
+                          ) : (
+                            <span className="text-muted">Belum Diperiksa · Tanpa Bukti</span>
+                          )}
+                        </p>
+                        <p className="text-muted">
+                          {resolvedVerification === "verified"
+                            ? `Diperiksa pada ${cert.verifiedAt ? cert.verifiedAt.slice(0, 10) : "-"}. Mengubah/menghapus URL, PDF, gambar, atau ID akan membatalkan status ini.`
+                            : resolvedVerification === "needs_reverification"
+                              ? "Lampiran bukti atau ID kredensial berubah setelah pemeriksaan sebelumnya. Tinjau kembali lalu tandai ulang."
+                              : hasEvidence
+                                ? "Adanya tautan/dokumen tidak otomatis membuktikan keaslian. Periksa lalu tandai secara eksplisit."
+                                : "Lampirkan minimal satu bukti (URL, PDF, atau gambar) sebelum menandai Terverifikasi. Sertifikat tanpa bukti tetap tampil netral."}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {resolvedVerification === "verified" ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCertificate(cert.id, { verificationStatus: "unverified" })
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-rose-400 hover:text-rose-600 dark:border-line/40"
+                          >
+                            <span>Batalkan Terverifikasi</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={!hasEvidence}
+                              onClick={() =>
+                                updateCertificate(cert.id, { verificationStatus: "verified" })
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
+                            >
+                              <ShieldCheck className="size-3.5" />
+                              <span>
+                                {resolvedVerification === "needs_reverification"
+                                  ? "Tandai Bukti Baru Terverifikasi"
+                                  : "Tandai Sudah Diperiksa (Terverifikasi)"}
+                              </span>
+                            </button>
+                            {resolvedVerification === "needs_reverification" && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateCertificate(cert.id, { verificationStatus: "unverified" })
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[11px] font-medium text-muted hover:text-ink dark:border-line/40"
+                              >
+                                <span>Setel Belum Diperiksa</span>
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
 
                     <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
@@ -810,6 +1168,7 @@ export function TabCredentials({
                 return (
                   <div
                     key={ach.id}
+                    data-admin-item-id={ach.id}
                     {...(!isAchFiltered ? achDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       achDrag.dragIndex === rawIndex
@@ -1149,13 +1508,45 @@ export function TabCredentials({
             filteredCount={filteredCv.length}
           />
 
+          {cvSummary.hasAnySharedPdf && (
+            <div className="rounded-2xl border border-sky-200 bg-sky-50/75 p-4 text-xs text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-100">
+              <div className="flex items-start gap-2.5">
+                <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <div className="space-y-1">
+                  <p className="font-semibold">
+                    Mode CV Gabungan Aktif ({cvSummary.uniquePdfCount} berkas PDF unik untuk{" "}
+                    {cvSummary.docsWithPdf} peran)
+                  </p>
+                  <p className="text-sky-900/80 dark:text-sky-200/80 leading-relaxed">
+                    Beberapa peran saat ini menunjuk berkas PDF yang sama. Situs publik
+                    menyajikannya secara jujur sebagai CV gabungan dengan nama unduhan berkas
+                    aktual. Unggah PDF terpisah pada kartu peran bila sudah tersedia versi khusus
+                    per peran.
+                  </p>
+                  <ul className="mt-1 space-y-0.5 font-mono text-[11px] text-sky-800 dark:text-sky-300">
+                    {cvSummary.sharedGroups.map((group) => (
+                      <li key={group.identityKey}>
+                        • {group.titles.join(", ")} → {group.effectiveDownloadFilename}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-5">
             {filteredCv.map((doc) => {
               const rawIndex = cvList.findIndex((d) => d.id === doc.id);
+              const docInfo =
+                cvSummary.resolutionsById[doc.id] ||
+                resolveCvDocumentInfo(doc, cvList, cvSettings);
 
               return (
                 <div
                   key={doc.id}
+                  data-admin-item-id={doc.id}
+                  data-admin-field={rawIndex >= 0 ? `cvDocs[${rawIndex}].pdfUrl` : undefined}
                   {...(!isCvFiltered ? cvDrag.getDragProps(rawIndex) : {})}
                   className={`rounded-2xl border bg-white p-5 shadow-2xs transition dark:bg-[#0c0e17] ${
                     cvDrag.dragIndex === rawIndex
@@ -1170,9 +1561,27 @@ export function TabCredentials({
                         style={{ backgroundColor: doc.color || "#1b45c4" }}
                       />
                       <div>
-                        <h3 className="font-display text-sm font-bold text-ink">
-                          {doc.title || doc.roleKey}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-display text-sm font-bold text-ink">
+                            {doc.title || doc.roleKey}
+                          </h3>
+                          {!docInfo.hasPdf ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                              <AlertCircle className="size-3" />
+                              PDF Kosong
+                            </span>
+                          ) : docInfo.isSharedPdf ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-200">
+                              <Layers className="size-3" />
+                              CV Gabungan
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+                              <FileText className="size-3" />
+                              PDF Khusus Peran
+                            </span>
+                          )}
+                        </div>
                         <p className="font-mono text-[11px] text-muted">
                           roleKey: {doc.roleKey} {doc.versionLabel ? `· ${doc.versionLabel}` : ""}
                         </p>
@@ -1271,8 +1680,28 @@ export function TabCredentials({
                         value={doc.downloadFilename || ""}
                         onChange={(e) => updateCvDoc(doc.id, { downloadFilename: e.target.value })}
                         className={`mt-1 ${inputClass}`}
-                        placeholder="CV-ZakariaMP-Frontend.pdf"
+                        placeholder={DEFAULT_COMBINED_CV_FILENAME}
                       />
+                      {docInfo.hasPdf &&
+                        docInfo.downloadFilename !== (doc.downloadFilename || "").trim() && (
+                          <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[11px] text-sky-700 dark:text-sky-300">
+                            <span>
+                              Unduhan publik efektif:{" "}
+                              <strong className="font-mono">{docInfo.downloadFilename}</strong>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateCvDoc(doc.id, {
+                                  downloadFilename: docInfo.downloadFilename,
+                                })
+                              }
+                              className="underline hover:text-sky-900 dark:hover:text-sky-100"
+                            >
+                              Samakan field
+                            </button>
+                          </div>
+                        )}
                     </div>
 
                     <div>
@@ -1373,7 +1802,10 @@ export function TabCredentials({
                             type="button"
                             onClick={() =>
                               updateCvDoc(doc.id, {
-                                pages: [...(doc.pages || []), "/cv-page-1.png"],
+                                pages: [
+                                  ...(doc.pages || []),
+                                  isDefaultCombinedCvPdfUrl(doc.pdfUrl) ? "/cv-page-1.png" : "",
+                                ],
                               })
                             }
                             className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-surface dark:border-line/40 dark:bg-slate-800"
@@ -1383,6 +1815,32 @@ export function TabCredentials({
                           </button>
                         </div>
                       </div>
+
+                      {docInfo.hasStaleLegacyPages && (
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
+                          <span>
+                            Masih terdapat {docInfo.stalePageUrls.length} gambar preview CV gabungan
+                            lama (`/cv-page-*.png`). Situs publik otomatis mengabaikannya agar cocok
+                            dengan PDF aktif.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => clearStaleCvPages(doc)}
+                            className="shrink-0 rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-100"
+                          >
+                            Bersihkan Halaman Lama
+                          </button>
+                        </div>
+                      )}
+
+                      {docInfo.hasPdf &&
+                        !docInfo.usesCombinedDefaultPdf &&
+                        docInfo.previewMode === "pdf-embed" && (
+                          <p className="mb-3 text-[11px] text-muted">
+                            Tanpa render gambar halaman khusus, situs publik menampilkan pratinjau
+                            dokumen PDF langsung agar selalu sinkron dengan PDF peran ini.
+                          </p>
+                        )}
 
                       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
                         {(doc.pages || []).map((pageUrl, pIdx) => (

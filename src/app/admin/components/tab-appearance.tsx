@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { AdminNavigationTarget } from "../admin-navigation";
 import Lanyard from "@/components/lanyard";
 import ProfileCard from "@/components/profile-card";
 import { MediaFieldControl } from "./MediaFieldControl";
 import type { SiteConfig, LanyardConfig, ProfileCardConfig, SeoConfig } from "@/lib/site-store";
-import { Upload, Sparkles, Layers, Search } from "lucide-react";
+import {
+  DEFAULT_PORTRAIT_AVATAR_URL,
+  resolveLanyardImages,
+  resolveProfileCardAvatar,
+  resolveProfileCardImageFit,
+  resolveProfileCardMiniAvatar,
+} from "@/lib/content/identity-images";
+import { Sparkles, Layers, Search } from "lucide-react";
 
 interface TabAppearanceProps {
   config: SiteConfig;
@@ -19,6 +27,7 @@ interface TabAppearanceProps {
   ) => Promise<void>;
   uploadingImage: string | null;
   inputClass: string;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 type FieldKind = "range" | "select" | "color" | "toggle" | "image";
@@ -36,25 +45,25 @@ type Field = {
 
 const LANYARD_GROUPS: { title: string; fields: Field[] }[] = [
   {
-    title: "Tekstur & Gambar Kartu",
+    title: "Tekstur & Gambar Kartu ID Lanyard (Terpisah dari Avatar Orang)",
     fields: [
       {
         key: "frontImage",
-        label: "Gambar depan",
+        label: "Gambar Depan Lanyard — Kartu Frontend Dev (1457:2048)",
         kind: "image",
-        hint: "Rasio kartu ≈ 0.71 (mis. 640×900). PNG/JPG otomatis dikonversi ke WebP.",
+        hint: "Kartu ID depan 3D (Frontend Dev). Rasio ≈ 0.71 (1457×2048). Kosong = fallback ke /card-front-v2.webp. Tidak dipakai untuk avatar Hologram.",
       },
       {
         key: "backImage",
-        label: "Gambar belakang",
+        label: "Gambar Belakang Lanyard — Kartu Graphic Designer (1457:2048)",
         kind: "image",
-        hint: "Kosong = pakai gambar depan. PNG/JPG otomatis dikonversi ke WebP.",
+        hint: "Kartu ID belakang 3D (Graphic Designer). Rasio ≈ 0.71 (1457×2048). Kosong = fallback ke /card-back-v2.webp.",
       },
       {
         key: "strapImage",
-        label: "Gambar tali",
+        label: "Tekstur Tali Lanyard (Opsional)",
         kind: "image",
-        hint: "Gambar lebar, diulang sepanjang tali. PNG/JPG otomatis dikonversi ke WebP.",
+        hint: "Gambar memanjang (wide), diulang sepanjang tali lanyard 3D. PNG/JPG otomatis dikonversi ke WebP.",
       },
       { key: "imageFit", label: "Image fit", kind: "select", options: ["cover", "contain"] },
     ],
@@ -104,8 +113,20 @@ export function TabAppearance({
   uploadAndSet,
   uploadingImage,
   inputClass,
+  navigationTarget,
 }: TabAppearanceProps) {
   const [subTab, setSubTab] = useState<"lanyard" | "profileCard" | "seo">("lanyard");
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "appearance") return;
+    if (
+      navigationTarget.subTab === "lanyard" ||
+      navigationTarget.subTab === "profileCard" ||
+      navigationTarget.subTab === "seo"
+    ) {
+      setSubTab(navigationTarget.subTab);
+    }
+  }, [navigationTarget]);
 
   const updateLanyard = <K extends keyof LanyardConfig>(key: K, value: LanyardConfig[K]) => {
     setDraft({ ...config, lanyard: { ...config.lanyard, [key]: value } });
@@ -189,14 +210,16 @@ export function TabAppearance({
                     const value = config.lanyard[field.key];
                     return (
                       <div key={field.key} className={field.kind === "image" ? "sm:col-span-2" : ""}>
-                        <div className="flex items-center justify-between text-xs text-ink font-medium">
-                          <label htmlFor={`field-${field.key}`}>{field.label}</label>
-                          {field.kind === "range" && (
-                            <span className="font-mono text-xs text-brand font-bold">
-                              {typeof value === "number" ? value.toFixed(2) : String(value)}
-                            </span>
-                          )}
-                        </div>
+                        {field.kind !== "image" && (
+                          <div className="flex items-center justify-between text-xs text-ink font-medium">
+                            <label htmlFor={`field-${field.key}`}>{field.label}</label>
+                            {field.kind === "range" && (
+                              <span className="font-mono text-xs text-brand font-bold">
+                                {typeof value === "number" ? value.toFixed(2) : String(value)}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {field.kind === "range" && (
                           <input
@@ -258,48 +281,26 @@ export function TabAppearance({
                         )}
 
                         {field.kind === "image" && (
-                          <div className="mt-1.5 space-y-2">
-                            <input
-                              id={`field-${field.key}`}
-                              type="text"
-                              value={String(value ?? "")}
-                              onChange={(e) => updateLanyard(field.key, e.target.value as never)}
-                              placeholder="https://... atau path WebP"
-                              className={inputClass}
-                            />
-                            <div className="flex flex-wrap items-center gap-2">
-                              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm hover:bg-surface dark:border-line/40 dark:bg-slate-800 transition">
-                                <Upload className="size-3.5 text-brand" />
-                                <span>{uploadingImage === field.key ? "Memproses..." : "Unggah WebP"}</span>
-                                <input
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      void uploadAndSet(
-                                        file,
-                                        "lanyard",
-                                        (url) => updateLanyard(field.key, url as never),
-                                        field.key
-                                      );
-                                    }
-                                  }}
-                                />
-                              </label>
-                              {value && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateLanyard(field.key, "" as never)}
-                                  className="rounded-xl px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10"
-                                >
-                                  Hapus
-                                </button>
-                              )}
-                            </div>
-                            {field.hint && <p className="text-[11px] text-muted">{field.hint}</p>}
-                          </div>
+                          <MediaFieldControl
+                            label={field.label}
+                            value={String(value ?? "")}
+                            onChange={(url) => updateLanyard(field.key, url as never)}
+                            folder="lanyard"
+                            fieldKey={field.key}
+                            uploadAndSet={uploadAndSet}
+                            uploadingImage={uploadingImage}
+                            config={config}
+                            accept="image/png,image/jpeg,image/webp"
+                            placeholder={
+                              field.key === "frontImage"
+                                ? "/card-front-v2.webp"
+                                : field.key === "backImage"
+                                  ? "/card-back-v2.webp"
+                                  : "https://... atau path WebP"
+                            }
+                            previewShape={field.key === "strapImage" ? "wide" : "portrait"}
+                            helpText={field.hint}
+                          />
                         )}
                       </div>
                     );
@@ -312,14 +313,51 @@ export function TabAppearance({
           {/* Sticky 3D Lanyard Preview */}
           <div className="sticky top-24 self-start rounded-2xl border border-line/70 bg-white/70 p-4 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Fisika 3D Lanyard</h3>
-            <div className="mt-3 aspect-square w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-950">
-              <Lanyard
-                {...config.lanyard}
-                frontImage={config.lanyard.frontImage || undefined}
-                backImage={config.lanyard.backImage || undefined}
-                strapImage={config.lanyard.strapImage || undefined}
-              />
-            </div>
+            {(() => {
+              const resolvedLanyard = resolveLanyardImages({ lanyard: config.lanyard });
+              return (
+                <>
+                  <div className="mt-3 aspect-square w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-950">
+                    <Lanyard
+                      {...config.lanyard}
+                      frontImage={resolvedLanyard.frontImage}
+                      backImage={resolvedLanyard.backImage}
+                      strapImage={resolvedLanyard.strapImage || undefined}
+                    />
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-2 gap-2 rounded-xl border border-line/70 bg-surface/60 p-2.5 text-[11px] dark:border-line/40">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolvedLanyard.frontImage}
+                        alt="Preview sisi depan lanyard"
+                        className="aspect-[1457/2048] w-8 shrink-0 rounded border border-line object-cover bg-slate-900"
+                      />
+                      <div className="min-w-0">
+                        <div className="font-semibold text-ink truncate">Depan</div>
+                        <div className="truncate font-mono text-[10px] text-muted">
+                          {resolvedLanyard.frontImage}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolvedLanyard.backImage}
+                        alt="Preview sisi belakang lanyard"
+                        className="aspect-[1457/2048] w-8 shrink-0 rounded border border-line object-cover bg-slate-900"
+                      />
+                      <div className="min-w-0">
+                        <div className="font-semibold text-ink truncate">Belakang</div>
+                        <div className="truncate font-mono text-[10px] text-muted">
+                          {resolvedLanyard.backImage}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
             <p className="mt-2 text-center text-[11px] text-muted">
               Tarik kartu dengan mouse / kursor untuk menguji interaksi spring physics.
             </p>
@@ -332,11 +370,14 @@ export function TabAppearance({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
           <div className="space-y-5">
             <section className="rounded-2xl border border-line/70 bg-white/70 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Foto &amp; Aset Profile Card</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Foto &amp; Aset Hologram Profile Card</h3>
+              <p className="mt-1 text-[11px] text-muted">
+                Slot potret khusus manusia (terpisah dari desain kartu ID Lanyard &amp; About). Kosongkan override untuk mewarisi Potret Profil Global.
+              </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2" data-admin-field="profileCard.avatarUrl">
                   <MediaFieldControl
-                    label="Foto Avatar Profile Card"
+                    label="Potret Utama Hologram Card (Avatar Orang — Kosong = ikut Potret Profil Global)"
                     value={config.profileCard.avatarUrl || ""}
                     onChange={(url) => updateProfileCard("avatarUrl", url)}
                     folder="profile"
@@ -345,23 +386,33 @@ export function TabAppearance({
                     uploadingImage={uploadingImage}
                     config={config}
                     accept="image/webp,image/png,image/jpeg"
-                    placeholder="/avatar-portrait.webp atau URL Cloud"
+                    placeholder="/profile.webp atau kosongkan untuk ikut Potret Profil Global"
                     previewShape="portrait"
+                    helpText="Khusus foto potret manusia (rasio 4:5, disarankan ≥ 600×750 px). Fallback ke Potret Profil Global / /profile.webp — bukan ID card."
                   />
                   {config.profileCard.avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => updateProfileCard("avatarUrl", "")}
-                      className="mt-1 inline-flex items-center rounded-xl border border-line/70 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-ink dark:border-line/40"
-                    >
-                      Kosongkan (Ikuti Foto Profil Utama)
-                    </button>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateProfileCard("avatarUrl", "")}
+                        className="inline-flex items-center rounded-xl border border-line/70 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-ink dark:border-line/40"
+                      >
+                        Kosongkan (Ikuti Potret Profil Global)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateProfileCard("avatarUrl", DEFAULT_PORTRAIT_AVATAR_URL)}
+                        className="inline-flex items-center rounded-xl border border-line/70 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-ink dark:border-line/40"
+                      >
+                        Gunakan /profile.webp
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2" data-admin-field="profileCard.miniAvatarUrl">
                   <MediaFieldControl
-                    label="Foto Avatar Kecil / Footer Card (Kosong = ikut foto utama)"
+                    label="Avatar Kecil Footer Hologram Card (Kosong = ikut Potret Utama)"
                     value={config.profileCard.miniAvatarUrl || ""}
                     onChange={(url) => updateProfileCard("miniAvatarUrl", url)}
                     folder="profile"
@@ -370,8 +421,9 @@ export function TabAppearance({
                     uploadingImage={uploadingImage}
                     config={config}
                     accept="image/webp,image/png,image/jpeg"
-                    placeholder="Kosongkan agar otomatis mengikuti foto utama"
-                    previewShape="square"
+                    placeholder="Kosongkan agar otomatis mengikuti potret utama Hologram Card"
+                    previewShape="avatar"
+                    helpText="Foto bulat kecil di kiri bawah Hologram Card (rasio 1:1). Kosong = mengikuti potret utama Hologram Card."
                   />
                 </div>
 
@@ -513,29 +565,48 @@ export function TabAppearance({
           {/* Sticky Profile Card Preview */}
           <div className="sticky top-24 self-start rounded-2xl border border-line/70 bg-white/70 p-4 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Hologram Profile Card</h3>
-            <div className="mt-3 flex items-center justify-center p-4">
-              {(() => {
-                const previewAvatar =
-                  config.profileCard.avatarUrl ||
-                  config.generalProfile?.avatarUrl ||
-                  "/avatar-portrait.webp";
-                const previewSecondary =
-                  !config.profileCard.avatarUrl &&
-                  (previewAvatar === "/card-front-v2.webp" ||
-                    previewAvatar === config.lanyard.frontImage)
-                    ? config.lanyard.backImage || "/card-back-v2.webp"
-                    : undefined;
-                return (
-                  <ProfileCard
-                    {...config.profileCard}
-                    avatarUrl={previewAvatar}
-                    secondaryAvatarUrl={previewSecondary}
-                    miniAvatarUrl={config.profileCard.miniAvatarUrl || previewAvatar}
-                    imageFit={config.profileCard.imageFit || "cover"}
-                  />
-                );
-              })()}
-            </div>
+            {(() => {
+              const imageContext = {
+                profileCard: config.profileCard,
+                generalProfile: config.generalProfile,
+                lanyard: config.lanyard,
+              };
+              const avatarResolution = resolveProfileCardAvatar(imageContext);
+              const miniResolution = resolveProfileCardMiniAvatar(imageContext);
+              const fitResolution = resolveProfileCardImageFit(imageContext);
+              return (
+                <>
+                  <div className="mt-3 flex items-center justify-center p-4">
+                    <ProfileCard
+                      {...config.profileCard}
+                      avatarUrl={avatarResolution.url}
+                      secondaryAvatarUrl={undefined}
+                      miniAvatarUrl={miniResolution.url}
+                      imageFit={fitResolution}
+                    />
+                  </div>
+                  <div className="mt-2 space-y-1.5 rounded-xl border border-line/70 bg-surface/60 p-3 text-[11px] dark:border-line/40">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted">Potret utama aktif:</span>
+                      <code className="truncate font-mono text-[10px] text-brand">{avatarResolution.url}</code>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted">Avatar mini footer:</span>
+                      <code className="truncate font-mono text-[10px] text-ink">{miniResolution.url}</code>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted">Sumber fallback:</span>
+                      <span className="font-medium text-ink">{avatarResolution.source}</span>
+                    </div>
+                    {(avatarResolution.rejectedCardUrl || miniResolution.rejectedCardUrl) && (
+                      <p className="rounded-lg bg-amber-50 px-2 py-1 text-[10px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                        Aset ID card ({avatarResolution.rejectedCardUrl || miniResolution.rejectedCardUrl}) diabaikan untuk avatar orang; menampilkan fallback potret {avatarResolution.url}.
+                      </p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
             <p className="mt-2 text-center text-[11px] text-muted">
               Gerakkan kursor di atas kartu untuk melihat efek glare hologram dan 3D tilt.
             </p>
@@ -570,6 +641,7 @@ export function TabAppearance({
                 <label className="block text-xs font-semibold text-ink">Meta Title Utama (ID)</label>
                 <input
                   type="text"
+                  data-admin-field="seo.metaTitle"
                   value={seo.metaTitle || ""}
                   onChange={(e) => updateSeo({ metaTitle: e.target.value })}
                   className={`mt-1.5 ${inputClass}`}
@@ -592,6 +664,7 @@ export function TabAppearance({
                 <label className="block text-xs font-semibold text-ink">Meta Description (ID)</label>
                 <textarea
                   rows={3}
+                  data-admin-field="seo.metaDesc"
                   value={seo.metaDesc || ""}
                   onChange={(e) => updateSeo({ metaDesc: e.target.value })}
                   className={`mt-1.5 ${inputClass}`}
@@ -614,6 +687,7 @@ export function TabAppearance({
                 <label className="block text-xs font-semibold text-ink">Canonical Site URL</label>
                 <input
                   type="url"
+                  data-admin-field="seo.canonicalUrl"
                   value={seo.canonicalUrl || ""}
                   onChange={(e) => updateSeo({ canonicalUrl: e.target.value })}
                   className={`mt-1.5 ${inputClass}`}
@@ -650,7 +724,7 @@ export function TabAppearance({
                 />
               </div>
 
-              <div>
+              <div data-admin-field="seo.ogImage">
                 <MediaFieldControl
                   label="Gambar OpenGraph / Share Card (`og:image`, default `/opengraph-image`)"
                   value={seo.ogImage || ""}

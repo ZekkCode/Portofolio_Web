@@ -4,30 +4,25 @@ import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
-import { auditContentHealth } from "@/lib/content/content-health";
-import { recordNewRevision } from "@/lib/content/revisions";
+import {
+  evaluatePublishReadiness,
+  getContentReadinessSummary,
+} from "@/lib/content/content-health";
+import {
+  publishConfigWithRevision,
+  shouldUseLocalRevisions,
+} from "@/lib/content/revisions";
 import {
   invalidatePublishedContentCache,
   fetchPublishedContentWithMeta,
 } from "@/lib/content/public-content";
 import {
-  deleteLocalCmsDoc,
-  isLocalCmsOverrideAllowed,
+  isStrictLocalCmsStore,
   readLocalCmsDoc,
   writeLocalCmsDoc,
 } from "@/lib/content/local-cms-store";
 
 const PUBLISHED_CACHE_HEADER = "public, max-age=0, must-revalidate";
-
-function shouldUseLocalCmsWriteFallback(): boolean {
-  if (!isSupabaseConfigured()) return isLocalCmsOverrideAllowed();
-  if (process.env.LOCAL_CMS_STORE === "1") return isLocalCmsOverrideAllowed();
-  const hasServiceRole = Boolean(getServiceRoleClient());
-  if (!process.env.VERCEL && !hasServiceRole) {
-    return isLocalCmsOverrideAllowed();
-  }
-  return false;
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -43,8 +38,10 @@ export async function GET(request: Request) {
       );
     }
 
-    // Prefer local draft when local store override applies
-    if (isLocalCmsOverrideAllowed()) {
+    const useLocalStore = shouldUseLocalRevisions();
+
+    // Gunakan sumber tunggal yang sama dengan operasi tulis (local-store vs Supabase)
+    if (useLocalStore) {
       const localDraft = await readLocalCmsDoc<Partial<SiteConfig>>("draft");
       if (localDraft?.config) {
         return NextResponse.json(
@@ -62,9 +59,7 @@ export async function GET(request: Request) {
           }
         );
       }
-    }
-
-    if (isSupabaseConfigured()) {
+    } else if (isSupabaseConfigured() && !isStrictLocalCmsStore()) {
       try {
         const supabase = getServiceRoleClient() || getSupabaseClient();
         if (supabase) {
@@ -98,7 +93,7 @@ export async function GET(request: Request) {
   }
 
   // 2. Mode 'published'
-  if (isLocalCmsOverrideAllowed()) {
+  if (shouldUseLocalRevisions()) {
     const localCurrent = await readLocalCmsDoc<Partial<SiteConfig>>("current");
     if (localCurrent?.config) {
       const normalized = normalizeConfig(localCurrent.config);
@@ -125,7 +120,7 @@ export async function GET(request: Request) {
     }
   }
 
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || isStrictLocalCmsStore()) {
     const etag = '"local-unconfigured"';
     const ifNoneMatch = request.headers.get("if-none-match");
     if (ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `W/${etag}`)) {
@@ -271,7 +266,7 @@ export async function POST(request: Request) {
   const editor = auth.userEmail || "admin";
   normalized.updatedAt = timestamp;
 
-  const useLocalStore = shouldUseLocalCmsWriteFallback();
+  const useLocalStore = shouldUseLocalRevisions();
   if (!isSupabaseConfigured() && !useLocalStore) {
     return NextResponse.json(
       {
@@ -290,13 +285,12 @@ export async function POST(request: Request) {
       const targetDocId = action === "draft" ? "draft" : "current";
       let serverUpdatedAt: string | undefined;
 
-      if (useLocalStore || isLocalCmsOverrideAllowed()) {
+      if (useLocalStore) {
         const localDoc = await readLocalCmsDoc(targetDocId);
         if (localDoc?.updated_at) {
           serverUpdatedAt = localDoc.updated_at;
         }
-      }
-      if (!serverUpdatedAt && action === "publish") {
+      } else if (action === "publish") {
         const meta = await fetchPublishedContentWithMeta();
         serverUpdatedAt = meta.updatedAt;
       }
@@ -353,16 +347,6 @@ export async function POST(request: Request) {
       );
 
       if (draftErr) {
-        if (isLocalCmsOverrideAllowed()) {
-          const saved = await writeLocalCmsDoc("draft", normalized);
-          return NextResponse.json({
-            success: true,
-            provider: "local-store",
-            status: "draft",
-            message: "Draf disimpan di penyimpanan lokal server (Supabase RLS aktif).",
-            updatedAt: saved.updated_at,
-          });
-        }
         return NextResponse.json(
           { success: false, error: "Gagal menyimpan draf ke database." },
           { status: 500 }
@@ -381,7 +365,9 @@ export async function POST(request: Request) {
     // =========================================================================
     // AKSI 2: PUBLIKASIKAN
     // =========================================================================
-    const health = auditContentHealth(normalized);
+    // Audit raw projects, certificates & techStackCategories sebelum normalizeConfig melakukan fallback/normalisasi otomatis
+    const health = evaluatePublishReadiness(normalized, rawBody);
+    const readiness = getContentReadinessSummary(health);
     if (!health.canPublish) {
       const errorMsgs = health.issues
         .filter((i) => i.severity === "error")
@@ -392,58 +378,27 @@ export async function POST(request: Request) {
           error: "Publikasi ditolak: Ditemukan kesalahan integritas konten yang wajib diperbaiki.",
           details: errorMsgs,
           health,
+          readiness,
         },
         { status: 400 }
       );
     }
 
-    const revResult = await recordNewRevision(
-      normalized,
+    const pubRes = await publishConfigWithRevision({
+      config: normalized,
       editor,
-      `Publikasi Konten oleh ${editor}`
-    );
+      summary: `Publikasi Konten oleh ${editor}`,
+    });
 
-    let savedUpdatedAt = timestamp;
-    let usedProvider = "supabase";
-
-    if (useLocalStore) {
-      const saved = await writeLocalCmsDoc("current", normalized);
-      await deleteLocalCmsDoc("draft");
-      savedUpdatedAt = saved.updated_at;
-      usedProvider = "local-store";
-    } else {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
-      if (!supabase) {
-        return NextResponse.json(
-          { success: false, error: "Klien Supabase tidak tersedia" },
-          { status: 500 }
-        );
-      }
-
-      const { error: publishErr } = await supabase.from("site_config").upsert(
+    if (!pubRes.success) {
+      return NextResponse.json(
         {
-          id: "current",
-          config: normalized,
-          updated_at: timestamp,
+          success: false,
+          code: pubRes.code,
+          error: pubRes.error,
         },
-        { onConflict: "id" }
+        { status: 500 }
       );
-
-      if (publishErr) {
-        if (isLocalCmsOverrideAllowed()) {
-          const saved = await writeLocalCmsDoc("current", normalized);
-          await deleteLocalCmsDoc("draft");
-          savedUpdatedAt = saved.updated_at;
-          usedProvider = "local-store";
-        } else {
-          return NextResponse.json(
-            { success: false, error: "Gagal mempublikasikan konfigurasi pada database." },
-            { status: 500 }
-          );
-        }
-      } else {
-        await supabase.from("site_config").delete().eq("id", "draft");
-      }
     }
 
     invalidatePublishedContentCache();
@@ -461,12 +416,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      provider: usedProvider,
+      provider: pubRes.provider,
       status: "published",
-      version: revResult.version,
-      revisionId: revResult.revisionId,
-      message: "Konten berhasil dipublikasikan secara langsung ke seluruh situs.",
-      updatedAt: savedUpdatedAt,
+      version: pubRes.version,
+      revisionId: pubRes.revisionId,
+      message:
+        health.warningsCount > 0
+          ? `Konten dipublikasikan dengan ${health.warningsCount} peringatan kelengkapan yang masih perlu ditinjau.`
+          : "Konten berhasil dipublikasikan ke situs.",
+      updatedAt: pubRes.updatedAt,
+      health,
+      readiness,
     });
   } catch {
     return NextResponse.json(

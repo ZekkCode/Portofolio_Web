@@ -3,6 +3,11 @@
 import { useState, useMemo } from "react";
 import type { SiteConfig, SocialLinkItem } from "@/lib/site-store";
 import { computeAutoStatsBreakdown } from "@/lib/content/selectors";
+import {
+  DEFAULT_PORTRAIT_AVATAR_URL,
+  resolveAboutPersonaImages,
+  resolveGlobalPortrait,
+} from "@/lib/content/identity-images";
 import { MediaFieldControl } from "./MediaFieldControl";
 import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import { reorderItemsWithSortOrder } from "./AdminListTools";
@@ -18,6 +23,8 @@ import {
   ChevronUp,
   ChevronDown,
   MousePointerClick,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 interface TabGeneralProps {
@@ -140,6 +147,7 @@ export function TabGeneral({
             <label className="block text-xs font-semibold text-ink">Nama Lengkap (ID)</label>
             <input
               type="text"
+              data-admin-field="generalProfile.name"
               value={profile.name}
               onChange={(e) => updateProfile({ name: e.target.value })}
               className={`mt-1.5 ${inputClass}`}
@@ -225,18 +233,66 @@ export function TabGeneral({
           </div>
 
           <div className="sm:col-span-2">
-            <MediaFieldControl
-              label="Foto Profil Utama (Fallback Global)"
-              value={profile.avatarUrl}
-              onChange={(url) => updateProfile({ avatarUrl: url })}
-              folder="profile"
-              fieldKey="general-avatar"
-              uploadAndSet={uploadAndSet}
-              uploadingImage={uploadingImage}
-              config={config}
-              previewShape="avatar"
-              helpText="Digunakan saat ProfileCard tidak memiliki override khusus. Disarankan potret rasio portrait WebP."
-            />
+            {(() => {
+              const resolvedPortrait = resolveGlobalPortrait(config);
+              return (
+                <div className="space-y-2.5" data-admin-field="generalProfile.avatarUrl">
+                  <MediaFieldControl
+                    label="Potret Profil Global (Avatar Orang — Fallback Utama)"
+                    value={profile.avatarUrl}
+                    onChange={(url) => updateProfile({ avatarUrl: url })}
+                    folder="profile"
+                    fieldKey="general-avatar"
+                    uploadAndSet={uploadAndSet}
+                    uploadingImage={uploadingImage}
+                    config={config}
+                    previewShape="avatar"
+                    placeholder="/profile.webp atau URL potret wajah"
+                    helpText="Khusus foto potret wajah (rasio 4:5, disarankan ≥ 600×750 px). Dipakai sebagai fallback utama avatar Hologram Card & profil — jangan diisi gambar ID card."
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface/60 px-3 py-2 text-[11px]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolvedPortrait.url}
+                        alt="Pratinjau potret aktif"
+                        className="size-8 shrink-0 rounded-full border border-line object-cover object-[50%_15%] bg-white"
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink">
+                          Potret aktif di publik:{" "}
+                          <code className="font-mono text-[10px] text-brand">
+                            {resolvedPortrait.url}
+                          </code>
+                        </div>
+                        {resolvedPortrait.rejectedCardUrl ? (
+                          <div className="text-amber-700 dark:text-amber-400">
+                            Field masih berisi ID card ({resolvedPortrait.rejectedCardUrl}); publik fallback ke {resolvedPortrait.url}.
+                          </div>
+                        ) : resolvedPortrait.isRepoLowResPortrait ? (
+                          <div className="text-muted">
+                            Menggunakan potret bawaan /profile.webp (203×250 px). Unggah potret ≥ 600×750 px bila ingin hasil lebih tajam.
+                          </div>
+                        ) : (
+                          <div className="text-muted">
+                            Sumber khusus potret aktif (terpisah dari desain ID card).
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {resolvedPortrait.rejectedCardUrl && (
+                      <button
+                        type="button"
+                        onClick={() => updateProfile({ avatarUrl: DEFAULT_PORTRAIT_AVATAR_URL })}
+                        className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 transition"
+                      >
+                        Pakai /profile.webp
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -264,6 +320,7 @@ export function TabGeneral({
               <label className="block text-xs font-semibold text-ink">Hero Description (EN)</label>
               <textarea
                 rows={3}
+                data-admin-field="generalProfile.heroDescEn"
                 value={profile.heroDescEn}
                 onChange={(e) => updateProfile({ heroDescEn: e.target.value })}
                 className={`mt-1.5 ${inputClass}`}
@@ -421,14 +478,14 @@ export function TabGeneral({
               Kartu Persona Interaktif (About Me)
             </h2>
             <p className="text-[11px] text-muted">
-              Biarkan URL gambar kosong untuk otomatis mengikuti gambar depan/belakang Lanyard aktif.
+              Kartu identitas dua sisi untuk seksi About Me (bukan foto potret avatar). Kosongkan URL jika ingin mengikuti sisi depan/belakang Lanyard 3D.
             </p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <MediaFieldControl
-            label="Gambar Kartu Depan About (Opsional Override)"
+            label="Kartu Persona Depan — Frontend Dev (Desain ID Card)"
             value={profile.aboutPersona?.frontImage || ""}
             onChange={(url) => updateAboutPersona({ frontImage: url })}
             folder="lanyard"
@@ -436,9 +493,12 @@ export function TabGeneral({
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             config={config}
+            previewShape="portrait"
+            placeholder="/card-front-v2.webp"
+            helpText="Kartu depan di seksi About Me (rasio 1457:2048). Kosong = ikut Lanyard Depan (/card-front-v2.webp)."
           />
           <MediaFieldControl
-            label="Gambar Kartu Belakang About (Opsional Override)"
+            label="Kartu Persona Belakang — Graphic Designer (Desain ID Card)"
             value={profile.aboutPersona?.backImage || ""}
             onChange={(url) => updateAboutPersona({ backImage: url })}
             folder="lanyard"
@@ -446,7 +506,41 @@ export function TabGeneral({
             uploadAndSet={uploadAndSet}
             uploadingImage={uploadingImage}
             config={config}
+            previewShape="portrait"
+            placeholder="/card-back-v2.webp"
+            helpText="Kartu belakang di seksi About Me (rasio 1457:2048). Kosong = ikut Lanyard Belakang (/card-back-v2.webp)."
           />
+          {(() => {
+            const resolvedPersona = resolveAboutPersonaImages(config);
+            return (
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-surface/60 p-3 text-[11px]">
+                <div className="flex items-center gap-2.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={resolvedPersona.frontImage}
+                    alt="Preview Kartu Frontend About Me"
+                    className="aspect-[1457/2048] w-11 shrink-0 rounded-md border border-line object-cover bg-slate-900"
+                  />
+                  <div>
+                    <div className="font-semibold text-ink">Kartu Depan (Frontend Dev)</div>
+                    <div className="font-mono text-[10px] text-muted">{resolvedPersona.frontImage}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={resolvedPersona.backImage}
+                    alt="Preview Kartu Graphic Designer About Me"
+                    className="aspect-[1457/2048] w-11 shrink-0 rounded-md border border-line object-cover bg-slate-900"
+                  />
+                  <div>
+                    <div className="font-semibold text-ink">Kartu Belakang (Graphic Designer)</div>
+                    <div className="font-mono text-[10px] text-muted">{resolvedPersona.backImage}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <div>
             <label className="block text-xs font-semibold text-ink">Label Tab 1 (ID)</label>
@@ -536,6 +630,7 @@ export function TabGeneral({
             <label className="block text-xs font-semibold text-ink">Alamat Email Publik</label>
             <input
               type="email"
+              data-admin-field="generalProfile.email"
               value={profile.email}
               onChange={(e) => updateProfile({ email: e.target.value })}
               className={`mt-1.5 ${inputClass}`}
@@ -874,6 +969,134 @@ export function TabGeneral({
                   </strong>
                 </p>
               )}
+
+              {/* Rincian Interval & Record Dikecualikan */}
+              <div className="space-y-3 border-t border-line/40 pt-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+                  <span>
+                    Aturan: <strong className="text-ink">{autoBreakdown.monthCountingRule}</strong>
+                  </span>
+                  <span className="rounded bg-surface px-2 py-0.5 font-mono text-[10px] text-ink dark:bg-slate-800">
+                    Referensi: {autoBreakdown.asOfMonth}
+                  </span>
+                </div>
+
+                {autoBreakdown.overlappingRule === "merge_intervals" && (
+                  <div className="rounded-lg border border-line/60 bg-white/80 p-3 dark:border-line/30 dark:bg-slate-950/60">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-ink">
+                        Interval Tergabung ({autoBreakdown.mergedIntervals.length})
+                      </span>
+                      <span className="font-mono text-[11px] font-semibold text-brand">
+                        Total: {autoBreakdown.experienceMonths} bln net
+                      </span>
+                    </div>
+                    {autoBreakdown.mergedIntervals.length === 0 ? (
+                      <p className="mt-1.5 text-[11px] text-muted">
+                        Belum ada interval tanggal pengalaman yang valid untuk dihitung.
+                      </p>
+                    ) : (
+                      <ul className="mt-2 space-y-1.5">
+                        {autoBreakdown.mergedIntervals.map((interval) => (
+                          <li
+                            key={`${interval.startYm}-${interval.endYm}`}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-surface/60 px-2.5 py-1.5 text-[11px] dark:bg-slate-900/60"
+                          >
+                            <span className="font-mono font-semibold text-ink">
+                              {interval.startYm} s.d. {interval.endYm}
+                            </span>
+                            <span className="text-muted">
+                              {interval.labels.join(" + ")}
+                            </span>
+                            <span className="rounded bg-brand/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-brand">
+                              {interval.months} bln
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-lg border border-line/60 bg-white/80 p-3 dark:border-line/30 dark:bg-slate-950/60">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span>Ikut Dihitung ({autoBreakdown.includedRecords.length})</span>
+                    </div>
+                    {autoBreakdown.includedRecords.length === 0 ? (
+                      <p className="mt-1.5 text-[11px] text-muted">Tidak ada record terhitung.</p>
+                    ) : (
+                      <ul className="mt-2 space-y-1.5">
+                        {autoBreakdown.includedRecords.map((rec) => (
+                          <li
+                            key={rec.id}
+                            className="rounded-md bg-surface/60 px-2.5 py-1.5 text-[11px] dark:bg-slate-900/60"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-ink">
+                                {rec.org || rec.role || rec.id}
+                              </span>
+                              <span className="font-mono text-[10px] font-semibold text-ink">
+                                {rec.months} bln
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted">
+                              <span className="font-mono">
+                                {rec.startYm} s.d. {rec.endYm}
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {rec.dateSource === "structured"
+                                  ? "Tanggal terstruktur"
+                                  : "Fallback teks periode"}
+                              </span>
+                              {rec.clampedFutureEnd && (
+                                <span className="text-amber-600 dark:text-amber-400">
+                                  (dibatasi ke {rec.endYm})
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-line/60 bg-white/80 p-3 dark:border-line/30 dark:bg-slate-950/60">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      <span>Tidak Ikut Dihitung ({autoBreakdown.excludedRecords.length})</span>
+                    </div>
+                    {autoBreakdown.excludedRecords.length === 0 ? (
+                      <p className="mt-1.5 text-[11px] text-muted">
+                        Seluruh record pengalaman ikut dihitung.
+                      </p>
+                    ) : (
+                      <ul className="mt-2 space-y-1.5">
+                        {autoBreakdown.excludedRecords.map((rec) => (
+                          <li
+                            key={rec.id}
+                            className="rounded-md bg-amber-50/70 px-2.5 py-1.5 text-[11px] dark:bg-amber-950/20"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-ink">
+                                {rec.org || rec.role || rec.id}
+                              </span>
+                              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                                {rec.exclusionReason}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[10px] text-muted">
+                              {rec.exclusionDetail}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-4 pt-2">

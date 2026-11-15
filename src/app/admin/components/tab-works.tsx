@@ -1,8 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { SiteConfig, Project, ProjectCategoryConfig } from "@/lib/site-store";
 import { slugifyProjectTitle } from "@/lib/site-config";
+import {
+  auditProjectPublishIssues,
+  isProjectPublic,
+} from "@/lib/content/content-health";
+import type { ContentHealthIssue } from "@/lib/content/types";
+import {
+  extractArrayIndexFromField,
+  type AdminNavigationTarget,
+} from "../admin-navigation";
 import { MediaFieldControl } from "./MediaFieldControl";
 import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import {
@@ -21,6 +30,7 @@ import {
   Tag,
   ChevronUp,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 
 interface TabWorksProps {
@@ -35,6 +45,7 @@ interface TabWorksProps {
   ) => Promise<void>;
   uploadingImage: string | null;
   inputClass: string;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 const PAGE_SIZE = 15;
@@ -46,6 +57,7 @@ export function TabWorks({
   uploadAndSet,
   uploadingImage,
   inputClass,
+  navigationTarget,
 }: TabWorksProps) {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -57,21 +69,55 @@ export function TabWorks({
   const projects = config.projects || [];
   const categories = config.projectCategories || [];
 
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "works") return;
+    let targetIdx = navigationTarget.itemId
+      ? projects.findIndex((p) => p.id === navigationTarget.itemId)
+      : -1;
+    if (targetIdx < 0) {
+      const parsed = extractArrayIndexFromField(navigationTarget.field, "projects");
+      if (parsed !== null && parsed >= 0 && parsed < projects.length) {
+        targetIdx = parsed;
+      }
+    }
+    if (targetIdx >= 0) {
+      setSearch("");
+      setFilterCategory("all");
+      setStatusFilter("all");
+      setPage(Math.floor(targetIdx / PAGE_SIZE) + 1);
+    }
+  }, [navigationTarget, projects]);
+
+  const { projectErrorsById, publicErrorProjectCount } = useMemo(() => {
+    const allIssues = auditProjectPublishIssues(projects);
+    const errorsMap = new Map<string, ContentHealthIssue[]>();
+    for (const issue of allIssues) {
+      if (issue.severity !== "error") continue;
+      const key = issue.itemId || "";
+      if (!errorsMap.has(key)) errorsMap.set(key, []);
+      errorsMap.get(key)!.push(issue);
+    }
+    return {
+      projectErrorsById: errorsMap,
+      publicErrorProjectCount: errorsMap.size,
+    };
+  }, [projects]);
+
   const addProject = () => {
     const id = "project-" + Date.now();
     const newProj: Project = {
       id,
-      slug: `proyek-baru-${projects.length + 1}`,
-      title: "Proyek Baru",
-      titleEn: "New Project",
+      slug: "",
+      title: "",
+      titleEn: "",
       summary: "",
       summaryEn: "",
-      desc: "Deskripsi ringkas mengenai tujuan, fitur, dan arsitektur proyek...",
-      descEn: "Brief description of the project goals, architecture, and features...",
+      desc: "",
+      descEn: "",
       category: "both",
-      tags: ["Next.js", "TypeScript", "Tailwind CSS"],
+      tags: [],
       techIds: [],
-      role: "Frontend Developer & UI Designer",
+      role: "",
       period: String(new Date().getFullYear()),
       status: "completed",
       collaborators: [],
@@ -92,7 +138,7 @@ export function TabWorks({
       previewUrl: "",
       repo: "",
       featured: false,
-      published: true,
+      published: false,
       visible: true,
       sortOrder: projects.length + 1,
     };
@@ -102,7 +148,7 @@ export function TabWorks({
     setStatusFilter("all");
     setPage(Math.max(1, Math.ceil(nextList.length / PAGE_SIZE)));
     setDraft({ ...config, projects: nextList });
-    setStatus("Proyek baru ditambahkan di draft");
+    setStatus("Proyek baru ditambahkan sebagai draf");
   };
 
   const updateProject = (id: string, updates: Partial<Project>) => {
@@ -390,6 +436,23 @@ export function TabWorks({
         filteredCount={filteredList.length}
       />
 
+      {publicErrorProjectCount > 0 && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-2xl border border-rose-500/35 bg-rose-500/10 p-3.5 text-xs text-rose-800 dark:text-rose-200"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400" />
+          <div>
+            <p className="font-bold">
+              {publicErrorProjectCount} proyek berstatus publik belum memenuhi syarat publikasi
+            </p>
+            <p className="mt-0.5 opacity-90">
+              Lengkapi judul (bukan placeholder), slug unik, ringkasan/deskripsi, dan foto cover, atau ubah statusnya kembali menjadi Draf. Tautan GitHub dan demo bersifat opsional.
+            </p>
+          </div>
+        </div>
+      )}
+
       {filteredList.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line p-10 text-center dark:border-line/40">
           <FolderGit2 className="mx-auto size-8 text-muted" />
@@ -413,11 +476,26 @@ export function TabWorks({
         <div className="space-y-5">
           {pagedList.map((project) => {
             const globalIdx = projects.findIndex((p) => p.id === project.id);
+            const itemKey = project.id || `projects-${globalIdx}`;
+            const cardErrors = projectErrorsById.get(itemKey) || [];
+            const isPublic = isProjectPublic(project);
+            const titleError = cardErrors.find((i) => i.fieldKey === "title");
+            const slugError = cardErrors.find((i) => i.fieldKey === "slug");
+            const summaryError = cardErrors.find((i) => i.fieldKey === "summary");
+            const descError = cardErrors.find((i) => i.fieldKey === "desc");
+            const imageError = cardErrors.find((i) => i.fieldKey === "image");
+            const urlError = cardErrors.find((i) => i.fieldKey === "url");
+
             return (
               <div
                 key={project.id}
+                data-admin-item-id={itemKey}
                 {...getDragProps(globalIdx)}
-                className="rounded-2xl border border-line bg-white p-5 dark:border-line/40 dark:bg-[#0c0e17]"
+                className={`rounded-2xl border bg-white p-5 dark:bg-[#0c0e17] ${
+                  cardErrors.length > 0
+                    ? "border-rose-500/60 dark:border-rose-500/50"
+                    : "border-line dark:border-line/40"
+                }`}
               >
                 {/* Card Header */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3 dark:border-line/40">
@@ -426,11 +504,29 @@ export function TabWorks({
                       #{globalIdx + 1}
                     </span>
                     <h3 className="font-display text-sm font-bold text-ink truncate">
-                      {project.title || "Proyek Baru"}
+                      {project.title || "Draf Proyek Baru"}
                     </h3>
                     <span className="rounded border border-line/60 px-2 py-0.5 text-[10px] font-semibold text-muted uppercase dark:border-line/40">
                       {project.category || "both"}
                     </span>
+                    {project.published === false ? (
+                      <span className="rounded bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                        Draf
+                      </span>
+                    ) : project.visible === false ? (
+                      <span className="rounded bg-slate-500/15 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        Tersembunyi
+                      </span>
+                    ) : cardErrors.length > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:text-rose-300">
+                        <AlertCircle className="size-2.5" />
+                        <span>{cardErrors.length} Perlu Diperbaiki</span>
+                      </span>
+                    ) : (
+                      <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                        Siap Publik
+                      </span>
+                    )}
                     {project.featured && (
                       <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                         <Star className="size-2.5 fill-amber-500" /> Unggulan
@@ -476,17 +572,47 @@ export function TabWorks({
                   </div>
                 </div>
 
+                {!isPublic ? (
+                  <p className="mt-3 rounded-xl border border-line/60 bg-surface/50 px-3 py-2 text-[11px] text-muted dark:border-line/30 dark:bg-slate-900/40">
+                    {project.published === false
+                      ? "Berstatus Draf — dapat disimpan walau belum lengkap dan tidak tampil di situs publik maupun statistik."
+                      : "Berstatus Tersembunyi — tidak ditampilkan di halaman publik."}
+                  </p>
+                ) : cardErrors.length > 0 ? (
+                  <div
+                    role="alert"
+                    className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/5 px-3 py-2.5 text-[11px] text-rose-700 dark:text-rose-300"
+                  >
+                    <p className="font-bold">Belum dapat dipublikasikan sebelum field berikut dilengkapi:</p>
+                    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                      {cardErrors.map((err) => (
+                        <li key={err.id}>{err.message}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 {/* Form Fields Grid — PENTING: HANYA SATU <label> mengandung kata 'Judul' dan SATU <textarea> per kartu! */}
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <label className="block text-xs font-semibold text-body">
-                    Judul
-                    <input
-                      type="text"
-                      value={project.title}
-                      onChange={(e) => updateProject(project.id, { title: e.target.value })}
-                      className={`mt-1.5 ${inputClass}`}
-                    />
-                  </label>
+                  <div>
+                    <label className="block text-xs font-semibold text-body">
+                      Judul
+                      <input
+                        type="text"
+                        value={project.title}
+                        onChange={(e) => updateProject(project.id, { title: e.target.value })}
+                        className={`mt-1.5 ${inputClass} ${
+                          titleError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                        }`}
+                        placeholder="Mis. Redesign POS TOMUGO"
+                      />
+                    </label>
+                    {titleError && (
+                      <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {titleError.message}
+                      </p>
+                    )}
+                  </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-ink">Project Title (EN)</label>
@@ -505,7 +631,9 @@ export function TabWorks({
                         type="text"
                         value={project.slug || ""}
                         onChange={(e) => updateProject(project.id, { slug: e.target.value })}
-                        className={`flex-1 font-mono ${inputClass}`}
+                        className={`flex-1 font-mono ${inputClass} ${
+                          slugError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                        }`}
                         placeholder="nama-proyek"
                       />
                       <button
@@ -520,6 +648,11 @@ export function TabWorks({
                         Auto
                       </button>
                     </div>
+                    {slugError && (
+                      <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {slugError.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -602,9 +735,16 @@ export function TabWorks({
                       type="text"
                       value={project.summary || ""}
                       onChange={(e) => updateProject(project.id, { summary: e.target.value })}
-                      className={`mt-1.5 ${inputClass}`}
+                      className={`mt-1.5 ${inputClass} ${
+                        summaryError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                      }`}
                       placeholder="1 kalimat ringkas untuk kartu..."
                     />
+                    {summaryError && (
+                      <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {summaryError.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -636,36 +776,47 @@ export function TabWorks({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-ink">URL Demo Langsung</label>
+                    <label className="block text-xs font-semibold text-ink">URL Demo Langsung (Opsional)</label>
                     <input
                       type="text"
                       value={project.previewUrl || ""}
                       onChange={(e) => updateProject(project.id, { previewUrl: e.target.value })}
-                      className={`mt-1.5 ${inputClass}`}
-                      placeholder="https://..."
+                      className={`mt-1.5 ${inputClass} ${
+                        urlError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                      }`}
+                      placeholder="https://... (tidak wajib)"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-ink">URL Repositori GitHub</label>
+                    <label className="block text-xs font-semibold text-ink">URL Repositori GitHub (Opsional)</label>
                     <input
                       type="text"
                       value={project.repo || ""}
                       onChange={(e) => updateProject(project.id, { repo: e.target.value })}
-                      className={`mt-1.5 ${inputClass}`}
-                      placeholder="https://github.com/..."
+                      className={`mt-1.5 ${inputClass} ${
+                        urlError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                      }`}
+                      placeholder="https://github.com/... (tidak wajib untuk desain)"
                     />
                   </div>
 
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <label className="block text-xs font-semibold text-ink">URL Studi Kasus Lengkap (Behance / Notion / Blog)</label>
+                    <label className="block text-xs font-semibold text-ink">URL Studi Kasus Lengkap (Behance / Notion / Blog — Opsional)</label>
                     <input
                       type="text"
                       value={project.caseStudyUrl || ""}
                       onChange={(e) => updateProject(project.id, { caseStudyUrl: e.target.value })}
-                      className={`mt-1.5 ${inputClass}`}
+                      className={`mt-1.5 ${inputClass} ${
+                        urlError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                      }`}
                       placeholder="https://..."
                     />
+                    {urlError && (
+                      <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {urlError.message}
+                      </p>
+                    )}
                   </div>
 
                   {/* Relasi ke Tech Stack CMS */}
@@ -708,9 +859,17 @@ export function TabWorks({
                         rows={2}
                         value={project.desc}
                         onChange={(e) => updateProject(project.id, { desc: e.target.value })}
-                        className={`mt-1.5 ${inputClass}`}
+                        className={`mt-1.5 ${inputClass} ${
+                          descError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500" : ""
+                        }`}
+                        placeholder="Uraikan tujuan, masalah, solusi, dan fitur proyek..."
                       />
                     </label>
+                    {descError && (
+                      <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {descError.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2 lg:col-span-3">
@@ -802,7 +961,13 @@ export function TabWorks({
                 </div>
 
                 {/* Cover, Alt Text & Logo */}
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 rounded-xl border border-line/60 bg-surface/50 p-4 dark:border-line/30 dark:bg-slate-900/40">
+                <div
+                  className={`mt-4 grid gap-4 sm:grid-cols-2 rounded-xl border p-4 ${
+                    imageError
+                      ? "border-rose-500/60 bg-rose-500/5 dark:border-rose-500/50 dark:bg-rose-950/20"
+                      : "border-line/60 bg-surface/50 dark:border-line/30 dark:bg-slate-900/40"
+                  }`}
+                >
                   <div className="space-y-2">
                     <MediaFieldControl
                       label="Foto Cover Utama (WebP / SVG)"
@@ -815,6 +980,11 @@ export function TabWorks({
                       config={config}
                       previewShape="wide"
                     />
+                    {imageError && (
+                      <p role="alert" className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        {imageError.message}
+                      </p>
+                    )}
                     <input
                       type="text"
                       value={project.imageAlt || ""}

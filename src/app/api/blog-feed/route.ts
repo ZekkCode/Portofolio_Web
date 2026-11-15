@@ -1,213 +1,241 @@
 import { NextResponse } from "next/server";
-import { VERIFIED_BLOG_POSTS, sanitizeBlogPost, type BlogPost } from "@/lib/blog-feed";
+import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
+import type { BlogPost } from "@/lib/blog-feed";
+import type { ManualBlogPostConfig } from "@/lib/site-config";
+import type { BlogFeedErrorCode } from "@/lib/content/blog-sync";
+import { fetchBlogFeedSecurely } from "@/lib/content/blog-feed-server";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import { mergeBlogPostsWithOverrides } from "@/lib/content/selectors";
 
 export const dynamic = "force-dynamic";
 
-function decodeHtmlEntities(input: string): string {
-  return input
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#x27;|&apos;/g, "'")
-    .replace(/&ldquo;|&rdquo;/g, '"')
-    .replace(/&lsquo;|&rsquo;/g, "'")
-    .replace(/&ndash;/g, "-")
-    .replace(/&mdash;/g, "\u2014")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+function mapErrorCodeToHttpStatus(code?: BlogFeedErrorCode): number {
+  switch (code) {
+    case "missing_feed_url":
+    case "unsafe_url":
+    case "blocked_destination":
+      return 400;
+    case "html_not_feed":
+    case "invalid_feed_format":
+      return 422;
+    case "timeout":
+      return 504;
+    default:
+      return 502;
+  }
 }
 
-async function fetchExternalBlogFeed(baseFeedUrl: string, limit: number, noCache = false): Promise<BlogPost[]> {
-  const timeoutMs = 4500;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const cleanFeed = (baseFeedUrl || "https://zekktech.biz.id").replace(/\/$/, "");
-
-  try {
-    // 1. Try public JSON API endpoint if feedUrl is an API URL or standard root
-    const apiUrl =
-      cleanFeed.includes("/api/") || cleanFeed.endsWith(".json")
-        ? cleanFeed
-        : `${cleanFeed}/api/public/posts?limit=${limit}`;
-
-    try {
-      const apiRes = await fetch(apiUrl, {
-        signal: controller.signal,
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "ZekkTech-Portfolio/1.0",
-        },
-        cache: noCache ? "no-store" : "default",
-      });
-
-      if (apiRes.ok) {
-        const data = await apiRes.json();
-        const rawList = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.posts)
-          ? data.posts
-          : [];
-        if (rawList.length > 0) {
-          const valid = rawList
-            .map((item: unknown, idx: number) => sanitizeBlogPost(item, idx))
-            .filter((p: BlogPost | null): p is BlogPost => p !== null);
-          if (valid.length > 0) {
-            clearTimeout(timer);
-            return valid.slice(0, limit);
-          }
-        }
-      }
-    } catch {
-      // Fallback to HTML scraping
-    }
-
-    // 2. Scrape HTML from blog root
-    const blogHtmlUrl = cleanFeed.endsWith("/blog") ? cleanFeed : `${cleanFeed}/blog`;
-    try {
-      const blogRes = await fetch(blogHtmlUrl, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ZekkTechPortfolio/1.0",
-        },
-        cache: noCache ? "no-store" : "default",
-      });
-
-      if (blogRes.ok) {
-        const html = await blogRes.text();
-        const origin = new URL(cleanFeed).origin;
-        const articleRegex = /<a\s+[^>]*href=["'](\/post\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-        const parsedPosts: BlogPost[] = [];
-        let match;
-
-        while ((match = articleRegex.exec(html)) !== null && parsedPosts.length < limit) {
-          const slugPath = match[1];
-          const inner = match[2];
-          const slug = slugPath.replace(/^\/post\//, "");
-          const url = `${origin}${slugPath}`;
-
-          let coverImage = "";
-          const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
-          if (imgMatch) {
-            const rawSrc = imgMatch[1].replace(/&amp;/g, "&");
-            if (rawSrc.includes("url=")) {
-              const urlParam = rawSrc.match(/url=([^&]+)/);
-              coverImage = urlParam ? decodeURIComponent(urlParam[1]) : rawSrc;
-            } else {
-              coverImage = rawSrc.startsWith("http") ? rawSrc : `${origin}${rawSrc.startsWith("/") ? rawSrc : `/${rawSrc}`}`;
-            }
-          }
-
-          const textClean = inner
-            .replace(/<[^>]+>/g, "\n")
-            .split("\n")
-            .map((s) => decodeHtmlEntities(s.trim()))
-            .filter(Boolean);
-
-          parsedPosts.push({
-            id: slug,
-            title: textClean[2] || slug.replace(/-/g, " "),
-            slug,
-            excerpt: textClean[3] || "",
-            coverImage,
-            category: textClean[0] || "Teknologi",
-            publishedAt: textClean[1] || "",
-            url,
-          });
-        }
-
-        if (parsedPosts.length > 0) {
-          clearTimeout(timer);
-          return parsedPosts;
-        }
-      }
-    } catch {
-      // Fallback below
-    }
-  } finally {
-    clearTimeout(timer);
-  }
-
-  return VERIFIED_BLOG_POSTS.slice(0, limit);
+function toManualPostShapes(posts: BlogPost[]): ManualBlogPostConfig[] {
+  return posts.map((p, idx) => ({
+    id: p.id || `sync-${idx + 1}`,
+    slug: p.slug || `sync-${idx + 1}`,
+    title: p.title,
+    excerpt: p.excerpt,
+    coverImage: p.coverImage || "",
+    url: p.url,
+    category: p.category || "Article",
+    date: p.publishedAt || "",
+    featured: false,
+    pinned: false,
+    published: true,
+    visible: true,
+  }));
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const rawSync = searchParams.get("rawSync") === "1";
   const refresh = searchParams.get("refresh") === "1";
   const locale = searchParams.get("locale") === "en" ? "en" : "id";
-  const rawOnly = searchParams.get("rawSync") === "1";
 
   const config = await fetchPublishedContent();
-  const blogConfig = config.blog;
-  const limit = Math.min(Math.max(blogConfig?.displayCount || 4, 1), 12);
+  const blogConfig = config?.blog;
 
-  if (rawOnly) {
-    const synced = await fetchExternalBlogFeed(
-      blogConfig?.feedUrl || "https://zekktech.biz.id",
-      limit,
-      refresh
-    );
-    return NextResponse.json(synced, {
-      headers: {
-        "Cache-Control": refresh
-          ? "no-store"
-          : "public, s-maxage=900, stale-while-revalidate=3600",
-      },
-    });
-  }
+  const limitParam = Number(searchParams.get("limit"));
+  const defaultLimit = blogConfig?.displayCount || 4;
+  const limit = Number.isFinite(limitParam) && limitParam > 0
+    ? Math.min(Math.max(Math.round(limitParam), 1), 12)
+    : Math.min(Math.max(defaultLimit, 1), 12);
 
   if (blogConfig?.visible === false || blogConfig?.published === false) {
-    return NextResponse.json([], {
-      headers: { "Cache-Control": "public, max-age=0, must-revalidate" },
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        status: "success_empty",
+        mode: "disabled",
+        attemptAt: null,
+        syncedAt: blogConfig?.lastSyncedAt || null,
+        sourceHost: "",
+        count: 0,
+        posts: [],
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
 
-  const mode = blogConfig?.sourceMode || "hybrid";
-  const externalRaw =
-    mode === "manual"
-      ? []
-      : await fetchExternalBlogFeed(
-          blogConfig?.feedUrl || "https://zekktech.biz.id",
-          limit,
-          refresh
-        );
+  const rawMode = (blogConfig?.sourceMode as string | undefined) || "hybrid";
+  const mode: "hybrid" | "manual" | "sync" =
+    rawMode === "manual" ? "manual" : rawMode === "sync" || rawMode === "synced" ? "sync" : "hybrid";
 
-  const externalAsManual = externalRaw.map((p, idx) => ({
-    id: p.id || p.slug,
-    slug: p.slug,
-    title: p.title,
-    excerpt: p.excerpt,
-    coverImage: p.coverImage,
-    url: p.url,
-    category: p.category,
-    date: p.publishedAt,
-    published: true,
-    visible: true,
-    sortOrder: idx + 1,
-  }));
+  if (mode === "manual") {
+    if (rawSync) {
+      return NextResponse.json(
+        {
+          ok: true,
+          status: "success_empty",
+          mode: "manual",
+          attemptAt: blogConfig?.lastSyncAttemptAt || null,
+          syncedAt: blogConfig?.lastSyncedAt || null,
+          sourceHost: "",
+          count: 0,
+          posts: [],
+        },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
-  const merged = mergeBlogPostsWithOverrides(config, externalAsManual, locale).map((p) => ({
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    excerpt: p.excerpt,
-    coverImage: p.coverImage || "",
-    coverAlt: p.coverAlt,
-    category: p.category,
-    publishedAt: p.date,
-    readTime: p.readTime,
-    url: p.url,
-    featured: p.featured,
-    pinned: p.pinned,
-    source: p.source,
-  }));
+    const manualMerged = mergeBlogPostsWithOverrides(config, undefined, locale);
+    return NextResponse.json(
+      {
+        ok: true,
+        status: manualMerged.length > 0 ? "success_posts" : "success_empty",
+        mode: "manual",
+        attemptAt: blogConfig?.lastSyncAttemptAt || null,
+        syncedAt: blogConfig?.lastSyncedAt || null,
+        sourceHost: "",
+        count: manualMerged.length,
+        posts: manualMerged,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
-  return NextResponse.json(merged, {
-    headers: {
-      "Cache-Control": refresh
-        ? "no-store"
-        : "public, s-maxage=300, stale-while-revalidate=1800",
+  const feedUrl = (blogConfig?.feedUrl || "").trim();
+  if (!feedUrl && rawSync) {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "never",
+        mode,
+        attemptAt: blogConfig?.lastSyncAttemptAt || null,
+        syncedAt: blogConfig?.lastSyncedAt || null,
+        sourceHost: "",
+        count: 0,
+        posts: [],
+        errorCode: "missing_feed_url",
+        errorMessage: "URL sumber feed blog belum diisi.",
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const fetchLimit = rawSync ? Math.max(limit, 12) : Math.max(limit, 8);
+  const result = await fetchBlogFeedSecurely(feedUrl, {
+    limit: fetchLimit,
+    noCache: refresh,
+  });
+
+  if (rawSync) {
+    return NextResponse.json(
+      {
+        ...result,
+        mode,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  if (result.ok) {
+    const externalAsManual = toManualPostShapes(result.posts);
+    const merged = mergeBlogPostsWithOverrides(config, externalAsManual, locale);
+    return NextResponse.json(
+      {
+        ok: true,
+        status: result.status,
+        mode,
+        attemptAt: result.attemptAt,
+        syncedAt: result.syncedAt,
+        sourceHost: result.sourceHost,
+        syncCount: result.count,
+        count: merged.length,
+        posts: merged,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  // Pada kegagalan sinkronisasi: pertahankan artikel valid terakhir + kurasi manual (JANGAN pakai data dummy)
+  const fallbackMerged = mergeBlogPostsWithOverrides(config, undefined, locale);
+  return NextResponse.json(
+    {
+      ok: false,
+      status: "error",
+      mode,
+      attemptAt: result.attemptAt,
+      syncedAt: blogConfig?.lastSyncedAt || null,
+      sourceHost: result.sourceHost,
+      count: fallbackMerged.length,
+      posts: fallbackMerged,
+      errorCode: result.errorCode,
+      errorMessage: result.errorMessage,
+      usedCachedFallback: (blogConfig?.syncedPosts?.length || 0) > 0,
     },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}
+
+export async function POST(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Cross-Origin request ditolak" }, { status: 403 });
+  }
+
+  const auth = await verifyAdminRequest(request);
+  if (!auth.isAuthenticated) {
+    return NextResponse.json({ error: "Akses ditolak" }, { status: 401 });
+  }
+
+  let body: { feedUrl?: string; limit?: number } = {};
+  try {
+    const parsed = await request.json();
+    if (parsed && typeof parsed === "object") {
+      body = parsed as { feedUrl?: string; limit?: number };
+    }
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "error",
+        attemptAt: new Date().toISOString(),
+        syncedAt: null,
+        sourceHost: "",
+        count: 0,
+        posts: [],
+        errorCode: "invalid_feed_format",
+        errorMessage: "Body permintaan sinkronisasi harus berupa JSON valid.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const config = await fetchPublishedContent();
+  const targetUrl =
+    typeof body.feedUrl === "string"
+      ? body.feedUrl.trim()
+      : (config?.blog?.feedUrl || "").trim();
+
+  const limitParam = Number(body.limit);
+  const limit =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.max(Math.round(limitParam), 1), 24)
+      : 12;
+
+  const result = await fetchBlogFeedSecurely(targetUrl, {
+    limit,
+    noCache: true,
+  });
+
+  return NextResponse.json(result, {
+    status: result.ok ? 200 : mapErrorCodeToHttpStatus(result.errorCode),
+    headers: { "Cache-Control": "no-store" },
   });
 }

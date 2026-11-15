@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  extractArrayIndexFromField,
+  type AdminNavigationTarget,
+} from "../admin-navigation";
 import type {
   SiteConfig,
   FaqItemConfig,
   BlogConfig,
+  BlogSyncStatus,
   ManualBlogPostConfig,
   SyncedBlogPostOverride,
   NavMenuItemConfig,
@@ -13,6 +18,12 @@ import type {
   ContactConfig,
   FooterConfig,
 } from "@/lib/site-config";
+import {
+  canonicalizeBlogUrl,
+  deduplicateBlogPosts,
+  resolveBlogSyncMeta,
+  sanitizeSyncErrorMessage,
+} from "@/lib/content/blog-sync";
 import { MediaFieldControl } from "./MediaFieldControl";
 import { ConfirmImpactModal, type DeleteImpactItem } from "./ConfirmImpactModal";
 import {
@@ -35,6 +46,8 @@ import {
   Pin,
   AlertCircle,
   CheckCircle2,
+  Clock,
+  Loader2,
   Eye,
   EyeOff,
   RotateCcw,
@@ -52,6 +65,7 @@ interface TabContentProps {
   ) => Promise<void>;
   uploadingImage: string | null;
   inputClass: string;
+  navigationTarget?: AdminNavigationTarget | null;
 }
 
 const FAQ_PAGE_SIZE = 10;
@@ -64,7 +78,7 @@ const SECTION_LABELS: Record<SectionKey, { name: string; anchors: string }> = {
   cv: { name: "Folder Berkas CV & PaperCrumple", anchors: "#cv, #resume" },
   journey: { name: "Jejak Akademik & Pengalaman", anchors: "#journey, #akademik" },
   achievements: { name: "Prestasi & Rekognisi", anchors: "#achievements, #prestasi" },
-  certificates: { name: "Sertifikasi Terverifikasi", anchors: "#certificates, #sertifikasi" },
+  certificates: { name: "Sertifikasi & Kredensial", anchors: "#certificates, #sertifikasi" },
   stack: { name: "Tech Stack & Alat", anchors: "#stack, #tech-stack" },
   projects: { name: "Proyek & Studi Kasus", anchors: "#proyek, #projects" },
   blog: { name: "Catatan & Blog ZekkTech", anchors: "#blog" },
@@ -127,6 +141,7 @@ export function TabContent({
   uploadAndSet,
   uploadingImage,
   inputClass,
+  navigationTarget,
 }: TabContentProps) {
   const [subTab, setSubTab] = useState<"faq" | "blog" | "navigation" | "sections" | "contactFooter">("faq");
 
@@ -142,6 +157,29 @@ export function TabContent({
   const [pendingDelete, setPendingDelete] = useState<DeleteImpactItem | null>(null);
 
   const faqList = config.faq || [];
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== "content") return;
+    const sub = navigationTarget.subTab;
+    if (sub === "faq" || sub === "blog" || sub === "navigation" || sub === "sections" || sub === "contactFooter") {
+      setSubTab(sub);
+    }
+    if (sub === "faq") {
+      let idx = navigationTarget.itemId
+        ? faqList.findIndex((f) => f.id === navigationTarget.itemId)
+        : -1;
+      if (idx < 0) {
+        const parsed = extractArrayIndexFromField(navigationTarget.field, "faq");
+        if (parsed !== null && parsed >= 0 && parsed < faqList.length) idx = parsed;
+      }
+      if (idx >= 0) {
+        setFaqSearch("");
+        setFaqCategoryFilter("all");
+        setFaqStatusFilter("all");
+        setFaqPage(Math.floor(idx / FAQ_PAGE_SIZE) + 1);
+      }
+    }
+  }, [navigationTarget, faqList]);
   const blog: BlogConfig = config.blog || {
     visible: true,
     feedUrl: "https://zekktech.biz.id",
@@ -267,50 +305,114 @@ export function TabContent({
 
   const handleSyncBlogFeed = async () => {
     setSyncingFeed(true);
-    setStatus("Menyinkronkan artikel terbaru dari portal blog...");
+    setStatus("Menyinkronkan artikel terbaru dari sumber feed blog...");
+    const attemptIso = new Date().toISOString();
     try {
-      const res = await fetch("/api/blog-feed?rawSync=1&refresh=1", { cache: "no-store" });
-      if (!res.ok) {
-        setStatus("Gagal menyinkronkan feed blog");
-        return;
-      }
-      const data = await res.json();
-      if (!Array.isArray(data)) {
-        setStatus("Respons feed blog tidak berbentuk array");
+      const res = await fetch("/api/blog-feed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feedUrl: blog.feedUrl || "",
+          limit: Math.max(blog.displayCount || 4, 12),
+        }),
+        cache: "no-store",
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.ok !== true || !Array.isArray(data.posts)) {
+        const errMsg = sanitizeSyncErrorMessage(
+          data?.errorMessage || data?.error || `Sinkronisasi gagal (HTTP ${res.status}).`
+        );
+        updateBlog({
+          syncStatus: "error",
+          lastSyncAttemptAt: data?.attemptAt || attemptIso,
+          lastSyncError: errMsg,
+        });
+        setStatus(
+          syncedPosts.length > 0
+            ? `Sinkronisasi gagal: ${errMsg} Artikel valid terakhir tetap dipertahankan.`
+            : `Sinkronisasi gagal: ${errMsg}`
+        );
         return;
       }
 
-      const incoming: ManualBlogPostConfig[] = data.map((p: Record<string, unknown>, idx: number) => {
-        const postId = String(p.id || p.slug || `synced-${idx}`);
-        const ov = syncedOverrides[postId];
-        // Respect manuallyEdited overrides so sync never destroys curated admin edits
-        return {
-          id: postId,
-          slug: String(p.slug || postId),
-          title: ov?.manuallyEdited && ov.title ? ov.title : String(p.title || ""),
-          excerpt: ov?.manuallyEdited && ov.excerpt ? ov.excerpt : String(p.excerpt || ""),
-          coverImage:
-            ov?.manuallyEdited && ov.coverImage !== undefined
-              ? ov.coverImage
-              : String(p.coverImage || ""),
-          url: String(p.url || ""),
-          category: String(p.category || "Teknologi"),
-          date: String(p.publishedAt || p.date || ""),
-          published: true,
-          visible: ov?.hidden !== true,
-          featured: ov?.featured ?? false,
-          pinned: ov?.pinned ?? false,
-          sortOrder: idx + 1,
-        };
-      });
+      const findOverrideForIncoming = (postId: string, postUrl: string) => {
+        if (syncedOverrides[postId]) return syncedOverrides[postId];
+        if (postUrl && syncedOverrides[postUrl]) return syncedOverrides[postUrl];
+        const canonUrl = canonicalizeBlogUrl(postUrl);
+        if (!canonUrl) return undefined;
+        for (const [k, ov] of Object.entries(syncedOverrides)) {
+          if (ov && canonicalizeBlogUrl(k) === canonUrl) return ov;
+        }
+        return undefined;
+      };
+
+      const rawIncoming: ManualBlogPostConfig[] = (data.posts as Array<Record<string, unknown>>).map(
+        (p, idx) => {
+          const postId = String(p.id || p.slug || `synced-${idx + 1}`);
+          const postUrl = String(p.url || "");
+          const ov = findOverrideForIncoming(postId, postUrl);
+          // Hormati edit manual ter-kunci agar sinkronisasi ulang tidak menimpa kurasi admin
+          return {
+            id: postId,
+            slug: String(p.slug || postId),
+            title: ov?.manuallyEdited && ov.title ? ov.title : String(p.title || ""),
+            titleEn: ov?.manuallyEdited && ov.titleEn ? ov.titleEn : undefined,
+            excerpt: ov?.manuallyEdited && ov.excerpt ? ov.excerpt : String(p.excerpt || ""),
+            excerptEn: ov?.manuallyEdited && ov.excerptEn ? ov.excerptEn : undefined,
+            coverImage:
+              ov?.manuallyEdited && ov.coverImage !== undefined
+                ? ov.coverImage
+                : String(p.coverImage || ""),
+            url: postUrl,
+            category:
+              ov?.manuallyEdited && ov.category
+                ? ov.category
+                : String(p.category || "Article"),
+            date: String(p.publishedAt || p.date || ""),
+            published: true,
+            visible: ov?.hidden !== true,
+            featured: ov?.featured ?? false,
+            pinned: ov?.pinned ?? false,
+            sortOrder: typeof ov?.sortOrder === "number" ? ov.sortOrder : idx + 1,
+          };
+        }
+      );
+
+      const dedupedIncoming = deduplicateBlogPosts(
+        rawIncoming,
+        blog.portalUrl || blog.feedUrl
+      );
+      const nextSyncStatus: BlogSyncStatus =
+        dedupedIncoming.length > 0 ? "success_posts" : "success_empty";
+      const syncedAtValue = typeof data.syncedAt === "string" && data.syncedAt ? data.syncedAt : attemptIso;
 
       updateBlog({
-        syncedPosts: incoming,
-        lastSyncedAt: new Date().toISOString(),
+        syncedPosts: dedupedIncoming,
+        lastSyncedAt: syncedAtValue,
+        lastSyncAttemptAt: data.attemptAt || syncedAtValue,
+        lastSyncCount: dedupedIncoming.length,
+        syncStatus: nextSyncStatus,
+        lastSyncError: undefined,
       });
-      setStatus(`Sinkronisasi selesai: ${incoming.length} artikel berhasil dimuat (override manual dipertahankan).`);
+
+      setStatus(
+        dedupedIncoming.length > 0
+          ? `Sinkronisasi selesai: ${dedupedIncoming.length} artikel valid dimuat (override manual dipertahankan).`
+          : "Sinkronisasi selesai: sumber feed aktif tetapi saat ini belum berisi artikel."
+      );
     } catch {
-      setStatus("Gagal menghubungi feed blog eksternal");
+      const errMsg = "Tidak dapat menghubungi endpoint sinkronisasi internal server.";
+      updateBlog({
+        syncStatus: "error",
+        lastSyncAttemptAt: attemptIso,
+        lastSyncError: errMsg,
+      });
+      setStatus(
+        syncedPosts.length > 0
+          ? `Sinkronisasi gagal: ${errMsg} Artikel valid terakhir tetap dipertahankan.`
+          : `Sinkronisasi gagal: ${errMsg}`
+      );
     } finally {
       setSyncingFeed(false);
     }
@@ -660,6 +762,7 @@ export function TabContent({
                 return (
                   <div
                     key={item.id}
+                    data-admin-item-id={item.id}
                     {...(!isFaqFiltered ? faqDrag.getDragProps(rawIndex) : {})}
                     className={`rounded-2xl border bg-white p-5 transition dark:bg-[#0c0e17] ${
                       faqDrag.dragIndex === rawIndex
@@ -804,28 +907,29 @@ export function TabContent({
               <div>
                 <label className="mb-1 block text-xs font-semibold text-ink">Mode Sumber Artikel</label>
                 <select
-                  value={blog.sourceMode || "hybrid"}
+                  value={resolveBlogSyncMeta(blog).sourceMode}
                   onChange={(e) =>
                     updateBlog({ sourceMode: e.target.value as BlogConfig["sourceMode"] })
                   }
                   className={inputClass}
                 >
                   <option value="hybrid">Hybrid (Manual + Sinkron)</option>
-                  <option value="synced">Synced (Feed Eksternal + Override)</option>
+                  <option value="sync">Synced (Feed Eksternal + Override)</option>
                   <option value="manual">Manual Saja (Artikel Lokal CMS)</option>
                 </select>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">URL Feed / API Sumber</label>
+                <label className="mb-1 block text-xs font-semibold text-ink">URL Feed JSON / RSS / Atom</label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-2.5 size-4 text-muted" />
                   <input
                     type="url"
                     value={blog.feedUrl || ""}
+                    data-admin-field="blog.feedUrl"
                     onChange={(e) => updateBlog({ feedUrl: e.target.value })}
                     className={`${inputClass} pl-9`}
-                    placeholder="https://zekktech.biz.id"
+                    placeholder="https://zekktech.biz.id/feed.xml"
                   />
                 </div>
               </div>
@@ -896,7 +1000,7 @@ export function TabContent({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Sinkronisasi Terakhir</label>
+                <label className="mb-1 block text-xs font-semibold text-ink">Aksi Sinkronisasi Feed</label>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -908,13 +1012,106 @@ export function TabContent({
                     <span>{syncingFeed ? "Menyinkronkan..." : "Sinkronkan Feed Sekarang"}</span>
                   </button>
                 </div>
-                {blog.lastSyncedAt && (
-                  <p className="mt-1 font-mono text-[10px] text-muted">
-                    Sync terakhir: {new Date(blog.lastSyncedAt).toLocaleString("id-ID")}
-                  </p>
-                )}
               </div>
             </div>
+
+            {(() => {
+              const syncMeta = resolveBlogSyncMeta(blog);
+              const effectiveStatus: BlogSyncStatus = syncingFeed ? "syncing" : syncMeta.status;
+              const badgeMap: Record<BlogSyncStatus, { label: string; cls: string }> = {
+                never: {
+                  label: "Belum Pernah Disinkronkan",
+                  cls: "bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+                },
+                syncing: {
+                  label: "Sedang Memuat Feed...",
+                  cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+                },
+                success_empty: {
+                  label: "Sukses (0 Artikel / Kosong)",
+                  cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                },
+                success_posts: {
+                  label: `Sukses (${syncMeta.syncedCount} Artikel)`,
+                  cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+                },
+                error: {
+                  label: "Gagal Sinkronisasi",
+                  cls: "bg-red-500/15 text-red-700 dark:text-red-300",
+                },
+              };
+              const badge = badgeMap[effectiveStatus];
+              const trimmedFeed = (syncMeta.feedUrl || "").trim();
+              const trimmedPortal = (syncMeta.portalUrl || "").trim();
+              const looksLikeHtmlPortal =
+                syncMeta.sourceMode !== "manual" &&
+                Boolean(trimmedFeed) &&
+                (trimmedFeed === trimmedPortal ||
+                  /\/blog\/?$/i.test(trimmedFeed));
+
+              return (
+                <div
+                  data-admin-blog-sync-panel
+                  className="mt-4 rounded-xl border border-line/70 bg-white/80 p-3.5 text-xs dark:border-line/40 dark:bg-[#0c0e17]/80 space-y-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {effectiveStatus === "syncing" ? (
+                        <Loader2 className="size-3.5 animate-spin text-blue-600" />
+                      ) : effectiveStatus === "success_posts" ? (
+                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                      ) : effectiveStatus === "error" ? (
+                        <AlertCircle className="size-3.5 text-red-600" />
+                      ) : (
+                        <Clock className="size-3.5 text-muted" />
+                      )}
+                      <span className="font-semibold text-ink">Status Sinkronisasi Feed:</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[11px] text-muted">
+                      Tersinkron: {syncMeta.syncedCount} | Manual aktif: {syncMeta.manualCount}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-[11px] text-muted">
+                    <span>
+                      Percobaan terakhir:{" "}
+                      {syncMeta.attemptAt ? new Date(syncMeta.attemptAt).toLocaleString("id-ID") : "Belum pernah"}
+                    </span>
+                    <span>
+                      Sukses terakhir:{" "}
+                      {syncMeta.syncedAt ? new Date(syncMeta.syncedAt).toLocaleString("id-ID") : "Belum ada"}
+                    </span>
+                  </div>
+
+                  {syncMeta.sourceMode === "manual" && (
+                    <p className="text-[11px] text-muted">
+                      Mode Manual aktif: halaman publik hanya menampilkan Artikel Manual CMS dan tidak memanggil feed eksternal.
+                    </p>
+                  )}
+
+                  {syncMeta.status === "error" && syncMeta.errorMessage && (
+                    <p
+                      role="alert"
+                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-700 dark:text-red-300"
+                    >
+                      {syncMeta.errorMessage}
+                      {syncMeta.hasLastValidCache
+                        ? " Artikel tersinkron terakhir yang valid dan kurasi manual tetap dipertahankan."
+                        : ""}
+                    </p>
+                  )}
+
+                  {looksLikeHtmlPortal && syncMeta.status !== "success_posts" && (
+                    <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-300">
+                      Catatan: URL sumber saat ini mengarah ke halaman web portal (`/blog`), bukan endpoint feed JSON/RSS/Atom. Isi URL endpoint feed khusus jika portal menyediakan feed, atau gunakan Mode Manual.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Manual Posts CRUD */}
@@ -947,6 +1144,8 @@ export function TabContent({
                 {manualPosts.map((post, idx) => (
                   <div
                     key={post.id}
+                    data-admin-item-id={post.id}
+                    data-admin-field={`blog.manualPosts[${idx}]`}
                     {...manualDrag.getDragProps(idx)}
                     className="rounded-2xl border border-line bg-white p-4 dark:border-line/40 dark:bg-[#0c0e17]"
                   >
@@ -1182,7 +1381,7 @@ export function TabContent({
                         </div>
                       </div>
 
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-2 sm:grid-cols-3">
                         <input
                           type="text"
                           value={ov?.title ?? sp.title}
@@ -1206,6 +1405,19 @@ export function TabContent({
                           }
                           className={inputClass}
                           placeholder="URL cover override..."
+                        />
+                        <input
+                          type="number"
+                          value={typeof ov?.sortOrder === "number" ? ov.sortOrder : ""}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            updateSyncedOverride(sp.id, {
+                              sortOrder: raw === "" ? undefined : Number(raw),
+                              manuallyEdited: true,
+                            });
+                          }}
+                          className={inputClass}
+                          placeholder="Urutan override (opsional)..."
                         />
                       </div>
                     </div>
@@ -1244,6 +1456,8 @@ export function TabContent({
               return (
                 <div
                   key={nav.id}
+                  data-admin-item-id={nav.id}
+                  data-admin-field={`navigation[${idx}].href`}
                   {...navDrag.getDragProps(idx)}
                   className="rounded-2xl border border-line bg-white p-4 dark:border-line/40 dark:bg-[#0c0e17]"
                 >

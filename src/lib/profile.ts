@@ -1,7 +1,9 @@
+import { DEFAULT_PORTRAIT_AVATAR_URL } from "./content/identity-images";
+
 export const profile = {
   name: "Zakaria Mujur Prasetyo",
   nickname: "Zekk",
-  avatar: "/card-front-v2.webp",
+  avatar: DEFAULT_PORTRAIT_AVATAR_URL,
   brand: "ZekkTech",
   roles: "UI/UX & Frontend Developer",
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",

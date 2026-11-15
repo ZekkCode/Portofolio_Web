@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, Eye, FileText, X, Award } from "lucide-react";
+import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
@@ -10,6 +10,12 @@ import {
   getPublishedCertificates,
   getPublishedSectionMeta,
 } from "@/lib/content/selectors";
+import {
+  hasCertificateEvidence,
+  resolveCertificateVerificationStatus,
+  resolveCertificatesSectionDesc,
+  type CertificateVerificationStatus,
+} from "@/lib/content/certificate-verification";
 
 export function CertificatesSection() {
   const { t, i18n } = useTranslation();
@@ -55,6 +61,50 @@ export function CertificatesSection() {
     }
   };
 
+  const resolvedSectionDesc = useMemo(
+    () =>
+      resolveCertificatesSectionDesc(
+        secMeta.desc,
+        publishedCertificates,
+        t("certificates.desc")
+      ),
+    [secMeta.desc, publishedCertificates, t]
+  );
+
+  const renderVerificationBadge = (status: CertificateVerificationStatus) => {
+    if (status === "verified") {
+      return (
+        <span
+          data-verification-badge="verified"
+          className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+        >
+          <ShieldCheck className="size-3 shrink-0" />
+          <span>{t("certificates.verifiedBadge", "Terverifikasi")}</span>
+        </span>
+      );
+    }
+    if (status === "needs_reverification") {
+      return (
+        <span
+          data-verification-badge="needs_reverification"
+          className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+        >
+          <RotateCcw className="size-3 shrink-0" />
+          <span>{t("certificates.needsRecheckBadge", "Perlu Periksa Ulang")}</span>
+        </span>
+      );
+    }
+    return (
+      <span
+        data-verification-badge="unverified"
+        className="inline-flex items-center gap-1 rounded-md border border-line/70 bg-slate-100/80 px-2 py-0.5 text-[10px] font-medium text-muted dark:border-line/40 dark:bg-slate-800/70 dark:text-slate-300"
+      >
+        <Clock className="size-3 shrink-0" />
+        <span>{t("certificates.uncheckedBadge", "Belum Diperiksa")}</span>
+      </span>
+    );
+  };
+
   return (
     <section
       id="certificates"
@@ -64,7 +114,7 @@ export function CertificatesSection() {
       <ScrollReveal y={24}>
         <SectionTitle
           title={secMeta.title || t("certificates.title")}
-          desc={secMeta.desc || t("certificates.desc")}
+          desc={resolvedSectionDesc}
         />
       </ScrollReveal>
 
@@ -119,12 +169,20 @@ export function CertificatesSection() {
         ) : (
           <div role="tabpanel" className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {filtered.map((cert) => {
-              const proofLink = cert.credentialUrl || (cert.allowDownload !== false ? cert.credentialPdf : undefined);
-              const canPreviewInline = Boolean(cert.image || (cert.credentialPdf && cert.allowDownload !== false));
+              const proofLink =
+                cert.credentialUrl ||
+                (cert.allowDownload !== false ? cert.credentialPdf : undefined);
+              const canPreviewInline = Boolean(
+                cert.image || (cert.credentialPdf && cert.allowDownload !== false)
+              );
+              const evidenceAttached = hasCertificateEvidence(cert);
+              const resolvedStatus = resolveCertificateVerificationStatus(cert);
 
               return (
                 <div
                   key={cert.id || cert.title}
+                  data-cert-id={cert.id}
+                  data-verification-status={resolvedStatus}
                   className={`group relative flex flex-col justify-between rounded-xl border bg-white p-5 transition-colors duration-200 hover:border-brand/40 dark:bg-[#111422] ${
                     cert.featured
                       ? "border-brand/40 dark:border-blue-500/40"
@@ -144,11 +202,14 @@ export function CertificatesSection() {
                       ) : (
                         <Award className="size-5 text-brand/60 shrink-0 dark:text-blue-400/70" />
                       )}
-                      {cert.featured && (
-                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
-                          {isEn ? "Featured" : "Unggulan"}
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center justify-end gap-1">
+                        {cert.featured && (
+                          <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
+                            {isEn ? "Featured" : "Unggulan"}
+                          </span>
+                        )}
+                        {renderVerificationBadge(resolvedStatus)}
+                      </div>
                     </div>
 
                     <h3 className="font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
@@ -173,31 +234,39 @@ export function CertificatesSection() {
                     </div>
                   </div>
 
-                  {(proofLink || canPreviewInline) && (
-                    <div className="mt-4 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
-                      {canPreviewInline && (
-                        <button
-                          type="button"
-                          onClick={() => setPreviewCert(cert)}
-                          className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
-                        >
-                          <Eye className="size-3.5" />
-                          <span>{isEn ? "Preview" : "Pratinjau"}</span>
-                        </button>
-                      )}
-                      {proofLink && (
-                        <a
-                          href={proofLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
-                          <ArrowUpRight className="size-3.5" />
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  <div className="mt-4 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
+                    {proofLink || canPreviewInline ? (
+                      <>
+                        {canPreviewInline && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewCert(cert)}
+                            className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
+                          >
+                            <Eye className="size-3.5" />
+                            <span>{isEn ? "Preview" : "Pratinjau"}</span>
+                          </button>
+                        )}
+                        {proofLink && (
+                          <a
+                            href={proofLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
+                            <ArrowUpRight className="size-3.5" />
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-muted">
+                        {evidenceAttached
+                          ? t("certificates.restrictedProofNote", "Lampiran dibatasi")
+                          : t("certificates.noEvidenceNote", "Bukti belum dilampirkan")}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -219,10 +288,13 @@ export function CertificatesSection() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-              <div className="min-w-0 pr-4">
-                <h4 className="font-display text-sm sm:text-base font-bold text-ink truncate">
-                  {previewCert.title}
-                </h4>
+              <div className="min-w-0 pr-4 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-display text-sm sm:text-base font-bold text-ink truncate">
+                    {previewCert.title}
+                  </h4>
+                  {renderVerificationBadge(resolveCertificateVerificationStatus(previewCert))}
+                </div>
                 <p className="text-xs text-muted truncate">
                   {previewCert.issuer} · {previewCert.date}
                   {previewCert.expiryDate ? ` (${isEn ? "Exp" : "Berlaku s.d."} ${previewCert.expiryDate})` : ""}
@@ -246,7 +318,7 @@ export function CertificatesSection() {
                   alt={previewCert.title}
                   className="mx-auto max-h-[65vh] w-auto rounded-lg object-contain border border-line/60"
                 />
-              ) : previewCert.credentialPdf ? (
+              ) : previewCert.credentialPdf && previewCert.allowDownload !== false ? (
                 <iframe
                   src={previewCert.credentialPdf}
                   title={previewCert.title}
@@ -281,7 +353,7 @@ export function CertificatesSection() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 font-semibold text-brand hover:underline dark:text-blue-400"
                   >
-                    <span>{isEn ? "Verify Credential" : "Verifikasi Resmi"}</span>
+                    <span>{t("certificates.openLink", "Buka Tautan Bukti")}</span>
                     <ArrowUpRight className="size-3.5" />
                   </a>
                 )}

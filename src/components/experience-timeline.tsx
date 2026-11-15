@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useSiteConfig, type ExperienceItem } from "@/lib/site-store";
 import { getPublishedExperience } from "@/lib/content/selectors";
+import { InstitutionLogo } from "@/components/institution-logo";
 import { Briefcase, MapPin, Calendar, ExternalLink, ChevronDown } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -297,15 +298,12 @@ export function ExperienceTimeline() {
               }`}
             >
               <div className="flex items-start gap-3">
-                {item.logo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.logo}
-                    alt={item.org}
-                    className="size-9 shrink-0 rounded-lg border border-line/60 object-contain bg-white p-1 dark:bg-slate-900"
-                    loading="lazy"
-                  />
-                )}
+                <InstitutionLogo
+                  src={item.logo}
+                  name={item.org}
+                  fallbackCode="ORG"
+                  size="sm"
+                />
                 <div className="min-w-0 flex-1">
                   <h4 className="font-display text-sm sm:text-base font-bold text-ink tracking-tight">
                     {item.role}

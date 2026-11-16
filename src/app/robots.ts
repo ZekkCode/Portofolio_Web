@@ -14,14 +14,20 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   let requestedHost = "";
   try {
     const headerList = await headers();
-    requestedHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase();
+    requestedHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase().trim();
   } catch {}
 
   let baseUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || prof.site);
-  if (requestedHost.includes("zakariamp.my.id")) {
-    baseUrl = "https://www.zakariamp.my.id";
-  } else if (requestedHost.includes("zakariamp.id")) {
-    baseUrl = "https://www.zakariamp.id";
+  if (requestedHost) {
+    const cleanHost = requestedHost.split(":")[0];
+    if (
+      cleanHost.endsWith("zakariamp.my.id") ||
+      cleanHost.endsWith("zakariamp.id") ||
+      cleanHost.endsWith("vercel.app") ||
+      cleanHost.includes("localhost")
+    ) {
+      baseUrl = `https://${requestedHost}`;
+    }
   }
 
   const allowRoot = seo.robotsIndex !== false;
@@ -31,7 +37,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       {
         userAgent: "*",
         allow: allowRoot ? "/" : undefined,
-        disallow: allowRoot ? ["/admin", "/admin/", "/api/", "/private/"] : ["/", "/admin", "/api/"],
+        disallow: allowRoot ? ["/admin", "/admin/", "/api/admin/", "/private/"] : ["/"],
       },
       {
         userAgent: [
@@ -46,10 +52,22 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           "Bravebot",
         ],
         allow: allowRoot ? "/" : undefined,
-        disallow: allowRoot ? ["/admin", "/admin/", "/api/", "/private/"] : ["/"],
+        disallow: allowRoot ? ["/admin", "/admin/", "/api/admin/", "/private/"] : ["/"],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: [
+      `${baseUrl}/sitemap.xml`,
+      `${baseUrl}/sitemap-main.xml`,
+      `${baseUrl}/sitemap-services.xml`,
+      `${baseUrl}/sitemap-projects.xml`,
+      `${baseUrl}/sitemap-certificates.xml`,
+      `${baseUrl}/sitemap-career.xml`,
+      `${baseUrl}/sitemap-images.xml`,
+      "https://www.zakariamp.id/sitemap.xml",
+      "https://zakariamp.id/sitemap.xml",
+      "https://www.zakariamp.my.id/sitemap.xml",
+      "https://zakariamp.my.id/sitemap.xml",
+    ],
     host: baseUrl,
   };
 }

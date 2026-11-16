@@ -733,7 +733,7 @@ function Footer() {
                     <a
                       href={s.href}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="me noopener noreferrer"
                       aria-label={s.label}
                       title={s.label}
                       className={`group flex size-11 items-center justify-center rounded-xl text-body transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:text-slate-400 ${getSocialHoverClasses(s.label)}`}

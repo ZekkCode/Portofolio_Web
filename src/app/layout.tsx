@@ -95,11 +95,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
   try {
     const headerList = await headers();
-    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase();
-    if (reqHost.includes("zakariamp.my.id")) {
-      siteUrl = "https://www.zakariamp.my.id";
-    } else if (reqHost.includes("zakariamp.id")) {
-      siteUrl = "https://www.zakariamp.id";
+    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase().trim();
+    if (reqHost) {
+      const cleanHost = reqHost.split(":")[0];
+      if (
+        cleanHost.endsWith("zakariamp.my.id") ||
+        cleanHost.endsWith("zakariamp.id") ||
+        cleanHost.endsWith("vercel.app")
+      ) {
+        siteUrl = `https://${reqHost}`;
+      }
     }
   } catch {}
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
@@ -123,6 +128,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     alternates: {
       canonical: "/",
+      languages: {
+        "id-ID": "/",
+        "en-US": "/",
+        "x-default": "/",
+      },
     },
     verification: {
       google: resolveGoogleVerificationTokens(seo.googleVerification),
@@ -241,11 +251,16 @@ export default async function RootLayout({
 
   try {
     const headerList = await headers();
-    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase();
-    if (reqHost.includes("zakariamp.my.id")) {
-      siteUrl = "https://www.zakariamp.my.id";
-    } else if (reqHost.includes("zakariamp.id")) {
-      siteUrl = "https://www.zakariamp.id";
+    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase().trim();
+    if (reqHost) {
+      const cleanHost = reqHost.split(":")[0];
+      if (
+        cleanHost.endsWith("zakariamp.my.id") ||
+        cleanHost.endsWith("zakariamp.id") ||
+        cleanHost.endsWith("vercel.app")
+      ) {
+        siteUrl = `https://${reqHost}`;
+      }
     }
   } catch {}
   const email = pub.email;
@@ -257,6 +272,12 @@ export default async function RootLayout({
   const sameAsUrls = Array.from(
     new Set([
       ...pub.socials.filter((s) => s.href?.startsWith("http")).map((s) => s.href),
+      "https://github.com/ZekkCode",
+      "https://www.linkedin.com/in/zakariamp",
+      "https://www.behance.net/zakariamp",
+      "https://www.instagram.com/zekksparow",
+      "https://www.tiktok.com/@zekksparow",
+      "https://trakteer.id/zakariamp",
       ...(config.blog?.portalUrl?.startsWith("http") ? [config.blog.portalUrl] : []),
     ])
   );

@@ -76,6 +76,16 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   const mounted = useMounted();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlLang = searchParams.get("lang")?.toLowerCase();
+      if (urlLang === "en" || urlLang === "id") {
+        if (!i18n.language?.startsWith(urlLang)) {
+          void i18n.changeLanguage(urlLang);
+        }
+        return;
+      }
+    }
     const saved = getSavedLanguage();
     if (saved && !i18n.language?.startsWith(saved)) {
       void i18n.changeLanguage(saved);

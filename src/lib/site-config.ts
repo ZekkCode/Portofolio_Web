@@ -47,6 +47,7 @@ export type LanyardConfig = {
 
 export type ProfileCardConfig = {
   avatarUrl: string;
+  secondaryAvatarUrl?: string;
   iconUrl: string;
   miniAvatarUrl: string;
   imageFit?: "cover" | "contain";
@@ -616,9 +617,10 @@ export const defaultLanyard: LanyardConfig = {
 };
 
 export const defaultProfileCard: ProfileCardConfig = {
-  avatarUrl: "",
+  avatarUrl: "/card-front-v2.webp",
+  secondaryAvatarUrl: "/card-back-v2.webp",
   iconUrl: "",
-  miniAvatarUrl: "",
+  miniAvatarUrl: "/profile.webp",
   imageFit: "cover",
   name: profile.name,
   title: profile.roles,
@@ -1386,9 +1388,19 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
 
   // 4. Profile Card
   const rawProfileCard = raw.profileCard ? { ...raw.profileCard } : undefined;
+  const rawAvatar = rawProfileCard?.avatarUrl?.trim() || "";
+  const normalizedAvatar =
+    !rawAvatar || rawAvatar === "/profile.webp"
+      ? defaultProfileCard.avatarUrl
+      : rawAvatar;
+  const rawSecondary = rawProfileCard?.secondaryAvatarUrl?.trim() || "";
+  const normalizedSecondary = rawSecondary || defaultProfileCard.secondaryAvatarUrl || "/card-back-v2.webp";
   const normalizedProfileCard: ProfileCardConfig = {
     ...defaultProfileCard,
     ...rawProfileCard,
+    avatarUrl: normalizedAvatar,
+    secondaryAvatarUrl: normalizedSecondary,
+    miniAvatarUrl: rawProfileCard?.miniAvatarUrl?.trim() || defaultProfileCard.miniAvatarUrl,
     imageFit:
       !rawProfileCard?.avatarUrl && rawProfileCard?.imageFit === "contain"
         ? defaultProfileCard.imageFit

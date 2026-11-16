@@ -3,6 +3,7 @@
 import ProfileCard from "@/components/profile-card";
 import {
   resolveProfileCardAvatar,
+  resolveProfileCardSecondaryAvatar,
   resolveProfileCardImageFit,
   resolveProfileCardMiniAvatar,
 } from "@/lib/content/identity-images";
@@ -12,7 +13,13 @@ import { profile } from "@/lib/profile";
 export function ProfileCardStage() {
   const { profileCard: pc, generalProfile, lanyard } = useSiteConfig();
   const imageContext = { profileCard: pc, generalProfile, lanyard };
-  const resolvedAvatar = resolveProfileCardAvatar(imageContext).url;
+  const rawResolvedAvatar = resolveProfileCardAvatar(imageContext).url;
+  const resolvedAvatar =
+    !rawResolvedAvatar || rawResolvedAvatar === "/profile.webp"
+      ? "/card-front-v2.webp"
+      : rawResolvedAvatar;
+  const resolvedSecondaryAvatar =
+    resolveProfileCardSecondaryAvatar(imageContext) || "/card-back-v2.webp";
   const resolvedMiniAvatar = resolveProfileCardMiniAvatar(imageContext).url;
   const resolvedImageFit = resolveProfileCardImageFit(imageContext);
 
@@ -23,8 +30,9 @@ export function ProfileCardStage() {
         name={pc.name || generalProfile?.name || profile.name}
         title={pc.title || generalProfile?.roles || profile.roles}
         avatarUrl={resolvedAvatar}
+        secondaryAvatarUrl={resolvedSecondaryAvatar}
         iconUrl={pc.iconUrl || undefined}
-        miniAvatarUrl={resolvedMiniAvatar}
+        miniAvatarUrl={resolvedMiniAvatar || "/profile.webp"}
         imageFit={resolvedImageFit}
         backdropColor={pc.backdropColor || undefined}
         onContactClick={() => {

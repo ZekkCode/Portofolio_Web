@@ -166,14 +166,14 @@ export function resolveGlobalPortrait(
 }
 
 /**
- * Resolves the Hologram Profile Card's main human portrait.
- * Priority: profileCard.avatarUrl (non-card) -> generalProfile portrait -> /profile.webp.
+ * Resolves the Hologram Profile Card's main avatar.
+ * Defaults to card-front-v2.webp so the interactive 3D ID card is displayed in contact.
  */
 export function resolveProfileCardAvatar(
   config?: IdentityImageConfigSlice
 ): PortraitResolution {
   const rawUrl = config?.profileCard?.avatarUrl?.trim() || "";
-  if (isUsablePortraitUrl(rawUrl, config)) {
+  if (rawUrl && !isMissingPortraitAliasUrl(rawUrl)) {
     return {
       url: rawUrl,
       rawUrl,
@@ -183,36 +183,37 @@ export function resolveProfileCardAvatar(
     };
   }
 
-  const globalPortrait = resolveGlobalPortrait(config);
   return {
-    url: globalPortrait.url,
+    url: DEFAULT_FRONTEND_CARD_URL,
     rawUrl,
-    source:
-      globalPortrait.source === "generalProfile.avatarUrl"
-        ? "generalProfile.avatarUrl"
-        : "fallback-portrait",
+    source: "fallback-portrait",
     isFallback: true,
-    rejectedCardUrl:
-      isIdentityCardAssetUrl(rawUrl, config)
-        ? rawUrl
-        : globalPortrait.rejectedCardUrl,
-    rejectedMissingUrl:
-      isMissingPortraitAliasUrl(rawUrl)
-        ? rawUrl
-        : globalPortrait.rejectedMissingUrl,
-    isRepoLowResPortrait: globalPortrait.isRepoLowResPortrait,
+    isRepoLowResPortrait: false,
   };
 }
 
 /**
+ * Resolves the secondary avatar for 3D card toggle (Graphic Designer back card).
+ */
+export function resolveProfileCardSecondaryAvatar(
+  config?: IdentityImageConfigSlice
+): string {
+  const rawUrl = config?.profileCard?.secondaryAvatarUrl?.trim() || "";
+  if (rawUrl && !isMissingPortraitAliasUrl(rawUrl)) {
+    return rawUrl;
+  }
+  return DEFAULT_DESIGNER_CARD_URL;
+}
+
+/**
  * Resolves the small footer avatar inside the Hologram Profile Card.
- * Priority: profileCard.miniAvatarUrl (non-card) -> Hologram main portrait -> /profile.webp.
+ * Priority: profileCard.miniAvatarUrl (non-card) -> Global human portrait -> /profile.webp.
  */
 export function resolveProfileCardMiniAvatar(
   config?: IdentityImageConfigSlice
 ): PortraitResolution {
   const rawUrl = config?.profileCard?.miniAvatarUrl?.trim() || "";
-  if (isUsablePortraitUrl(rawUrl, config)) {
+  if (rawUrl && isUsablePortraitUrl(rawUrl, config)) {
     return {
       url: rawUrl,
       rawUrl,
@@ -222,21 +223,13 @@ export function resolveProfileCardMiniAvatar(
     };
   }
 
-  const mainAvatar = resolveProfileCardAvatar(config);
+  const globalPortrait = resolveGlobalPortrait(config);
   return {
-    url: mainAvatar.url,
+    url: globalPortrait.url || DEFAULT_PORTRAIT_AVATAR_URL,
     rawUrl,
-    source: mainAvatar.isFallback ? mainAvatar.source : "hologram-portrait",
+    source: "fallback-portrait",
     isFallback: true,
-    rejectedCardUrl:
-      isIdentityCardAssetUrl(rawUrl, config)
-        ? rawUrl
-        : mainAvatar.rejectedCardUrl,
-    rejectedMissingUrl:
-      isMissingPortraitAliasUrl(rawUrl)
-        ? rawUrl
-        : mainAvatar.rejectedMissingUrl,
-    isRepoLowResPortrait: mainAvatar.isRepoLowResPortrait,
+    isRepoLowResPortrait: globalPortrait.isRepoLowResPortrait,
   };
 }
 

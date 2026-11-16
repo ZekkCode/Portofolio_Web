@@ -580,7 +580,7 @@ export function TabAppearance({
                     <ProfileCard
                       {...config.profileCard}
                       avatarUrl={avatarResolution.url}
-                      secondaryAvatarUrl={undefined}
+                      secondaryAvatarUrl={config.profileCard.secondaryAvatarUrl || "/card-back-v2.webp"}
                       miniAvatarUrl={miniResolution.url}
                       imageFit={fitResolution}
                     />

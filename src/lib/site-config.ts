@@ -1241,7 +1241,7 @@ export const defaultSiteConfig: SiteConfig = {
     canonicalUrl: resolveCanonicalSiteUrl(),
     robotsIndex: true,
     personJobTitle: "UI/UX Designer & Frontend Developer",
-    googleVerification: "",
+    googleVerification: "zJPFsbAW4iSJjucKreBPM52cIAApE4NbeoIYI9OTSZ0",
     bingVerification: "",
     yandexVerification: "",
     indexNowKey: "",
@@ -1926,10 +1926,26 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     canonicalUrl: resolveCanonicalSiteUrl(rawSeo.canonicalUrl),
     keywords: Array.isArray(rawSeo.keywords) ? rawSeo.keywords.filter((k) => typeof k === "string") : defaultSiteConfig.seo?.keywords,
     robotsIndex: rawSeo.robotsIndex !== false,
-    googleVerification: cleanToken(rawSeo.googleVerification, 128),
-    bingVerification: cleanToken(rawSeo.bingVerification, 128),
-    yandexVerification: cleanToken(rawSeo.yandexVerification, 128),
-    indexNowKey: cleanToken(rawSeo.indexNowKey, 128),
+    googleVerification:
+      cleanToken(rawSeo.googleVerification, 128) ||
+      (process.env.GOOGLE_SITE_VERIFICATION || "").trim() ||
+      defaultSiteConfig.seo?.googleVerification ||
+      undefined,
+    bingVerification:
+      cleanToken(rawSeo.bingVerification, 128) ||
+      (process.env.BING_SITE_VERIFICATION || "").trim() ||
+      defaultSiteConfig.seo?.bingVerification ||
+      undefined,
+    yandexVerification:
+      cleanToken(rawSeo.yandexVerification, 128) ||
+      (process.env.YANDEX_SITE_VERIFICATION || "").trim() ||
+      defaultSiteConfig.seo?.yandexVerification ||
+      undefined,
+    indexNowKey:
+      cleanToken(rawSeo.indexNowKey, 128) ||
+      (process.env.INDEXNOW_KEY || "").trim() ||
+      defaultSiteConfig.seo?.indexNowKey ||
+      undefined,
   };
 
   return {

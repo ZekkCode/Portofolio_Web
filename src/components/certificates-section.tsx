@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
@@ -24,6 +25,27 @@ export function CertificatesSection() {
   const [filter, setFilter] = useState<string>("all");
   const [previewCert, setPreviewCert] = useState<CertificateItem | null>(null);
   const [currentCertIndex, setCurrentCertIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll and listen for Escape key when preview modal is open
+  useEffect(() => {
+    if (previewCert) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setPreviewCert(null);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [previewCert]);
 
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
@@ -219,28 +241,82 @@ export function CertificatesSection() {
               key={cert.id || cert.title}
               data-cert-id={cert.id}
               data-verification-status={resolvedStatus}
-              className={`group relative flex flex-col justify-between rounded-xl border bg-white p-4 sm:p-5 transition-colors duration-200 hover:border-brand/40 dark:bg-[#111422] ${
-                isMobile ? "min-h-[220px]" : ""
-              } ${
+              className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-3.5 sm:p-4 transition-all duration-200 hover:border-brand/40 hover:shadow-md dark:bg-[#111422] ${
                 cert.featured
-                  ? "border-brand/40 dark:border-blue-500/40"
+                  ? "border-brand/40 shadow-sm dark:border-blue-500/40"
                   : "border-line/80 dark:border-line/60"
               }`}
             >
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  {cert.issuerLogo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cert.issuerLogo}
-                      alt={cert.issuer}
-                      className="size-7 rounded border border-line/60 object-contain bg-white p-0.5 dark:bg-slate-900"
-                      loading="lazy"
-                    />
+                {/* Visual Thumbnail Sertifikat */}
+                <div
+                  className={`group/thumb relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-xl border border-line/60 bg-slate-100 dark:border-line/40 dark:bg-slate-900/60 ${
+                    canPreviewInline ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => {
+                    if (canPreviewInline) setPreviewCert(cert);
+                  }}
+                >
+                  {cert.image ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={cert.image}
+                        alt={cert.title}
+                        className="h-full w-full object-cover object-top transition-transform duration-300 group-hover/thumb:scale-105"
+                        loading="lazy"
+                      />
+                      {/* Subtle hover overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 backdrop-blur-[1px] transition-opacity duration-200 group-hover/thumb:opacity-100">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/80 px-2.5 py-1 text-xs font-semibold text-white shadow-md">
+                          <Eye className="size-3.5" />
+                          <span>{isEn ? "Preview" : "Pratinjau"}</span>
+                        </span>
+                      </div>
+                    </>
                   ) : (
-                    <Award className="size-5 text-brand/60 shrink-0 dark:text-blue-400/70" />
+                    /* Designed Certificate Document Placeholder */
+                    <div className="relative flex h-full w-full flex-col items-center justify-center p-3 text-center transition-colors group-hover/thumb:bg-slate-200/50 dark:group-hover/thumb:bg-slate-800/40">
+                      <div className="absolute inset-1.5 rounded-lg border border-dashed border-line/70 dark:border-line/40 pointer-events-none" />
+                      <div className="relative z-10 flex flex-col items-center gap-1">
+                        <div className="flex size-8 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-blue-500/15 dark:text-blue-400">
+                          <Award className="size-4" />
+                        </div>
+                        <span className="font-display text-[11px] font-bold text-ink line-clamp-1 max-w-[180px]">
+                          {cert.issuer}
+                        </span>
+                        <span className="text-[10px] text-muted line-clamp-1">
+                          {cert.credentialId ? `ID: ${cert.credentialId}` : (isEn ? "Credential Document" : "Dokumen Kredensial")}
+                        </span>
+                      </div>
+                      {canPreviewInline && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 backdrop-blur-[1px] transition-opacity duration-200 group-hover/thumb:opacity-100">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/80 px-2.5 py-1 text-xs font-semibold text-white shadow-md">
+                            <Eye className="size-3.5" />
+                            <span>{isEn ? "Preview" : "Pratinjau"}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
-                  <div className="flex flex-wrap items-center justify-end gap-1">
+                </div>
+
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {cert.issuerLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cert.issuerLogo}
+                        alt={cert.issuer}
+                        className="size-5 rounded border border-line/60 object-contain bg-white p-0.5 dark:bg-slate-900 shrink-0"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Award className="size-4 text-brand/60 shrink-0 dark:text-blue-400/70" />
+                    )}
+                    <span className="font-medium text-xs text-muted line-clamp-1 truncate">{cert.issuer}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-1 shrink-0">
                     {cert.featured && (
                       <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
                         {isEn ? "Featured" : "Unggulan"}
@@ -255,8 +331,10 @@ export function CertificatesSection() {
                 </h3>
 
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-muted">
-                  <span className="font-medium line-clamp-1">{cert.issuer}</span>
                   <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
+                  <span className="inline-block text-[11px] font-medium text-muted">
+                    {getCategoryLabel(cert.category)}
+                  </span>
                 </div>
 
                 {cert.credentialId && (
@@ -264,22 +342,16 @@ export function CertificatesSection() {
                     ID: {cert.credentialId}
                   </p>
                 )}
-
-                <div className="mt-1.5">
-                  <span className="inline-block text-[11px] font-medium text-muted">
-                    {getCategoryLabel(cert.category)}
-                  </span>
-                </div>
               </div>
 
-              <div className="mt-4 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
+              <div className="mt-3.5 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
                 {proofLink || canPreviewInline ? (
                   <>
                     {canPreviewInline && (
                       <button
                         type="button"
                         onClick={() => setPreviewCert(cert)}
-                        className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
+                        className="inline-flex min-h-[32px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
                       >
                         <Eye className="size-3.5" />
                         <span>{isEn ? "Preview" : "Pratinjau"}</span>
@@ -290,7 +362,7 @@ export function CertificatesSection() {
                         href={proofLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                        className="inline-flex min-h-[32px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
                         <ArrowUpRight className="size-3.5" />
@@ -373,20 +445,26 @@ export function CertificatesSection() {
         );
       })()}
 
-      {/* Lightbox Preview Modal */}
-      {previewCert && (
+      {/* Lightbox Preview Modal via Portal */}
+      {previewCert && mounted && typeof document !== "undefined" && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label={previewCert.title}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-          onClick={() => setPreviewCert(null)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6"
         >
+          {/* Full Backdrop with deep black & blur */}
           <div
-            className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-2xl dark:bg-[#111422]"
+            className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setPreviewCert(null)}
+            aria-hidden="true"
+          />
+
+          <div
+            className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line/80 bg-white shadow-2xl dark:border-line/60 dark:bg-[#111422]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+            <div className="flex items-center justify-between border-b border-line px-5 py-3.5 bg-white dark:bg-[#111422]">
               <div className="min-w-0 pr-4 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="font-display text-sm sm:text-base font-bold text-ink truncate">
@@ -403,7 +481,7 @@ export function CertificatesSection() {
                 type="button"
                 onClick={() => setPreviewCert(null)}
                 aria-label={isEn ? "Close" : "Tutup"}
-                className="flex size-8 items-center justify-center rounded-lg border border-line text-muted hover:text-ink"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:text-ink hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="size-4" />
               </button>
@@ -415,7 +493,7 @@ export function CertificatesSection() {
                 <img
                   src={previewCert.image}
                   alt={previewCert.title}
-                  className="mx-auto max-h-[65vh] w-auto rounded-lg object-contain border border-line/60"
+                  className="mx-auto max-h-[65vh] w-auto rounded-lg object-contain border border-line/60 shadow-sm"
                 />
               ) : previewCert.credentialPdf && previewCert.allowDownload !== false ? (
                 <iframe
@@ -423,13 +501,19 @@ export function CertificatesSection() {
                   title={previewCert.title}
                   className="h-[65vh] w-full rounded-lg border border-line/60 bg-white"
                 />
-              ) : null}
+              ) : (
+                <div className="flex h-48 flex-col items-center justify-center text-center text-muted">
+                  <Award className="size-12 mb-2 text-brand/40" />
+                  <p className="text-xs font-semibold text-ink">{previewCert.title}</p>
+                  <p className="text-[11px]">{previewCert.issuer}</p>
+                </div>
+              )}
               {previewCert.desc && (
                 <p className="mt-3 text-xs leading-relaxed text-body">{previewCert.desc}</p>
               )}
             </div>
 
-            <div className="flex items-center justify-between border-t border-line px-5 py-3 text-xs">
+            <div className="flex items-center justify-between border-t border-line px-5 py-3 text-xs bg-white dark:bg-[#111422]">
               <span className="font-mono text-muted">
                 {previewCert.credentialId ? `ID: ${previewCert.credentialId}` : ""}
               </span>
@@ -459,7 +543,8 @@ export function CertificatesSection() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

@@ -125,7 +125,23 @@ export function isPrivateOrReservedIp(rawIp: string): boolean {
   if (/^f[cd][0-9a-f]{2}:/.test(cleaned)) return true;
   if (/^fe[89ab][0-9a-f]:/.test(cleaned)) return true;
   if (/^ff[0-9a-f]{2}:/.test(cleaned)) return true;
-  if (/^64:ff9b::/.test(cleaned)) return true; // NAT64 prefix
+  if (/^64:ff9b::/.test(cleaned)) {
+    // RFC 6052 Well-Known Prefix 64:ff9b::/96: periksa apakah IPv4 yang tertanam adalah privat
+    const suffix = cleaned.replace(/^64:ff9b::/i, "");
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(suffix)) {
+      return isPrivateOrReservedIpv4(suffix);
+    }
+    const hexParts = suffix.split(":");
+    if (hexParts.length === 2) {
+      const p1 = parseInt(hexParts[0], 16);
+      const p2 = parseInt(hexParts[1], 16);
+      if (!Number.isNaN(p1) && !Number.isNaN(p2)) {
+        const dotted = `${(p1 >>> 8) & 0xff}.${p1 & 0xff}.${(p2 >>> 8) & 0xff}.${p2 & 0xff}`;
+        return isPrivateOrReservedIpv4(dotted);
+      }
+    }
+    return false;
+  }
 
   return false;
 }

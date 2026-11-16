@@ -207,10 +207,20 @@ export function verifyCsrfOrigin(request: Request): boolean {
     const originUrl = new URL(origin);
     const allowedHosts = new Set([
       host,
+      "zakariamp.id",
+      "www.zakariamp.id",
+      "zakariamp.my.id",
+      "www.zakariamp.my.id",
       "zakariamp.vercel.app",
       "localhost:3000",
       "127.0.0.1:3000",
     ]);
+
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      try {
+        allowedHosts.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).host);
+      } catch {}
+    }
 
     return allowedHosts.has(originUrl.host);
   } catch {

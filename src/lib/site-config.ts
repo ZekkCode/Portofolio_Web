@@ -1,4 +1,4 @@
-import { profile } from "@/lib/profile";
+import { profile, resolveCanonicalSiteUrl } from "@/lib/profile";
 import {
   normalizeCertificateVerification,
   type CertificateVerificationStatus,
@@ -652,8 +652,8 @@ export const defaultGeneralProfile: GeneralProfileConfig = {
     "Memiliki latar belakang desain grafis, multimedia, serta perakitan dan pemeliharaan perangkat komputer. Berpengalaman merancang antarmuka web yang terstruktur, cepat, dan mudah digunakan untuk organisasi kampus dan klien.",
   ],
   bioEn: [
-    "Informatics Engineering student at Universitas Trunojoyo Madura (class of 2024) specializing in UI/UX design and frontend web engineering since 2020. Experienced in crafting design systems in Figma and translating them into robust Next.js and TypeScript applications.",
-    "Rooted in graphic design, multimedia, and computer hardware maintenance. Proven track record in delivering clean, responsive, and accessible web interfaces for campus organizations and freelance clients.",
+    "Informatics Engineering student at Universitas Trunojoyo Madura (class of 2024) focusing on UI/UX design and frontend web engineering since 2020. Designs systems in Figma and builds responsive applications with Next.js and TypeScript.",
+    "Background in graphic design, multimedia, and computer hardware maintenance. Builds structured, accessible web interfaces for campus organizations and freelance clients.",
   ],
   avatarUrl: DEFAULT_PORTRAIT_AVATAR_URL,
   location: "Mojokerto, Jawa Timur",
@@ -666,7 +666,7 @@ export const defaultGeneralProfile: GeneralProfileConfig = {
   email: profile.contact.email,
   phone: profile.contact.phone,
   whatsapp: profile.contact.whatsapp,
-  site: profile.site || "https://zakariamp.vercel.app",
+  site: resolveCanonicalSiteUrl(profile.site),
   ctaPrimaryLabelId: "Kirim Email",
   ctaPrimaryLabelEn: "Send Email",
   ctaPrimaryHref: `mailto:${profile.contact.email}`,
@@ -968,14 +968,20 @@ export const defaultAchievements: AchievementItem[] = [
 ];
 
 export const defaultCertificates: CertificateItem[] = (profile.certificates || []).map((c, idx) => ({
-  id: `cert-${idx + 1}`,
+  id: ("id" in c && typeof c.id === "string" && c.id) ? c.id : `cert-${idx + 1}`,
   title: c.title,
   issuer: c.issuer,
   date: c.date,
   credentialUrl: c.credentialUrl || "",
+  credentialPdf: ("credentialPdf" in c && typeof c.credentialPdf === "string") ? c.credentialPdf : undefined,
+  credentialId: ("credentialId" in c && typeof c.credentialId === "string") ? c.credentialId : undefined,
+  image: ("image" in c && typeof c.image === "string") ? c.image : undefined,
   category: (c.category || "design") as "design" | "frontend" | "systems" | "all",
-  verificationStatus: "unverified",
+  verificationStatus: ("verificationStatus" in c && typeof c.verificationStatus === "string")
+    ? (c.verificationStatus as CertificateVerificationStatus)
+    : "unverified",
   published: true,
+  allowDownload: true,
   sortOrder: idx + 1,
 }));
 
@@ -1208,16 +1214,28 @@ export const defaultSiteConfig: SiteConfig = {
   faq: defaultFaq,
   blog: defaultBlogConfig,
   seo: {
-    metaTitle: `${profile.name} | ${profile.roles}`,
-    metaTitleEn: `${profile.name} | ${profile.roles}`,
-    metaDesc: profile.bio[0],
-    metaDescEn: defaultGeneralProfile.bioEn[0],
-    keywords: ["Zakaria Mujur Prasetyo", "ZekkTech", "UI/UX Designer", "Frontend Developer"],
+    metaTitle: "Zakaria Mujur Prasetyo | UI/UX & Frontend Web (ZekkTech)",
+    metaTitleEn: "Zakaria Mujur Prasetyo | UI/UX & Frontend Dev — ZekkTech",
+    metaDesc: "Portofolio Zakaria Mujur Prasetyo (ZekkTech), UI/UX Designer & Frontend Developer di Mojokerto. Merancang antarmuka Figma dan aplikasi web Next.js & TypeScript.",
+    metaDescEn: "Portfolio of Zakaria Mujur Prasetyo (ZekkTech), UI/UX Designer and Frontend Developer in Mojokerto. Designing Figma systems and Next.js TypeScript web apps.",
+    keywords: [
+      "Zakaria Mujur Prasetyo",
+      "ZekkTech",
+      "ZekkCode",
+      "UI/UX Designer",
+      "Frontend Developer",
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "Figma",
+      "Mojokerto",
+      "Universitas Trunojoyo Madura",
+    ],
     ogImage: "/opengraph-image",
-    ogImageAlt: `${profile.name} - ${profile.brand} Portfolio`,
-    canonicalUrl: profile.site || "https://zakariamp.vercel.app",
+    ogImageAlt: "Zakaria Mujur Prasetyo (ZekkTech) - Portfolio UI/UX & Frontend",
+    canonicalUrl: resolveCanonicalSiteUrl(),
     robotsIndex: true,
-    personJobTitle: profile.roles,
+    personJobTitle: "UI/UX Designer & Frontend Developer",
   },
   sections: defaultSections,
   sectionOrder: defaultSectionOrder,
@@ -1277,7 +1295,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
         email: typeof rawProfile.email === "string" ? rawProfile.email : defaultGeneralProfile.email,
         phone: typeof rawProfile.phone === "string" ? rawProfile.phone : defaultGeneralProfile.phone,
         whatsapp: typeof rawProfile.whatsapp === "string" ? rawProfile.whatsapp : defaultGeneralProfile.whatsapp,
-        site: typeof rawProfile.site === "string" && rawProfile.site.trim() ? rawProfile.site : defaultGeneralProfile.site,
+        site: resolveCanonicalSiteUrl(typeof rawProfile.site === "string" && rawProfile.site.trim() ? rawProfile.site : defaultGeneralProfile.site),
         ctaPrimaryLabelId:
           typeof rawProfile.ctaPrimaryLabelId === "string" ? rawProfile.ctaPrimaryLabelId : defaultGeneralProfile.ctaPrimaryLabelId,
         ctaPrimaryLabelEn:
@@ -1658,6 +1676,20 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       )
     );
 
+  // Pastikan sertifikat default baru terverifikasi ikut tersedia jika belum ada di data tersimpan
+  const existingCertIds = new Set(normalizedCertificates.map((c) => c.id));
+  const existingCertTitles = new Set(normalizedCertificates.map((c) => c.title.toLowerCase().trim()));
+  for (const def of defaultCertificates) {
+    if (!existingCertIds.has(def.id) && !existingCertTitles.has(def.title.toLowerCase().trim())) {
+      normalizedCertificates.push(
+        normalizeCertificateVerification(
+          { ...def, sortOrder: normalizedCertificates.length + 1 },
+          typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
+        )
+      );
+    }
+  }
+
   // 11. Tech Stack & Categories
   const normalizedTechStackCategories = normalizeTechStackCategories(
     raw.techStackCategories
@@ -1873,6 +1905,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
   const normalizedSeo: SeoConfig = {
     ...defaultSiteConfig.seo,
     ...(raw.seo && typeof raw.seo === "object" ? raw.seo : {}),
+    canonicalUrl: resolveCanonicalSiteUrl(raw.seo?.canonicalUrl),
     keywords: Array.isArray(raw.seo?.keywords) ? raw.seo.keywords.filter((k) => typeof k === "string") : defaultSiteConfig.seo?.keywords,
     robotsIndex: raw.seo?.robotsIndex !== false,
   };

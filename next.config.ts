@@ -13,10 +13,10 @@ const cspDirectives = [
   "font-src 'self' data:",
   // Audio / media assets served locally ('self')
   "media-src 'self' blob:",
-  // Allowed image sources: local, data URI, blob (Three.js/PDF), Supabase storage, Cloudflare R2, Workers CDN, ZekkTech Blog, GitHub
-  "img-src 'self' data: blob: https://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://raw.githubusercontent.com https://avatars.githubusercontent.com",
-  // Allowed API & WebSocket connections: Supabase REST/Realtime, Cloudflare R2, Workers CDN, Turnstile, ZekkTech Blog, Vercel Insights
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://challenges.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://vitals.vercel-insights.com",
+  // Allowed image sources: local, data URI, blob (Three.js/PDF), Supabase storage, Cloudflare R2, Workers CDN, ZekkTech Blog, GitHub, Custom Domains
+  "img-src 'self' data: blob: https://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://raw.githubusercontent.com https://avatars.githubusercontent.com https://zakariamp.id https://*.zakariamp.id https://zakariamp.my.id https://*.zakariamp.my.id https://zakariamp.vercel.app",
+  // Allowed API & WebSocket connections: Supabase REST/Realtime, Cloudflare R2, Workers CDN, Turnstile, ZekkTech Blog, Vercel Insights, Custom Domains
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.r2.cloudflarestorage.com https://*.cloudflare.com https://challenges.cloudflare.com https://*.r2.dev https://*.workers.dev https://zekktech.biz.id https://vitals.vercel-insights.com https://zakariamp.id https://*.zakariamp.id https://zakariamp.my.id https://*.zakariamp.my.id https://zakariamp.vercel.app",
   // Allow embedded Cloudflare Turnstile challenge frames
   "frame-src 'self' https://challenges.cloudflare.com",
   "frame-ancestors 'self'",
@@ -71,6 +71,26 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "**.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "zakariamp.id",
+      },
+      {
+        protocol: "https",
+        hostname: "**.zakariamp.id",
+      },
+      {
+        protocol: "https",
+        hostname: "zakariamp.my.id",
+      },
+      {
+        protocol: "https",
+        hostname: "**.zakariamp.my.id",
+      },
+      {
+        protocol: "https",
+        hostname: "zakariamp.vercel.app",
       },
     ],
   },
@@ -181,6 +201,12 @@ const nextConfig: NextConfig = {
         source: "/sounds/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/certificates/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
         ],
       },
     ];

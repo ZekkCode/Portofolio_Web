@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { GlobalClickSound } from "@/components/global-click-sound";
-import { profile } from "@/lib/profile";
+import { profile, resolveCanonicalSiteUrl } from "@/lib/profile";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import {
   getPublishedCertificates,
@@ -24,21 +24,18 @@ const fontDisplay = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  weight: ["500", "700"],
 });
 
 const fontBody = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
-  weight: ["400", "500", "600"],
 });
 
 const fontPixel = Pixelify_Sans({
   subsets: ["latin"],
   variable: "--font-pixel",
   display: "swap",
-  weight: ["600", "700"],
 });
 
 export const viewport: Viewport = {
@@ -69,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const seo = getPublishedSeo(config, "id");
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = (seo.canonicalUrl || pub.site || profile.site).replace(/\/$/, "");
+  const siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
   const metaDesc = seo.metaDesc || pub.heroDesc;
   const ogImage = seo.ogImage || "/opengraph-image";
@@ -79,6 +76,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(siteUrl),
     manifest: "/manifest.webmanifest",
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "32x32" },
+        { url: "/Profil-Zakaria Mujur Prasetyo.png", type: "image/png", sizes: "192x192" },
+      ],
+      apple: [
+        { url: "/Profil-Zakaria Mujur Prasetyo.png", sizes: "180x180", type: "image/png" },
+      ],
+      shortcut: ["/favicon.ico"],
+    },
     alternates: {
       canonical: "/",
       languages: {
@@ -134,7 +141,6 @@ export async function generateMetadata(): Promise<Metadata> {
       username: "zekksparow",
       gender: "male",
       locale: "id_ID",
-      alternateLocale: ["en_US"],
       url: siteUrl,
       siteName: brand,
       title: metaTitle,
@@ -193,7 +199,7 @@ export default async function RootLayout({
 
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = (seo.canonicalUrl || pub.site || profile.site).replace(/\/$/, "");
+  const siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
   const email = pub.email;
   const phone = pub.phone;
   const bioIntro = pub.heroDesc;

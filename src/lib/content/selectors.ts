@@ -48,7 +48,7 @@ import {
   type SeoConfig,
   type TechStackCategoryConfig,
 } from "@/lib/site-config";
-import { profile } from "@/lib/profile";
+import { profile, resolveCanonicalSiteUrl } from "@/lib/profile";
 import {
   EXPERIENCE_MONTH_COUNTING_RULE_LABEL,
   analyzeExperienceDateMigration,
@@ -746,7 +746,7 @@ export function getPublishedSeo(config?: Partial<SiteConfig>, locale: Locale = "
     keywords: raw.keywords && raw.keywords.length > 0 ? raw.keywords : undefined,
     ogImage: raw.ogImage,
     ogImageAlt: raw.ogImageAlt || `${gp?.name || profile.name} Portfolio`,
-    canonicalUrl: raw.canonicalUrl || gp?.site || "https://zakariamp.vercel.app",
+    canonicalUrl: resolveCanonicalSiteUrl(raw.canonicalUrl || gp?.site),
     robotsIndex: raw.robotsIndex !== false,
     personJobTitle: raw.personJobTitle || gp?.roles || profile.roles,
   };

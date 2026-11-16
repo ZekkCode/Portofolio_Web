@@ -702,10 +702,21 @@ export default function Home() {
   const seo = useMemo(() => getPublishedSeo(siteConfig, langLocale), [siteConfig, langLocale]);
 
   useEffect(() => {
-    if (seo.metaTitle && typeof document !== "undefined") {
+    if (typeof document === "undefined") return;
+    if (seo.metaTitle) {
       document.title = seo.metaTitle;
     }
-  }, [seo.metaTitle]);
+    document.documentElement.lang = langLocale;
+    if (seo.metaDesc) {
+      let metaDescEl = document.querySelector('meta[name="description"]');
+      if (!metaDescEl) {
+        metaDescEl = document.createElement("meta");
+        metaDescEl.setAttribute("name", "description");
+        document.head.appendChild(metaDescEl);
+      }
+      metaDescEl.setAttribute("content", seo.metaDesc);
+    }
+  }, [seo.metaTitle, seo.metaDesc, langLocale]);
 
   const renderSection = (key: SectionKey) => {
     switch (key) {

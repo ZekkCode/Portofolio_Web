@@ -1,5 +1,27 @@
 import { DEFAULT_PORTRAIT_AVATAR_URL } from "./content/identity-images";
 
+export const DEFAULT_CANONICAL_SITE_URL = "https://zakariamp.id";
+export const FALLBACK_DEPLOYMENT_SITE_URL = "https://zakariamp.vercel.app";
+
+/**
+ * Menyelesaikan URL kanonikal publik secara aman.
+ * Menomorsatukan NEXT_PUBLIC_SITE_URL jika disetel, atau kandidat yang diberikan,
+ * dengan fallback ke https://zakariamp.id.
+ */
+export function resolveCanonicalSiteUrl(candidate?: string): string {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const raw = envUrl || candidate?.trim() || DEFAULT_CANONICAL_SITE_URL;
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = "";
+    parsed.search = "";
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+    return parsed.toString();
+  } catch {
+    return DEFAULT_CANONICAL_SITE_URL;
+  }
+}
+
 export const profile = {
   name: "Zakaria Mujur Prasetyo",
   nickname: "Zekk",
@@ -9,7 +31,7 @@ export const profile = {
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",
   tagline: "Mahasiswa Teknik Informatika",
   location: "Mojokerto, Jawa Timur",
-  site: process.env.NEXT_PUBLIC_SITE_URL || "https://zakariamp.vercel.app",
+  site: resolveCanonicalSiteUrl(),
   since: "2020",
   bio: [
     "Mahasiswa Teknik Informatika Universitas Trunojoyo Madura (angkatan 2024) yang mendalami UI/UX design dan rekayasa frontend web sejak 2020. Terbiasa merancang design system di Figma dan mengimplementasikannya ke Next.js serta TypeScript.",
@@ -192,11 +214,35 @@ export const profile = {
   ],
   certificates: [
     {
+      id: "cert-mersi-bug-ai-2026",
+      title: "Strategi Efektif Menemukan Celah Keamanan Menggunakan AI Secara Presisi & Terarah",
+      issuer: "Merdeka Siber",
+      date: "2026-08-02",
+      credentialUrl: "/certificates/mersi-hunting-bug-with-ai-2026.pdf",
+      credentialPdf: "/certificates/mersi-hunting-bug-with-ai-2026.pdf",
+      category: "systems",
+      verificationStatus: "verified",
+      image: "/certificates/mersi-hunting-bug-with-ai-2026.webp",
+    },
+    {
+      id: "cert-tcc-vibecode-2026",
+      title: "Peserta Lomba Vibe Code Nasional TCC 2026",
+      issuer: "UKM TRIPLE-C Universitas Trunojoyo Madura",
+      date: "2026-10-31",
+      credentialUrl: "/certificates/tcc-vibe-code-2026-zakaria.webp",
+      credentialId: "122/Srt/PAN-TCC/DIV.TI/CCC/KM-UTM/XI/2026",
+      category: "frontend",
+      verificationStatus: "verified",
+      image: "/certificates/tcc-vibe-code-2026-zakaria.webp",
+    },
+    {
+      id: "cert-google-ux-2023",
       title: "Google UX Design Specialization",
       issuer: "Google / Coursera",
       date: "2023",
       credentialUrl: "",
       category: "design",
+      verificationStatus: "unverified",
     },
     {
       title: "Belajar Dasar Pemrograman Web",

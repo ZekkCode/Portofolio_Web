@@ -1,5 +1,6 @@
 import { lookup as dnsLookupDefault } from "node:dns/promises";
 import { isIP } from "node:net";
+import { resolveCanonicalSiteUrl } from "@/lib/profile";
 import {
   extractAlternateFeedUrl,
   isHtmlFeedResponse,
@@ -230,7 +231,7 @@ async function fetchSingleFeedTarget(params: {
       signal: controller.signal,
       headers: {
         Accept: acceptHeader,
-        "User-Agent": "ZekkPortfolio-FeedSync/2.0 (+https://zakariamp.dev)",
+        "User-Agent": `ZekkPortfolio-FeedSync/2.0 (+${resolveCanonicalSiteUrl()})`,
       },
       cache: "no-store",
     });

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import { getPublishedProfile, getPublishedSeo } from "@/lib/content/selectors";
+import { resolveCanonicalSiteUrl } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const config = await fetchPublishedContent();
   const seo = getPublishedSeo(config, "id");
   const prof = getPublishedProfile(config, "id");
-  const baseUrl = (seo.canonicalUrl || prof.site || "https://zakariamp.vercel.app").replace(/\/$/, "");
+  const baseUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || prof.site);
 
   const allowRoot = seo.robotsIndex !== false;
 

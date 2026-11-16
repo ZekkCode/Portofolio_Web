@@ -3,6 +3,7 @@ import path from "node:path";
 import { ImageResponse } from "next/og";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import { getPublishedProfile } from "@/lib/content/selectors";
+import { resolveCanonicalSiteUrl } from "@/lib/profile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,8 @@ function getPortraitDataUri(): string | null {
 export default async function Image() {
   const config = await fetchPublishedContent();
   const pub = getPublishedProfile(config, "id");
-  const siteHost = (pub.site || "https://zakariamp.vercel.app").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const canonical = resolveCanonicalSiteUrl(pub.site);
+  const siteHost = canonical.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const accent = config.lanyard?.cardColor || "#1b45c4";
   const portraitSrc = getPortraitDataUri();
 

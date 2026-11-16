@@ -15,8 +15,8 @@ export function resolveCanonicalSiteUrl(candidate?: string): string {
     const parsed = new URL(raw);
     parsed.hash = "";
     parsed.search = "";
-    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
-    return parsed.toString();
+    const cleanPath = parsed.pathname.replace(/\/+$/, "");
+    return `${parsed.origin}${cleanPath}`;
   } catch {
     return DEFAULT_CANONICAL_SITE_URL;
   }

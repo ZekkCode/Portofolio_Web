@@ -13,7 +13,7 @@ import {
   resolveProfileCardImageFit,
   resolveProfileCardMiniAvatar,
 } from "@/lib/content/identity-images";
-import { Sparkles, Layers, Search } from "lucide-react";
+import { Sparkles, Layers, Search, ExternalLink } from "lucide-react";
 
 interface TabAppearanceProps {
   config: SiteConfig;
@@ -151,7 +151,7 @@ export function TabAppearance({
     seo.metaDesc ||
     config.generalProfile?.heroDesc ||
     "Portfolio resmi Zakaria Mujur Prasetyo (ZekkTech).";
-  const serpHost = seo.canonicalUrl || config.generalProfile?.site || "https://zakariamp.vercel.app";
+  const serpHost = seo.canonicalUrl || config.generalProfile?.site || "https://zakariamp.id";
 
   return (
     <div className="space-y-6">
@@ -691,7 +691,7 @@ export function TabAppearance({
                   value={seo.canonicalUrl || ""}
                   onChange={(e) => updateSeo({ canonicalUrl: e.target.value })}
                   className={`mt-1.5 ${inputClass}`}
-                  placeholder="https://zakariamp.vercel.app"
+                  placeholder="https://zakariamp.id"
                 />
               </div>
 
@@ -749,6 +749,134 @@ export function TabAppearance({
                   className={`mt-1.5 ${inputClass}`}
                   placeholder="Zakaria Mujur Prasetyo - ZekkTech Portfolio"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* ===================== Webmaster & IndexNow Verification ===================== */}
+          <div className="rounded-2xl border border-line/70 bg-white/70 p-5 shadow-sm dark:border-line/40 dark:bg-slate-900/60">
+            <div className="mb-4">
+              <h3 className="text-sm font-bold text-ink">Verifikasi Mesin Pencari &amp; IndexNow</h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Integrasi token webmaster resmi untuk Google, Bing, Yandex, serta protokol notifikasi instan IndexNow.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-ink">
+                  Google Search Console (Meta Verification Token)
+                </label>
+                <input
+                  type="text"
+                  value={seo.googleVerification || ""}
+                  onChange={(e) => updateSeo({ googleVerification: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Contoh: vW9kL... (isi token tanpa tag html)"
+                  maxLength={128}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  Menghasilkan tag &lt;meta name=&quot;google-site-verification&quot; content=&quot;...&quot; /&gt; di HTML server.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">
+                  Bing Webmaster Tools (Meta Verification Token: msvalidate.01)
+                </label>
+                <input
+                  type="text"
+                  value={seo.bingVerification || ""}
+                  onChange={(e) => updateSeo({ bingVerification: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Contoh: 1A2B3C4D5E6F... (32 karakter hex)"
+                  maxLength={128}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  Menghasilkan tag &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot; /&gt;.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink">
+                  Yandex Webmaster (Meta Verification Token: yandex-verification)
+                </label>
+                <input
+                  type="text"
+                  value={seo.yandexVerification || ""}
+                  onChange={(e) => updateSeo({ yandexVerification: e.target.value })}
+                  className={`mt-1.5 ${inputClass}`}
+                  placeholder="Contoh: yandex-verification token..."
+                  maxLength={128}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  Menghasilkan tag &lt;meta name=&quot;yandex-verification&quot; content=&quot;...&quot; /&gt;.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-ink">
+                    IndexNow API Key (Bing &amp; Yandex Instant Push)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomKey = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                        .map((b) => b.toString(16).padStart(2, "0"))
+                        .join("");
+                      updateSeo({ indexNowKey: randomKey });
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    Generate Random Key
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={seo.indexNowKey || ""}
+                  onChange={(e) => updateSeo({ indexNowKey: e.target.value })}
+                  className={`mt-1.5 ${inputClass} font-mono`}
+                  placeholder="32 karakter hex, contoh: c74384950e3b4a2e850b106366dbad2b"
+                  maxLength={128}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  {seo.indexNowKey ? (
+                    <>
+                      Key file aktif di:{" "}
+                      <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">
+                        {`${serpHost}/${seo.indexNowKey}.txt`}
+                      </code>
+                    </>
+                  ) : (
+                    "Masukkan atau generate key untuk mengaktifkan berkas verifikasi /{key}.txt dan submit otomatis saat publikasi."
+                  )}
+                </p>
+              </div>
+
+              {/* Status Tautan Mesin Pencari */}
+              <div className="mt-4 rounded-xl border border-line/40 bg-slate-50/60 p-3 text-xs dark:bg-slate-950/40">
+                <span className="font-semibold text-ink">URL Sitemap &amp; Robots:</span>
+                <div className="mt-1 flex flex-wrap gap-3">
+                  <a
+                    href={`${serpHost}/sitemap.xml`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <span>{`${serpHost}/sitemap.xml`}</span>
+                    <ExternalLink className="size-3" />
+                  </a>
+                  <a
+                    href={`${serpHost}/robots.txt`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <span>{`${serpHost}/robots.txt`}</span>
+                    <ExternalLink className="size-3" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>

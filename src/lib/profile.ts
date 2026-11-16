@@ -26,7 +26,7 @@ export const profile = {
   name: "Zakaria Mujur Prasetyo",
   nickname: "Zekk",
   avatar: DEFAULT_PORTRAIT_AVATAR_URL,
-  brand: "ZekkTech",
+  brand: "ZakariaMP",
   roles: "UI/UX & Frontend Developer",
   rolesFull: "UI/UX Designer · Frontend Developer · Freelancer",
   tagline: "Mahasiswa Teknik Informatika",

@@ -18,11 +18,12 @@ Panduan teknis optimasi mesin pencari (Google Search Central, Bing Webmaster, Li
     Disallow: /api/
     Disallow: /private/
 
-    Sitemap: https://zekktech.biz.id/sitemap.xml
+    Sitemap: https://zakariamp.id/sitemap.xml
     ```
 - **Kanonikalitas URL**:
-  - Penegakan `canonical: "https://zekktech.biz.id"` mencegah isu *duplicate content*.
+  - Penegakan `canonical: "https://zakariamp.id"` mencegah isu *duplicate content*.
   - Sesuai standar Google Search Central, XML sitemap ([`src/app/sitemap.ts`](file:///e:/ProjectZekk/Porotofolio-Zekk/src/app/sitemap.ts)) hanya memuat URL kanonikal bersih (tanpa anchor `#hash`).
+  - Domain alias (`zakariamp.my.id` dan `zakariamp.vercel.app`) diarahkan ke kanonikal utama `https://zakariamp.id`.
 
 ### B. Keamanan & HTTPS Trust Signals ([`next.config.ts`](file:///e:/ProjectZekk/Porotofolio-Zekk/next.config.ts))
 Header keamanan HTTP yang terpasang otomatis:
@@ -62,23 +63,23 @@ Header keamanan HTTP yang terpasang otomatis:
 Diinjeksikan di `<head>` root layout menggunakan format graf terpadu (`@graph`):
 
 1. **`WebSite`**:
-   - URL: `https://zekktech.biz.id`
+   - URL: `https://zakariamp.id`
    - InLanguage: `["id-ID", "en-US"]`
    - Publisher: Referensi ke entitas `Person`.
 
 2. **`Person`**:
    - `name`: Zakaria Mujur Prasetyo
-   - `alternateName`: Zekk, ZekkTech, zekksparow
+   - `alternateName`: Zekk, ZakariaMP, ZekkTech, zekksparow
    - `jobTitle`: UI/UX Designer, Frontend Developer, Graphic Designer, IT Support
    - `knowsLanguage`: `["id", "en"]`
    - `address`: Mojokerto, Jawa Timur, ID
    - `alumnusOf`: Universitas Trunojoyo Madura
    - `knowsAbout`: UI/UX Design, Frontend Development, Next.js, React, TypeScript, Tailwind CSS, Figma, WebGL, Graphic Design, SEO
-   - `sameAs`: Tautan media sosial terverifikasi (GitHub, LinkedIn, Behance, Instagram, Trakteer)
+   - `sameAs`: Tautan media sosial terverifikasi (GitHub, LinkedIn, Behance, Instagram, TikTok)
 
 3. **`ProfilePage`**:
    - Menghubungkan entitas `WebSite` dan `Person` untuk Google Knowledge Graph.
-   - `primaryImageOfPage`: `https://zekktech.biz.id/opengraph-image`
+   - `primaryImageOfPage`: `https://zakariamp.id/opengraph-image`
 
 ---
 
@@ -104,16 +105,16 @@ Repositori ini mengintegrasikan dua skill pendukung SEO:
 ### Perintah CLI untuk Audit Berkala:
 ```powershell
 # 1. Crawl teknis halaman web lokal/produksi
-npx -y seo crawl --url https://zekktech.biz.id
+npx -y seo crawl --url https://zakariamp.id
 
 # 2. Periksa status URL spesifik di Search Console
-npx -y seo page --url https://zekktech.biz.id
+npx -y seo page --url https://zakariamp.id
 
 # 3. Laporan performa kueri dan impresi organik
-npx -y seo report --site https://zekktech.biz.id
+npx -y seo report --site https://zakariamp.id
 
 # 4. Evaluasi alasan status pengindeksan Google
-npx -y seo index --site https://zekktech.biz.id
+npx -y seo index --site https://zakariamp.id
 ```
 
 ---
@@ -121,9 +122,9 @@ npx -y seo index --site https://zekktech.biz.id
 ## 6. Daftar Periksa Audit SEO (`Checklist`)
 
 - [x] HTTPS aktif dengan header HSTS 1 tahun (`Strict-Transport-Security`).
-- [x] `robots.txt` mengizinkan bot umum dan memblokir rute `/admin` serta `/api`.
-- [x] `sitemap.xml` hanya memuat URL kanonikal bersih (bebas hash `#fragment`).
-- [x] Tag kanonikal dan alternatif bahasa (`hreflang: id-ID, en-US`) terkonfigurasi.
+- [x] `robots.txt` mengizinkan bot umum (`Googlebot`, `Bingbot`, `Bravebot`, dll.) dan memblokir rute `/admin` serta `/api`.
+- [x] `sitemap.xml` hanya memuat URL kanonikal bersih `https://zakariamp.id` (bebas hash `#fragment`).
+- [x] Tag kanonikal server-side terpasang tanpa hreflang palsu/sirkular.
 - [x] Tepat satu `<h1>` per halaman dengan hierarki heading `h2`-`h4` logis.
 - [x] Meta description unik dan informatif (150–160 karakter).
 - [x] Skema JSON-LD (`WebSite`, `Person`, `ProfilePage`) tervalidasi Schema.org.

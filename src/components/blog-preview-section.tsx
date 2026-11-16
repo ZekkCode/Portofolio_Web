@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
@@ -15,7 +15,7 @@ import {
   getPublishedSectionMeta,
   mergeBlogPostsWithOverrides,
 } from "@/lib/content/selectors";
-import { ArrowRight, ArrowUpRight, Calendar, Loader2, Newspaper } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Calendar, Loader2, Newspaper, ChevronLeft, ChevronRight } from "lucide-react";
 
 export function BlogPreviewSection() {
   const { t, i18n } = useTranslation();
@@ -36,6 +36,10 @@ export function BlogPreviewSection() {
   );
   const [syncFetchStatus, setSyncFetchStatus] = useState<BlogSyncStatus>(resolvedMeta.status);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [currentBlogIndex, setCurrentBlogIndex] = useState(0);
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (blog?.visible === false || blog?.published === false) return;
@@ -227,117 +231,315 @@ export function BlogPreviewSection() {
         {posts.length === 0 ? (
           renderEmptyOrStatusState()
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {posts.map((post) => {
-              const hasError = imageErrors[post.id];
+          <>
+            {/* MOBILE ONLY: Single-Card Carousel dengan Swipe & Navigasi Kiri/Kanan Flanking */}
+            {(() => {
+              const totalBlogSlides = posts.length + 1;
+              const isCtaSlide = currentBlogIndex === posts.length;
+
+              const handlePrevBlog = () => {
+                setCurrentBlogIndex((prev) => Math.max(0, prev - 1));
+              };
+
+              const handleNextBlog = () => {
+                setCurrentBlogIndex((prev) => Math.min(totalBlogSlides - 1, prev + 1));
+              };
+
+              const handleBlogTouchStart = (e: React.TouchEvent) => {
+                touchStartXRef.current = e.touches[0].clientX;
+                touchStartYRef.current = e.touches[0].clientY;
+              };
+
+              const handleBlogTouchEnd = (e: React.TouchEvent) => {
+                if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+                const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+                const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 40) {
+                  if (deltaX < 0) {
+                    handleNextBlog();
+                  } else {
+                    handlePrevBlog();
+                  }
+                }
+                touchStartXRef.current = null;
+                touchStartYRef.current = null;
+              };
 
               return (
-                <a
-                  key={post.id}
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${post.title} (Buka di tab baru)`}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-4 sm:p-5 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] dark:hover:border-blue-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                <div
+                  className="md:hidden"
+                  onTouchStart={handleBlogTouchStart}
+                  onTouchEnd={handleBlogTouchEnd}
                 >
-                  <div>
-                    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-line/50 dark:border-line/30">
-                      {post.coverImage && !hasError ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={post.coverImage}
-                          alt={post.coverAlt || post.title}
-                          loading="eager"
-                          decoding="async"
-                          onError={() => handleImageError(post.id)}
-                          className="size-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
-                        />
+                  {/* Flanking Layout: Tombol Kiri, Kartu di Tengah, Tombol Kanan */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {/* Tombol Kiri (Sebelumnya) */}
+                    <button
+                      type="button"
+                      onClick={handlePrevBlog}
+                      disabled={currentBlogIndex === 0}
+                      aria-label={isEn ? "Previous article" : "Artikel sebelumnya"}
+                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line/80 bg-white text-ink shadow-sm transition-all disabled:opacity-20 disabled:pointer-events-none hover:border-brand/40 active:scale-95 dark:border-line/60 dark:bg-[#111422] dark:text-white"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+
+                    {/* Slide Content di Tengah */}
+                    <div className="min-w-0 flex-1">
+                      {!isCtaSlide ? (
+                        (() => {
+                          const post = posts[currentBlogIndex];
+                          if (!post) return null;
+                          const hasError = imageErrors[post.id];
+
+                          return (
+                            <a
+                              key={post.id}
+                              href={post.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`${post.title} (Buka di tab baru)`}
+                              className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-3.5 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] min-h-[300px]"
+                            >
+                              <div>
+                                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-line/50 dark:border-line/30">
+                                  {post.coverImage && !hasError ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={post.coverImage}
+                                      alt={post.coverAlt || post.title}
+                                      loading="eager"
+                                      decoding="async"
+                                      onError={() => handleImageError(post.id)}
+                                      className="size-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-muted bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
+                                      <Newspaper className="size-7 text-brand/60 dark:text-blue-400/60" />
+                                      <span className="font-display text-xs font-bold tracking-tight text-ink">
+                                        {config.generalProfile?.brand || "ZekkTech"} Blog
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-muted">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    {post.date ? (
+                                      <span className="inline-flex items-center gap-1 font-mono text-[10px]">
+                                        <Calendar className="size-3 text-brand/70 dark:text-blue-400/70" />
+                                        {post.date}
+                                      </span>
+                                    ) : (
+                                      <span className="font-mono text-[10px]">
+                                        {blogUrl.replace(/^https?:\/\//, "").split("/")[0]}
+                                      </span>
+                                    )}
+                                    {post.category && (
+                                      <>
+                                        <span className="text-muted/45" aria-hidden="true">·</span>
+                                        <span className="truncate text-[10px] font-medium text-muted">
+                                          {post.category}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  <span className="text-[11px] font-medium text-brand dark:text-blue-400 inline-flex items-center gap-0.5">
+                                    <span>{t("blog.readBtn", "Baca")}</span>
+                                    <ArrowUpRight className="size-3" />
+                                  </span>
+                                </div>
+
+                                <h3 className="mt-2 font-display text-xs sm:text-sm font-bold tracking-tight text-ink line-clamp-2 leading-snug">
+                                  {post.title}
+                                </h3>
+
+                                {post.excerpt && (
+                                  <p className="mt-1 text-[11px] leading-relaxed text-body line-clamp-2">
+                                    {post.excerpt}
+                                  </p>
+                                )}
+                              </div>
+                            </a>
+                          );
+                        })()
                       ) : (
-                        <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-muted bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
-                          <Newspaper className="size-8 text-brand/60 dark:text-blue-400/60" />
-                          <span className="font-display text-xs font-bold tracking-tight text-ink">
-                            {config.generalProfile?.brand || "ZekkTech"} Blog
-                          </span>
-                        </div>
+                        /* Slide CTA: Lihat Semua Artikel */
+                        <a
+                          href={blogUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${ctaLabel} (${displayHost})`}
+                          className="group relative flex flex-col justify-between gap-3 overflow-hidden rounded-2xl border border-dashed border-brand/50 bg-brand/[0.03] p-4.5 dark:border-blue-500/50 dark:bg-blue-500/[0.06] min-h-[300px]"
+                        >
+                          <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 text-xs font-mono text-muted">
+                              <span className="flex size-6 items-center justify-center rounded-lg border border-line/70 bg-white text-brand dark:border-line/50 dark:bg-[#161b2e] dark:text-blue-400">
+                                <Newspaper className="size-3.5" />
+                              </span>
+                              <span className="truncate">{displayHost}</span>
+                            </div>
+
+                            <h3 className="font-display text-sm font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors">
+                              {ctaLabel}
+                            </h3>
+
+                            <p className="text-xs leading-relaxed text-body">
+                              {isEn
+                                ? "Read full technical articles, design notes, and the complete archive on ZekkTech Blog."
+                                : "Baca seluruh artikel teknologi, catatan desain, dan arsip tulisan lengkap langsung di ZekkTech Blog."}
+                            </p>
+                          </div>
+
+                          <div className="inline-flex items-center gap-2 self-start rounded-xl border border-brand/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand dark:border-line/60 dark:bg-[#161b2e] dark:text-blue-400">
+                            <span>{isEn ? "Open Blog Portal" : "Buka Portal Blog"}</span>
+                            <ArrowUpRight className="size-3.5" />
+                          </div>
+                        </a>
                       )}
                     </div>
 
-                    <div className="mt-3.5 flex items-center justify-between gap-2 text-xs text-muted">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                        {post.date ? (
-                          <span className="inline-flex items-center gap-1.5 font-mono text-[11px]">
-                            <Calendar className="size-3 text-brand/70 dark:text-blue-400/70" />
-                            {post.date}
-                          </span>
+                    {/* Tombol Kanan (Berikutnya) */}
+                    <button
+                      type="button"
+                      onClick={handleNextBlog}
+                      disabled={isCtaSlide}
+                      aria-label={isEn ? "Next article" : "Artikel berikutnya"}
+                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line/80 bg-white text-ink shadow-sm transition-all disabled:opacity-20 disabled:pointer-events-none hover:border-brand/40 active:scale-95 dark:border-line/60 dark:bg-[#111422] dark:text-white"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+
+                  {/* Indikator Posisi di Bawah (Hanya info teks, bukan kontrol tombol) */}
+                  <div className="mt-2.5 flex items-center justify-center gap-1.5">
+                    <span data-carousel-indicator className="font-mono text-[11px] font-semibold text-muted">
+                      {currentBlogIndex + 1} / {totalBlogSlides}
+                    </span>
+                    {isCtaSlide && (
+                      <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[9px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
+                        CTA
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* DESKTOP ONLY: Grid 2/3 Kolom Asli */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              {posts.map((post) => {
+                const hasError = imageErrors[post.id];
+
+                return (
+                  <a
+                    key={post.id}
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${post.title} (Buka di tab baru)`}
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-4 sm:p-5 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] dark:hover:border-blue-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                  >
+                    <div>
+                      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-line/50 dark:border-line/30">
+                        {post.coverImage && !hasError ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={post.coverImage}
+                            alt={post.coverAlt || post.title}
+                            loading="eager"
+                            decoding="async"
+                            onError={() => handleImageError(post.id)}
+                            className="size-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                          />
                         ) : (
-                          <span className="font-mono text-[11px]">
-                            {blogUrl.replace(/^https?:\/\//, "").split("/")[0]}
-                          </span>
-                        )}
-                        {post.category && (
-                          <>
-                            <span className="text-muted/45" aria-hidden="true">·</span>
-                            <span className="truncate text-[11px] font-medium text-muted">
-                              {post.category}
+                          <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-muted bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
+                            <Newspaper className="size-8 text-brand/60 dark:text-blue-400/60" />
+                            <span className="font-display text-xs font-bold tracking-tight text-ink">
+                              {config.generalProfile?.brand || "ZekkTech"} Blog
                             </span>
-                          </>
+                          </div>
                         )}
                       </div>
 
-                      <span className="text-[11px] font-medium text-brand dark:text-blue-400 inline-flex items-center gap-0.5">
-                        <span>{t("blog.readBtn", "Baca")}</span>
-                        <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
-                      </span>
+                      <div className="mt-3.5 flex items-center justify-between gap-2 text-xs text-muted">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                          {post.date ? (
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[11px]">
+                              <Calendar className="size-3 text-brand/70 dark:text-blue-400/70" />
+                              {post.date}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[11px]">
+                              {blogUrl.replace(/^https?:\/\//, "").split("/")[0]}
+                            </span>
+                          )}
+                          {post.category && (
+                            <>
+                              <span className="text-muted/45" aria-hidden="true">·</span>
+                              <span className="truncate text-[11px] font-medium text-muted">
+                                {post.category}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        <span className="text-[11px] font-medium text-brand dark:text-blue-400 inline-flex items-center gap-0.5">
+                          <span>{t("blog.readBtn", "Baca")}</span>
+                          <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
+                        </span>
+                      </div>
+
+                      <h3 className="mt-2 font-display text-base font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                        {post.title}
+                      </h3>
+
+                      {post.excerpt && (
+                        <p className="mt-2 text-xs sm:text-[13px] leading-relaxed text-body line-clamp-3">
+                          {post.excerpt}
+                        </p>
+                      )}
                     </div>
+                  </a>
+                );
+              })}
 
-                    <h3 className="mt-2 font-display text-base font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
-                      {post.title}
-                    </h3>
-
-                    {post.excerpt && (
-                      <p className="mt-2 text-xs sm:text-[13px] leading-relaxed text-body line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                    )}
+              {/* Kartu ke-5: Lihat Semua mengarah langsung ke ZekkTech Blog */}
+              <a
+                href={blogUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-blog-see-all="true"
+                aria-label={`${ctaLabel} (${displayHost})`}
+                className={`group relative flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-dashed border-line/90 bg-slate-50/75 p-5 sm:p-6 transition-colors duration-200 hover:border-brand/50 hover:bg-brand/[0.03] dark:border-line/60 dark:bg-[#111422]/75 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${mdSeeAllSpan} ${lgSeeAllSpan}`}
+              >
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 text-xs font-mono text-muted">
+                    <span className="flex size-8 items-center justify-center rounded-lg border border-line/70 bg-white text-brand dark:border-line/50 dark:bg-[#161b2e] dark:text-blue-400">
+                      <Newspaper className="size-4" />
+                    </span>
+                    <span className="truncate">{displayHost}</span>
                   </div>
-                </a>
-              );
-            })}
 
-            {/* Kartu ke-5: Lihat Semua mengarah langsung ke ZekkTech Blog */}
-            <a
-              href={blogUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-blog-see-all="true"
-              aria-label={`${ctaLabel} (${displayHost})`}
-              className={`group relative flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-dashed border-line/90 bg-slate-50/75 p-5 sm:p-6 transition-colors duration-200 hover:border-brand/50 hover:bg-brand/[0.03] dark:border-line/60 dark:bg-[#111422]/75 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${mdSeeAllSpan} ${lgSeeAllSpan}`}
-            >
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 text-xs font-mono text-muted">
-                  <span className="flex size-8 items-center justify-center rounded-lg border border-line/70 bg-white text-brand dark:border-line/50 dark:bg-[#161b2e] dark:text-blue-400">
-                    <Newspaper className="size-4" />
-                  </span>
-                  <span className="truncate">{displayHost}</span>
+                  <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors">
+                    {ctaLabel}
+                  </h3>
+
+                  <p className="max-w-lg text-xs sm:text-sm leading-relaxed text-body">
+                    {isEn
+                      ? "Read full technical articles, design notes, and the complete archive on ZekkTech Blog."
+                      : "Baca seluruh artikel teknologi, catatan desain, dan arsip tulisan lengkap langsung di ZekkTech Blog."}
+                  </p>
                 </div>
 
-                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink group-hover:text-brand dark:group-hover:text-blue-400 transition-colors">
-                  {ctaLabel}
-                </h3>
-
-                <p className="max-w-lg text-xs sm:text-sm leading-relaxed text-body">
-                  {isEn
-                    ? "Read full technical articles, design notes, and the complete archive on ZekkTech Blog."
-                    : "Baca seluruh artikel teknologi, catatan desain, dan arsip tulisan lengkap langsung di ZekkTech Blog."}
-                </p>
-              </div>
-
-              <div className="inline-flex items-center gap-2 self-start rounded-xl border border-line/80 bg-white px-4 py-2 text-xs font-semibold text-ink transition-colors duration-200 group-hover:border-brand/40 group-hover:text-brand dark:border-line/60 dark:bg-[#161b2e] dark:text-slate-200 dark:group-hover:border-blue-500/50 dark:group-hover:text-blue-400">
-                <span>{isEn ? "View All on Blog" : "Lihat Semua Artikel"}</span>
-                <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
-              </div>
-            </a>
-          </div>
+                <div className="inline-flex items-center gap-2 self-start rounded-xl border border-line/80 bg-white px-4 py-2 text-xs font-semibold text-ink transition-colors duration-200 group-hover:border-brand/40 group-hover:text-brand dark:border-line/60 dark:bg-[#161b2e] dark:text-slate-200 dark:group-hover:border-blue-500/50 dark:group-hover:text-blue-400">
+                  <span>{isEn ? "View All on Blog" : "Lihat Semua Artikel"}</span>
+                  <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" />
+                </div>
+              </a>
+            </div>
+          </>
         )}
       </ScrollReveal>
     </section>

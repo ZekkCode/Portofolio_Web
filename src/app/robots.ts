@@ -21,7 +21,17 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         disallow: allowRoot ? ["/admin", "/admin/", "/api/", "/private/"] : ["/", "/admin", "/api/"],
       },
       {
-        userAgent: ["Googlebot", "Googlebot-Image", "Bingbot", "Slurp", "DuckDuckBot", "Baiduspider", "YandexBot", "Applebot"],
+        userAgent: [
+          "Googlebot",
+          "Googlebot-Image",
+          "Bingbot",
+          "Slurp",
+          "DuckDuckBot",
+          "Baiduspider",
+          "YandexBot",
+          "Applebot",
+          "Bravebot",
+        ],
         allow: allowRoot ? "/" : undefined,
         disallow: allowRoot ? ["/admin", "/admin/", "/api/", "/private/"] : ["/"],
       },

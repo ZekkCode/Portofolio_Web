@@ -88,9 +88,12 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     alternates: {
       canonical: "/",
-      languages: {
-        "id-ID": "/",
-        "x-default": "/",
+    },
+    verification: {
+      google: (seo.googleVerification || "").trim() || undefined,
+      yandex: (seo.yandexVerification || "").trim() || undefined,
+      other: {
+        ...(seo.bingVerification?.trim() ? { "msvalidate.01": seo.bingVerification.trim() } : {}),
       },
     },
     title: {

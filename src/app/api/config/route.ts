@@ -16,6 +16,7 @@ import {
   invalidatePublishedContentCache,
   fetchPublishedContentWithMeta,
 } from "@/lib/content/public-content";
+import { triggerIndexNowIfConfigured } from "@/lib/indexnow";
 import {
   isStrictLocalCmsStore,
   readLocalCmsDoc,
@@ -412,6 +413,19 @@ export async function POST(request: Request) {
       revalidatePath("/opengraph-image");
     } catch {
       // Ignore outside Next runtime
+    }
+
+    // Pemicu IndexNow non-blocking untuk mempercepat penemuan URL oleh Bing & Yandex
+    if (
+      normalized.seo?.indexNowKey &&
+      process.env.NODE_ENV === "production" &&
+      !process.env.LOCAL_CMS_STORE
+    ) {
+      triggerIndexNowIfConfigured(
+        normalized.seo.indexNowKey,
+        normalized.seo.canonicalUrl,
+        ["/"]
+      ).catch(() => {});
     }
 
     return NextResponse.json({

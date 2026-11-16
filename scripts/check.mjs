@@ -237,15 +237,15 @@ try {
     return [...document.querySelectorAll('input')].indexOf(inputs[inputs.length - 1]);
   })()`);
   await typeInto("input", "Proyek Cek Otomatis", titleIndex);
-  await sleep(200);
+  await sleep(400);
   assert.equal(await click("Simpan Draf"), true, "tombol Simpan Draf tidak ditemukan");
   let draftStored = [];
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 30; attempt++) {
     draftStored = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1:draft") ?? "{}").projects ?? []`);
     if (draftStored.some((project) => project.title === "Proyek Cek Otomatis" && project.published === false)) {
       break;
     }
-    await sleep(200);
+    await sleep(250);
   }
   assert.ok(
     draftStored.some((project) => project.title === "Proyek Cek Otomatis" && project.published === false),

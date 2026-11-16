@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw } from "lucide-react";
+import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
@@ -23,6 +23,10 @@ export function CertificatesSection() {
   const locale = isEn ? "en" : "id";
   const [filter, setFilter] = useState<string>("all");
   const [previewCert, setPreviewCert] = useState<CertificateItem | null>(null);
+  const [currentCertIndex, setCurrentCertIndex] = useState(0);
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   const config = useSiteConfig();
   const secMeta = getPublishedSectionMeta(config, "certificates", locale);
@@ -47,6 +51,47 @@ export function CertificatesSection() {
     filter === "all"
       ? publishedCertificates
       : publishedCertificates.filter((c) => c.category === filter);
+
+  const handleFilterChange = (cat: string) => {
+    setFilter(cat);
+    setCurrentCertIndex(0);
+  };
+
+  useEffect(() => {
+    if (filtered.length > 0 && currentCertIndex >= filtered.length) {
+      setCurrentCertIndex(0);
+    }
+  }, [filtered.length, currentCertIndex]);
+
+  const handlePrevCert = () => {
+    if (filtered.length <= 1) return;
+    setCurrentCertIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
+  };
+
+  const handleNextCert = () => {
+    if (filtered.length <= 1) return;
+    setCurrentCertIndex((prev) => (prev + 1) % filtered.length);
+  };
+
+  const handleCertTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleCertTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 40) {
+      if (deltaX < 0) {
+        handleNextCert();
+      } else {
+        handlePrevCert();
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
@@ -129,7 +174,7 @@ export function CertificatesSection() {
             type="button"
             role="tab"
             aria-selected={filter === "all"}
-            onClick={() => setFilter("all")}
+            onClick={() => handleFilterChange("all")}
             className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none ${
               filter === "all"
                 ? "bg-brand text-white border border-brand/30"
@@ -144,7 +189,7 @@ export function CertificatesSection() {
               type="button"
               role="tab"
               aria-selected={filter === catKey}
-              onClick={() => setFilter(catKey)}
+              onClick={() => handleFilterChange(catKey)}
               className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none ${
                 filter === catKey
                   ? "bg-brand text-white border border-brand/30"
@@ -157,122 +202,176 @@ export function CertificatesSection() {
         </div>
       )}
 
-      {/* Grid of Credentials */}
-      <ScrollReveal y={16}>
-        {filtered.length === 0 ? (
-          <div
-            role="tabpanel"
-            className="rounded-xl border border-line/60 bg-white/60 p-12 text-center text-xs text-body dark:border-line/40 dark:bg-[#111422]/60"
-          >
-            {t("certificates.empty", "Belum ada kredensial yang ditampilkan.")}
-          </div>
-        ) : (
-          <div role="tabpanel" className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-            {filtered.map((cert) => {
-              const proofLink =
-                cert.credentialUrl ||
-                (cert.allowDownload !== false ? cert.credentialPdf : undefined);
-              const canPreviewInline = Boolean(
-                cert.image || (cert.credentialPdf && cert.allowDownload !== false)
-              );
-              const evidenceAttached = hasCertificateEvidence(cert);
-              const resolvedStatus = resolveCertificateVerificationStatus(cert);
+      {/* Helper Card Render */}
+      {(() => {
+        const renderCertCard = (cert: CertificateItem, isMobile: boolean) => {
+          const proofLink =
+            cert.credentialUrl ||
+            (cert.allowDownload !== false ? cert.credentialPdf : undefined);
+          const canPreviewInline = Boolean(
+            cert.image || (cert.credentialPdf && cert.allowDownload !== false)
+          );
+          const evidenceAttached = hasCertificateEvidence(cert);
+          const resolvedStatus = resolveCertificateVerificationStatus(cert);
 
-              return (
-                <div
-                  key={cert.id || cert.title}
-                  data-cert-id={cert.id}
-                  data-verification-status={resolvedStatus}
-                  className={`group relative flex flex-col justify-between rounded-xl border bg-white p-5 transition-colors duration-200 hover:border-brand/40 dark:bg-[#111422] ${
-                    cert.featured
-                      ? "border-brand/40 dark:border-blue-500/40"
-                      : "border-line/80 dark:border-line/60"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      {cert.issuerLogo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={cert.issuerLogo}
-                          alt={cert.issuer}
-                          className="size-7 rounded border border-line/60 object-contain bg-white p-0.5 dark:bg-slate-900"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Award className="size-5 text-brand/60 shrink-0 dark:text-blue-400/70" />
-                      )}
-                      <div className="flex flex-wrap items-center justify-end gap-1">
-                        {cert.featured && (
-                          <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
-                            {isEn ? "Featured" : "Unggulan"}
-                          </span>
-                        )}
-                        {renderVerificationBadge(resolvedStatus)}
-                      </div>
-                    </div>
-
-                    <h3 className="font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
-                      {cert.title}
-                    </h3>
-
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-muted">
-                      <span className="font-medium line-clamp-1">{cert.issuer}</span>
-                      <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
-                    </div>
-
-                    {cert.credentialId && (
-                      <p className="mt-1 font-mono text-[10px] text-muted truncate">
-                        ID: {cert.credentialId}
-                      </p>
-                    )}
-
-                    <div className="mt-1.5">
-                      <span className="inline-block text-[11px] font-medium text-muted">
-                        {getCategoryLabel(cert.category)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
-                    {proofLink || canPreviewInline ? (
-                      <>
-                        {canPreviewInline && (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewCert(cert)}
-                            className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
-                          >
-                            <Eye className="size-3.5" />
-                            <span>{isEn ? "Preview" : "Pratinjau"}</span>
-                          </button>
-                        )}
-                        {proofLink && (
-                          <a
-                            href={proofLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
-                            <ArrowUpRight className="size-3.5" />
-                          </a>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-[11px] text-muted">
-                        {evidenceAttached
-                          ? t("certificates.restrictedProofNote", "Lampiran dibatasi")
-                          : t("certificates.noEvidenceNote", "Bukti belum dilampirkan")}
+          return (
+            <div
+              key={cert.id || cert.title}
+              data-cert-id={cert.id}
+              data-verification-status={resolvedStatus}
+              className={`group relative flex flex-col justify-between rounded-xl border bg-white p-4 sm:p-5 transition-colors duration-200 hover:border-brand/40 dark:bg-[#111422] ${
+                isMobile ? "min-h-[220px]" : ""
+              } ${
+                cert.featured
+                  ? "border-brand/40 dark:border-blue-500/40"
+                  : "border-line/80 dark:border-line/60"
+              }`}
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  {cert.issuerLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cert.issuerLogo}
+                      alt={cert.issuer}
+                      className="size-7 rounded border border-line/60 object-contain bg-white p-0.5 dark:bg-slate-900"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Award className="size-5 text-brand/60 shrink-0 dark:text-blue-400/70" />
+                  )}
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    {cert.featured && (
+                      <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand dark:bg-blue-500/15 dark:text-blue-400">
+                        {isEn ? "Featured" : "Unggulan"}
                       </span>
                     )}
+                    {renderVerificationBadge(resolvedStatus)}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </ScrollReveal>
+
+                <h3 className="font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
+                  {cert.title}
+                </h3>
+
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-muted">
+                  <span className="font-medium line-clamp-1">{cert.issuer}</span>
+                  <span className="font-mono text-[11px] shrink-0">{cert.date}</span>
+                </div>
+
+                {cert.credentialId && (
+                  <p className="mt-1 font-mono text-[10px] text-muted truncate">
+                    ID: {cert.credentialId}
+                  </p>
+                )}
+
+                <div className="mt-1.5">
+                  <span className="inline-block text-[11px] font-medium text-muted">
+                    {getCategoryLabel(cert.category)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2.5 border-t border-line/40 flex flex-wrap items-center justify-between gap-2">
+                {proofLink || canPreviewInline ? (
+                  <>
+                    {canPreviewInline && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewCert(cert)}
+                        className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-ink hover:text-brand dark:text-slate-200 dark:hover:text-blue-400"
+                      >
+                        <Eye className="size-3.5" />
+                        <span>{isEn ? "Preview" : "Pratinjau"}</span>
+                      </button>
+                    )}
+                    {proofLink && (
+                      <a
+                        href={proofLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand transition-colors duration-150 hover:text-brand-ink hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        <span>{t("certificates.viewCredential", "Lihat Bukti")}</span>
+                        <ArrowUpRight className="size-3.5" />
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[11px] text-muted">
+                    {evidenceAttached
+                      ? t("certificates.restrictedProofNote", "Lampiran dibatasi")
+                      : t("certificates.noEvidenceNote", "Bukti belum dilampirkan")}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <ScrollReveal y={16}>
+            {filtered.length === 0 ? (
+              <div
+                role="tabpanel"
+                className="rounded-xl border border-line/60 bg-white/60 p-12 text-center text-xs text-body dark:border-line/40 dark:bg-[#111422]/60"
+              >
+                {t("certificates.empty", "Belum ada kredensial yang ditampilkan.")}
+              </div>
+            ) : (
+              <>
+                {/* MOBILE ONLY: Circular Carousel dengan Swipe & Navigasi Melingkar Tanpa Batas */}
+                <div
+                  className="sm:hidden space-y-3"
+                  onTouchStart={handleCertTouchStart}
+                  onTouchEnd={handleCertTouchEnd}
+                >
+                  <div role="tabpanel">
+                    {renderCertCard(filtered[currentCertIndex] || filtered[0], true)}
+                  </div>
+
+                  {filtered.length > 1 ? (
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={handlePrevCert}
+                        aria-label={isEn ? "Previous credential (circular)" : "Sertifikat sebelumnya (melingkar)"}
+                        className="inline-flex size-9 items-center justify-center rounded-xl border border-line bg-white text-ink transition-colors hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] dark:text-white"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </button>
+
+                      <span data-carousel-indicator className="font-mono text-xs font-semibold text-muted">
+                        {currentCertIndex + 1} / {filtered.length}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleNextCert}
+                        aria-label={isEn ? "Next credential (circular)" : "Sertifikat berikutnya (melingkar)"}
+                        className="inline-flex size-9 items-center justify-center rounded-xl border border-line bg-white text-ink transition-colors hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] dark:text-white"
+                      >
+                        <ChevronRight className="size-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center pt-1">
+                      <span className="font-mono text-xs font-semibold text-muted">
+                        1 / 1
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP ONLY: Grid Kredensial Asli */}
+                <div role="tabpanel" className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {filtered.map((cert) => renderCertCard(cert, false))}
+                </div>
+              </>
+            )}
+          </ScrollReveal>
+        );
+      })()}
 
       {/* Lightbox Preview Modal */}
       {previewCert && (

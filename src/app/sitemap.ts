@@ -10,8 +10,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const seo = getPublishedSeo(config, "id");
   const prof = getPublishedProfile(config, "id");
   const baseUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || prof.site);
-  const lastModified = config.updatedAt ? new Date(config.updatedAt) : new Date();
-  const safeLastMod = Number.isNaN(lastModified.getTime()) ? new Date() : lastModified;
+  const fallbackDate = new Date("2025-01-01T00:00:00.000Z");
+  const parsedDate = config.updatedAt ? new Date(config.updatedAt) : null;
+  const safeLastMod = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : fallbackDate;
   const ogImageUrl = seo.ogImage?.startsWith("http")
     ? seo.ogImage
     : `${baseUrl}${seo.ogImage?.startsWith("/") ? seo.ogImage : "/opengraph-image"}`;

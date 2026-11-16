@@ -10,6 +10,7 @@ import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
+import { SubtlePortraitReveal } from "@/components/subtle-portrait-reveal";
 import { BackgroundStickers } from "@/components/background-stickers";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
 import { AnimatedEye } from "@/components/animated-eye";
@@ -74,6 +75,8 @@ function Header() {
   const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
   const config = useSiteConfig();
   const pubProfile = getPublishedProfile(config, locale);
+  const brandName = pubProfile.brand && pubProfile.brand !== "ZekkTech" ? pubProfile.brand : "ZakariaMP";
+  const logoUrl = config.headerLogoUrl || "/Profil-Zakaria Mujur Prasetyo.png";
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 pt-[env(safe-area-inset-top,0px)] dark:border-line dark:bg-[#08090e]/95">
@@ -82,20 +85,14 @@ function Header() {
           href="#atas"
           className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          {config.headerLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.headerLogoUrl}
-              alt={pubProfile.brand}
-              className="size-7.5 rounded-full object-cover border border-brand/30"
-            />
-          ) : (
-            <div className="flex size-7.5 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-ink text-xs font-black tracking-wider text-white">
-              {pubProfile.brand ? pubProfile.brand.charAt(0) : "Z"}
-            </div>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl}
+            alt={brandName}
+            className="size-8 rounded-full object-cover border border-brand/35 shadow-xs"
+          />
           <span className="font-display text-base font-bold tracking-tight text-ink">
-            {pubProfile.brand}
+            {brandName}
           </span>
         </SmoothNavLink>
 
@@ -290,6 +287,8 @@ function Stack() {
 
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isStackVisible, setIsStackVisible] = useState(false);
+  const [activeMobileCategory, setActiveMobileCategory] = useState<string>("");
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const el = marqueeRef.current;
@@ -315,6 +314,18 @@ function Stack() {
     [config, locale, t]
   );
 
+  useEffect(() => {
+    if (disciplines.length > 0 && !disciplines.some((d) => d.key === activeMobileCategory)) {
+      setActiveMobileCategory(disciplines[0].key);
+    }
+  }, [disciplines, activeMobileCategory]);
+
+  const toggleCategoryExpand = (catKey: string) => {
+    setExpandedCategories((prev) => ({ ...prev, [catKey]: !prev[catKey] }));
+  };
+
+  const currentMobileGroup = disciplines.find((d) => d.key === activeMobileCategory) || disciplines[0];
+
   const marqueeSeed = marqueeTools.length > 0 ? marqueeTools : [];
   const stackRow1 = useMemo(
     () => (marqueeSeed.length > 0 ? Array.from({ length: 4 }, () => marqueeSeed).flat() : []),
@@ -331,7 +342,7 @@ function Stack() {
   }, [marqueeSeed]);
 
   return (
-    <section id="stack" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+    <section id="stack" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-10 sm:py-20">
       <div id="tech-stack" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
         <SectionTitle
@@ -353,7 +364,128 @@ function Stack() {
         <>
           {disciplines.length > 0 && (
             <ScrollReveal y={20}>
-              <div className="grid gap-4 sm:grid-cols-2 mb-8 auto-rows-fr items-stretch">
+              {/* MOBILE ONLY: Horizontal Category Tabs + Dense 3-Column Grid + Expansion */}
+              <div className="sm:hidden mb-6">
+                {/* Horizontal Category Tabs */}
+                <div
+                  role="tablist"
+                  aria-label={sectionMeta.title || t("stack.title")}
+                  className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-3.5"
+                >
+                  {disciplines.map((cat) => {
+                    const isActive = (currentMobileGroup?.key || disciplines[0].key) === cat.key;
+                    return (
+                      <button
+                        key={cat.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => setActiveMobileCategory(cat.key)}
+                        className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 min-h-[38px] ${
+                          isActive
+                            ? "bg-brand text-white shadow-xs"
+                            : "border border-line/80 bg-white/70 text-body hover:border-brand/40 hover:text-brand dark:border-line/50 dark:bg-slate-900/70 dark:text-slate-300"
+                        }`}
+                      >
+                        {cat.category}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Active Category Content */}
+                {currentMobileGroup && (() => {
+                  const isExpanded = Boolean(expandedCategories[currentMobileGroup.key]);
+                  const tools = currentMobileGroup.tools;
+                  const visibleTools = isExpanded ? tools : tools.slice(0, 6);
+                  const hasMore = tools.length > 6;
+
+                  return (
+                    <div className="rounded-xl border border-line/80 bg-white p-3.5 dark:border-line/60 dark:bg-[#111422]">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-display text-xs font-bold text-ink uppercase tracking-wider">
+                          {currentMobileGroup.category}
+                        </h3>
+                        <span className="text-[11px] font-mono text-muted">
+                          {tools.length} {locale === "en" ? "tools" : "alat"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {visibleTools.map((tool) => {
+                          const tileContent = (
+                            <>
+                              {tool.icon && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={tool.icon}
+                                  alt={tool.name}
+                                  width={18}
+                                  height={18}
+                                  loading="lazy"
+                                  decoding="async"
+                                  className={`size-4.5 shrink-0 object-contain ${
+                                    tool.name === "GitHub" || tool.name === "CapCut" || tool.name === "Next.js"
+                                      ? "dark:invert"
+                                      : ""
+                                  }`}
+                                />
+                              )}
+                              <span className="text-[11px] font-medium text-ink truncate w-full text-center">
+                                {tool.name}
+                              </span>
+                            </>
+                          );
+
+                          if (tool.url) {
+                            return (
+                              <a
+                                key={tool.id || tool.name}
+                                href={tool.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={tool.desc || tool.name}
+                                className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-line/60 bg-surface/40 p-2 min-h-[58px] transition-colors hover:border-brand/40 hover:text-brand dark:border-line/40 dark:bg-slate-900/40"
+                              >
+                                {tileContent}
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={tool.id || tool.name}
+                              title={tool.desc || tool.name}
+                              className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-line/60 bg-surface/40 p-2 min-h-[58px] dark:border-line/40 dark:bg-slate-900/40"
+                            >
+                              {tileContent}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {hasMore && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryExpand(currentMobileGroup.key)}
+                          className="mt-3 w-full rounded-lg border border-line/80 py-2 text-xs font-semibold text-brand dark:border-line/50 dark:text-blue-400 hover:bg-brand/5 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>
+                            {isExpanded
+                              ? (locale === "en" ? "Show Less" : "Ringkas")
+                              : (locale === "en"
+                                  ? `View All ${currentMobileGroup.category} (${tools.length})`
+                                  : `Lihat Semua Alat (${tools.length})`)}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* DESKTOP ONLY: Grid 2 Kolom Kategori Utuh */}
+              <div className="hidden sm:grid sm:grid-cols-2 gap-4 mb-8 auto-rows-fr items-stretch">
                 {disciplines.map((item) => (
                   <div
                     key={item.key}
@@ -426,7 +558,7 @@ function Stack() {
           {marqueeSeed.length > 0 && (
             <div
               ref={marqueeRef}
-              className={`relative w-full overflow-hidden py-6 sm:py-8 space-y-4 [contain:layout_paint]${
+              className={`relative w-full overflow-hidden py-3 sm:py-8 space-y-2.5 sm:space-y-4 [contain:layout_paint]${
                 isStackVisible ? "" : " marquee-paused"
               }`}
             >
@@ -520,30 +652,30 @@ function Contact() {
   const contactDesc = sectionMeta.desc || contact.desc || t("contact.desc");
 
   return (
-    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-14 sm:py-20">
+    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-8 sm:py-20">
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full min-w-0">
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white dark:border-line/60 dark:bg-[#111422]">
           <div className={`grid grid-cols-1 min-w-0 items-stretch ${contact.showProfileCard ? "lg:grid-cols-[0.95fr_1.15fr]" : "lg:grid-cols-1"}`}>
             {/* KIRI: Hologram Profile Card */}
             {contact.showProfileCard && (
-              <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-4 sm:p-8">
+              <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-3 sm:p-8 max-h-[300px] sm:max-h-none overflow-hidden">
                 <DynamicProfileCardStage />
               </div>
             )}
 
             {/* KANAN: Formulir Pesan Langsung (Turnstile & Anti-Spam) */}
-            <div className="relative min-w-0 flex flex-col justify-center p-5 sm:p-8 lg:p-10 space-y-6">
+            <div className="relative min-w-0 flex flex-col justify-center p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-6">
               <div>
                 {(sectionMeta.eyebrow || contact.badge) && (
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
+                  <p className="mb-1 text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
                     {sectionMeta.eyebrow || contact.badge}
                   </p>
                 )}
-                <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
+                <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
                   {contactTitle}
                 </h2>
-                <p className="mt-2.5 text-sm leading-relaxed text-body">
+                <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-sm leading-relaxed text-body">
                   {contactDesc}
                 </p>
               </div>
@@ -690,6 +822,7 @@ function BackgroundGrid() {
         />
       )}
       <div className="absolute inset-0 bg-white/70 dark:bg-[#08090e]/75 pointer-events-none" />
+      <SubtlePortraitReveal isDark={isDark} prefersReducedMotion={prefersReducedMotion} />
     </div>
   );
 }

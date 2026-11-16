@@ -1026,7 +1026,14 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
     });
   }
   if (obj.seo && typeof obj.seo === "object") {
-    const seo = obj.seo as { ogImage?: string; canonicalUrl?: string };
+    const seo = obj.seo as {
+      ogImage?: string;
+      canonicalUrl?: string;
+      googleVerification?: string;
+      bingVerification?: string;
+      yandexVerification?: string;
+      indexNowKey?: string;
+    };
     checkSafeUrlField(seo.ogImage, {
       id: "seo-og-image-unsafe",
       dedupeKey: "unsafe-url:seo.ogImage",
@@ -1041,6 +1048,43 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
       field: "seo.canonicalUrl",
       message: "URL kanonikal SEO menggunakan protokol tidak aman",
     });
+
+    const checkVerificationToken = (token: unknown, fieldName: string, label: string) => {
+      if (token === undefined || token === null || token === "") return;
+      if (typeof token !== "string") {
+        pushIssue({
+          id: `seo-${fieldName}-invalid`,
+          dedupeKey: `seo-token-type:${fieldName}`,
+          section: "SEO",
+          field: `seo.${fieldName}`,
+          message: `Token ${label} harus berupa teks`,
+        });
+        return;
+      }
+      if (token.length > 128) {
+        pushIssue({
+          id: `seo-${fieldName}-too-long`,
+          dedupeKey: `seo-token-len:${fieldName}`,
+          section: "SEO",
+          field: `seo.${fieldName}`,
+          message: `Token ${label} melebihi batas 128 karakter`,
+        });
+      }
+      if (/<[^>]*>?/gm.test(token) || /["'<>]/.test(token)) {
+        pushIssue({
+          id: `seo-${fieldName}-malformed`,
+          dedupeKey: `seo-token-format:${fieldName}`,
+          section: "SEO",
+          field: `seo.${fieldName}`,
+          message: `Token ${label} mengandung karakter atau tag HTML yang tidak diizinkan`,
+        });
+      }
+    };
+
+    checkVerificationToken(seo.googleVerification, "googleVerification", "Google Search Console");
+    checkVerificationToken(seo.bingVerification, "bingVerification", "Bing Webmaster");
+    checkVerificationToken(seo.yandexVerification, "yandexVerification", "Yandex Webmaster");
+    checkVerificationToken(seo.indexNowKey, "indexNowKey", "IndexNow API Key");
   }
 
   if (errors.length > 0) {

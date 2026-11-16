@@ -28,7 +28,7 @@ export function FaqSection() {
   return (
     <section
       id="faq"
-      className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
+      className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-10 sm:py-20"
     >
       <div id="tanya-jawab" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24}>
@@ -51,13 +51,13 @@ export function FaqSection() {
                   onClick={() => setOpenId(isOpen ? null : item.id)}
                   aria-expanded={isOpen}
                   aria-controls={`faq-answer-${item.id}`}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="flex w-full items-center justify-between gap-3.5 px-4 py-3.5 sm:px-5 sm:py-4 text-left transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
-                  <span className="text-sm font-bold text-ink sm:text-base">
+                  <span className="text-xs sm:text-[13.5px] font-semibold text-ink leading-snug sm:leading-relaxed">
                     {item.question}
                   </span>
                   <ChevronDown
-                    className={`size-5 shrink-0 text-muted transition-transform duration-300 ${
+                    className={`size-4 shrink-0 text-muted transition-transform duration-300 ${
                       isOpen ? "rotate-180" : ""
                     }`}
                     aria-hidden="true"
@@ -72,7 +72,7 @@ export function FaqSection() {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-5 text-sm leading-relaxed text-body sm:px-6 sm:pb-6">
+                    <p className="px-4 pb-4 sm:px-5 sm:pb-4.5 text-xs sm:text-[13px] leading-relaxed text-body/90">
                       {item.answer}
                     </p>
                   </div>

@@ -749,6 +749,10 @@ export function getPublishedSeo(config?: Partial<SiteConfig>, locale: Locale = "
     canonicalUrl: resolveCanonicalSiteUrl(raw.canonicalUrl || gp?.site),
     robotsIndex: raw.robotsIndex !== false,
     personJobTitle: raw.personJobTitle || gp?.roles || profile.roles,
+    googleVerification: raw.googleVerification,
+    bingVerification: raw.bingVerification,
+    yandexVerification: raw.yandexVerification,
+    indexNowKey: raw.indexNowKey,
   };
 }
 

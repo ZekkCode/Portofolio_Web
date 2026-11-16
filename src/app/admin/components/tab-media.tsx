@@ -502,7 +502,7 @@ export function TabMedia({
             <span className="font-semibold text-slate-800 dark:text-slate-200">
               {profile?.name || "Zakaria Mujur Prasetyo"}
             </span>
-            <span>{seo?.canonicalUrl || profile?.site || "https://zakariamp.vercel.app"}</span>
+            <span>{seo?.canonicalUrl || profile?.site || "https://zakariamp.id"}</span>
           </div>
           <h4 className="mt-1 text-base font-medium text-blue-700 hover:underline dark:text-blue-400">
             {displaySeoTitle}

@@ -556,6 +556,10 @@ export type SeoConfig = {
   canonicalUrl?: string;
   robotsIndex?: boolean;
   personJobTitle?: string;
+  googleVerification?: string;
+  bingVerification?: string;
+  yandexVerification?: string;
+  indexNowKey?: string;
 };
 
 export type SiteConfig = {
@@ -1195,7 +1199,7 @@ export const defaultBlogConfig: BlogConfig = {
 export const defaultSiteConfig: SiteConfig = {
   version: 1,
   schemaVersion: 2,
-  headerLogoUrl: "",
+  headerLogoUrl: "/Profil-Zakaria Mujur Prasetyo.png",
   generalProfile: defaultGeneralProfile,
   stats: defaultStats,
   lanyard: defaultLanyard,
@@ -1214,12 +1218,13 @@ export const defaultSiteConfig: SiteConfig = {
   faq: defaultFaq,
   blog: defaultBlogConfig,
   seo: {
-    metaTitle: "Zakaria Mujur Prasetyo | UI/UX & Frontend Web (ZekkTech)",
-    metaTitleEn: "Zakaria Mujur Prasetyo | UI/UX & Frontend Dev — ZekkTech",
-    metaDesc: "Portofolio Zakaria Mujur Prasetyo (ZekkTech), UI/UX Designer & Frontend Developer di Mojokerto. Merancang antarmuka Figma dan aplikasi web Next.js & TypeScript.",
-    metaDescEn: "Portfolio of Zakaria Mujur Prasetyo (ZekkTech), UI/UX Designer and Frontend Developer in Mojokerto. Designing Figma systems and Next.js TypeScript web apps.",
+    metaTitle: "Zakaria Mujur Prasetyo | UI/UX & Frontend Web (ZakariaMP)",
+    metaTitleEn: "Zakaria Mujur Prasetyo | UI/UX & Frontend Dev — ZakariaMP",
+    metaDesc: "Portofolio Zakaria Mujur Prasetyo (ZakariaMP), UI/UX Designer & Frontend Developer di Mojokerto. Merancang antarmuka Figma dan aplikasi web Next.js & TypeScript.",
+    metaDescEn: "Portfolio of Zakaria Mujur Prasetyo (ZakariaMP), UI/UX Designer and Frontend Developer in Mojokerto. Designing Figma systems and Next.js TypeScript web apps.",
     keywords: [
       "Zakaria Mujur Prasetyo",
+      "ZakariaMP",
       "ZekkTech",
       "ZekkCode",
       "UI/UX Designer",
@@ -1232,10 +1237,14 @@ export const defaultSiteConfig: SiteConfig = {
       "Universitas Trunojoyo Madura",
     ],
     ogImage: "/opengraph-image",
-    ogImageAlt: "Zakaria Mujur Prasetyo (ZekkTech) - Portfolio UI/UX & Frontend",
+    ogImageAlt: "Zakaria Mujur Prasetyo (ZakariaMP) - Portfolio UI/UX & Frontend",
     canonicalUrl: resolveCanonicalSiteUrl(),
     robotsIndex: true,
     personJobTitle: "UI/UX Designer & Frontend Developer",
+    googleVerification: "",
+    bingVerification: "",
+    yandexVerification: "",
+    indexNowKey: "",
   },
   sections: defaultSections,
   sectionOrder: defaultSectionOrder,
@@ -1902,12 +1911,25 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
     ...(raw.contactSection && typeof raw.contactSection === "object" ? raw.contactSection : {}),
   };
 
+  const rawSeo = raw.seo && typeof raw.seo === "object" ? raw.seo : {};
+  const cleanToken = (val: unknown, maxLen = 128): string | undefined => {
+    if (typeof val !== "string") return undefined;
+    const trimmed = val.trim();
+    if (!trimmed) return undefined;
+    const sanitized = trimmed.replace(/<[^>]*>?/gm, "").replace(/["']/g, "");
+    return sanitized.slice(0, maxLen);
+  };
+
   const normalizedSeo: SeoConfig = {
     ...defaultSiteConfig.seo,
-    ...(raw.seo && typeof raw.seo === "object" ? raw.seo : {}),
-    canonicalUrl: resolveCanonicalSiteUrl(raw.seo?.canonicalUrl),
-    keywords: Array.isArray(raw.seo?.keywords) ? raw.seo.keywords.filter((k) => typeof k === "string") : defaultSiteConfig.seo?.keywords,
-    robotsIndex: raw.seo?.robotsIndex !== false,
+    ...rawSeo,
+    canonicalUrl: resolveCanonicalSiteUrl(rawSeo.canonicalUrl),
+    keywords: Array.isArray(rawSeo.keywords) ? rawSeo.keywords.filter((k) => typeof k === "string") : defaultSiteConfig.seo?.keywords,
+    robotsIndex: rawSeo.robotsIndex !== false,
+    googleVerification: cleanToken(rawSeo.googleVerification, 128),
+    bingVerification: cleanToken(rawSeo.bingVerification, 128),
+    yandexVerification: cleanToken(rawSeo.yandexVerification, 128),
+    indexNowKey: cleanToken(rawSeo.indexNowKey, 128),
   };
 
   return {

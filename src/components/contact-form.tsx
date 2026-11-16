@@ -403,10 +403,10 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
   }
 
   const inputBaseClass =
-    "w-full rounded-xl border border-line bg-slate-50/70 px-3.5 py-2.5 text-sm text-ink placeholder:text-body/55 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-line/60 dark:bg-[#0b0e1a] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-[#0b0e1a]";
+    "w-full rounded-xl border border-line bg-slate-50/70 px-3 py-2 sm:px-3.5 sm:py-2.5 text-base sm:text-sm text-ink placeholder:text-body/55 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-line/60 dark:bg-[#0b0e1a] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-[#0b0e1a]";
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-3 sm:space-y-4">
       {/* Honeypot anti-bot tersembunyi */}
       <div
         aria-hidden="true"
@@ -424,8 +424,8 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-4 sm:grid-cols-2">
+        <div className="space-y-1 sm:space-y-1.5">
           <label
             htmlFor="contact-name"
             className="block text-xs font-semibold text-ink dark:text-slate-200"
@@ -454,7 +454,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
           )}
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1 sm:space-y-1.5">
           <label
             htmlFor="contact-email"
             className="block text-xs font-semibold text-ink dark:text-slate-200"
@@ -484,7 +484,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1 sm:space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <label
             htmlFor="contact-subject"
@@ -515,7 +515,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         )}
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1 sm:space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <label
             htmlFor="contact-message"
@@ -532,7 +532,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
           id="contact-message"
           name="message"
           required
-          rows={4}
+          rows={3}
           maxLength={3000}
           placeholder={t("contact.form.messagePlaceholder")}
           value={message}
@@ -541,7 +541,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
             if (fieldErrors.message) setFieldErrors((p) => ({ ...p, message: undefined }));
           }}
           aria-invalid={Boolean(fieldErrors.message)}
-          className={`${inputBaseClass} resize-y min-h-[112px]`}
+          className={`${inputBaseClass} resize-y min-h-[80px] sm:min-h-[112px]`}
         />
         {fieldErrors.message && (
           <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.message}</p>
@@ -589,11 +589,11 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 sm:gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="submit"
           disabled={submitting || cooldownSeconds > 0}
-          className="inline-flex min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="inline-flex min-h-[44px] sm:min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-5 sm:px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           {submitting ? (
             <>
@@ -612,7 +612,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
           )}
         </button>
 
-        <p className="inline-flex items-center gap-1.5 text-[11px] leading-snug text-body/75 dark:text-slate-400">
+        <p className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] leading-snug text-body/75 dark:text-slate-400">
           <ShieldCheck className="size-3.5 shrink-0 text-emerald-500" />
           <span>{t("contact.form.securityNote")}</span>
         </p>

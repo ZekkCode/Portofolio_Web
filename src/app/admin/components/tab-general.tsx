@@ -678,7 +678,7 @@ export function TabGeneral({
               value={profile.site}
               onChange={(e) => updateProfile({ site: e.target.value })}
               className={`mt-1.5 ${inputClass}`}
-              placeholder="https://zakariamp.vercel.app"
+              placeholder="https://zakariamp.id"
             />
           </div>
 

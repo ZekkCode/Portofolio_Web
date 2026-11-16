@@ -45,6 +45,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  async rewrites() {
+    return [
+      {
+        source: "/:key([a-zA-Z0-9_-]{8,128})\\.txt",
+        destination: "/api/indexnow?key=:key",
+      },
+    ];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

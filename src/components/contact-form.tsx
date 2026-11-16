@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { AlertCircle, CheckCircle2, Loader2, Mail, Send, ShieldCheck } from "lucide-react";
@@ -58,6 +58,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
   );
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileReady, setTurnstileReady] = useState(false);
+  const [turnstileError, setTurnstileError] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
@@ -150,17 +151,16 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
       setTurnstileToken("");
 
       try {
-        const containerWidth = widgetContainerRef.current.clientWidth || window.innerWidth;
-        const widgetSize: "compact" | "flexible" = containerWidth < 305 ? "compact" : "flexible";
         const id = window.turnstile.render(widgetContainerRef.current, {
           sitekey: turnstileSiteKey,
           theme: effectiveTheme,
           language: locale,
-          size: widgetSize,
+          size: "flexible",
           callback: (token) => {
             if (cancelled) return;
             setTurnstileToken(token);
             setTurnstileReady(true);
+            setTurnstileError(false);
           },
           "expired-callback": () => {
             if (cancelled) return;
@@ -169,6 +169,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
           "error-callback": () => {
             if (cancelled) return;
             setTurnstileToken("");
+            setTurnstileError(true);
           },
         });
         widgetIdRef.current = id;
@@ -176,6 +177,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
       } catch {
         mountedInRun = false;
         setTurnstileReady(false);
+        setTurnstileError(true);
       }
     };
 
@@ -377,6 +379,20 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
     startedAtRef.current = Date.now();
   };
 
+  const directMailtoUrl = useMemo(() => {
+    const to = recipientEmail || "zakariamujur6@gmail.com";
+    const params = new URLSearchParams();
+    if (subject.trim()) params.set("subject", subject.trim());
+    if (message.trim()) {
+      const bodyText = name.trim()
+        ? `Halo Zakaria,\n\nSaya ${name.trim()}${email.trim() ? ` (${email.trim()})` : ""}.\n\n${message.trim()}`
+        : message.trim();
+      params.set("body", bodyText);
+    }
+    const qs = params.toString();
+    return `mailto:${to}${qs ? `?${qs}` : ""}`;
+  }, [recipientEmail, subject, message, name, email]);
+
   if (status?.type === "success") {
     return (
       <div
@@ -403,7 +419,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
   }
 
   const inputBaseClass =
-    "w-full rounded-xl border border-line bg-slate-50/70 px-3 py-2 sm:px-3.5 sm:py-2.5 text-base sm:text-sm text-ink placeholder:text-body/55 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-line/60 dark:bg-[#0b0e1a] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-[#0b0e1a]";
+    "w-full rounded-xl border border-line/80 bg-slate-50/80 px-3.5 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted/60 transition-all duration-150 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-white/[0.07] dark:focus:ring-blue-500/20";
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-3 sm:space-y-4">
@@ -424,11 +440,11 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-3.5 sm:grid-cols-2">
         <div className="space-y-1 sm:space-y-1.5">
           <label
             htmlFor="contact-name"
-            className="block text-xs font-semibold text-ink dark:text-slate-200"
+            className="block text-[11px] sm:text-xs font-semibold text-ink dark:text-slate-200"
           >
             {t("contact.form.nameLabel")}
             <span className="ml-0.5 text-rose-500" aria-hidden="true">*</span>
@@ -457,7 +473,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         <div className="space-y-1 sm:space-y-1.5">
           <label
             htmlFor="contact-email"
-            className="block text-xs font-semibold text-ink dark:text-slate-200"
+            className="block text-[11px] sm:text-xs font-semibold text-ink dark:text-slate-200"
           >
             {t("contact.form.emailLabel")}
             <span className="ml-0.5 text-rose-500" aria-hidden="true">*</span>
@@ -488,11 +504,11 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         <div className="flex items-center justify-between gap-2">
           <label
             htmlFor="contact-subject"
-            className="block text-xs font-semibold text-ink dark:text-slate-200"
+            className="block text-[11px] sm:text-xs font-semibold text-ink dark:text-slate-200"
           >
             {t("contact.form.subjectLabel")}
           </label>
-          <span className="text-[11px] text-body/70 dark:text-slate-400">
+          <span className="text-[10px] sm:text-[11px] text-body/70 dark:text-slate-400">
             {t("contact.form.subjectOptional")}
           </span>
         </div>
@@ -519,12 +535,12 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         <div className="flex items-center justify-between gap-2">
           <label
             htmlFor="contact-message"
-            className="block text-xs font-semibold text-ink dark:text-slate-200"
+            className="block text-[11px] sm:text-xs font-semibold text-ink dark:text-slate-200"
           >
             {t("contact.form.messageLabel")}
             <span className="ml-0.5 text-rose-500" aria-hidden="true">*</span>
           </label>
-          <span className="font-mono text-[11px] tabular-nums text-body/70 dark:text-slate-400">
+          <span className="font-mono text-[10px] sm:text-[11px] tabular-nums text-body/70 dark:text-slate-400">
             {message.length}/3000
           </span>
         </div>
@@ -541,7 +557,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
             if (fieldErrors.message) setFieldErrors((p) => ({ ...p, message: undefined }));
           }}
           aria-invalid={Boolean(fieldErrors.message)}
-          className={`${inputBaseClass} resize-y min-h-[80px] sm:min-h-[112px]`}
+          className={`${inputBaseClass} resize-none min-h-[88px] sm:min-h-[105px]`}
         />
         {fieldErrors.message && (
           <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.message}</p>
@@ -555,6 +571,33 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
             data-turnstile-ready={turnstileReady ? "true" : "false"}
             className="min-h-[65px] w-full"
           />
+        </div>
+      )}
+
+      {turnstileError && (
+        <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-950/30">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="space-y-1 text-amber-900 dark:text-amber-200">
+              <p className="font-semibold text-xs">
+                {locale === "en"
+                  ? "Verification issue detected"
+                  : "Kendala verifikasi keamanan"}
+              </p>
+              <p className="text-[11px] leading-relaxed text-amber-800/85 dark:text-amber-300/85">
+                {locale === "en"
+                  ? "Turnstile security check cannot reach the server on this domain. You can send your message directly via email:"
+                  : "Pemeriksaan Turnstile tidak dapat terhubung pada domain ini. Anda dapat mengirimkan pesan langsung via email:"}
+              </p>
+              <a
+                href={directMailtoUrl}
+                className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-ink transition-colors"
+              >
+                <Mail className="size-3.5" />
+                <span>{locale === "en" ? `Send via Email (${recipientEmail || "zakariamujur6@gmail.com"})` : `Kirim via Email (${recipientEmail || "zakariamujur6@gmail.com"})`}</span>
+              </a>
+            </div>
+          </div>
         </div>
       )}
 
@@ -593,7 +636,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         <button
           type="submit"
           disabled={submitting || cooldownSeconds > 0}
-          className="inline-flex min-h-[44px] sm:min-h-[46px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-5 sm:px-6 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="inline-flex min-h-[42px] sm:min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-brand-ink hover:shadow active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           {submitting ? (
             <>
@@ -602,7 +645,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
             </>
           ) : (
             <>
-              <Send className="size-4" />
+              <Send className="size-3.5 sm:size-4" />
               <span>
                 {cooldownSeconds > 0
                   ? `${cooldownSeconds}s`

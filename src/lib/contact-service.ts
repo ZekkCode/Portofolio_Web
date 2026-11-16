@@ -90,6 +90,7 @@ export function getContactRuntimeConfig(): ContactRuntimeConfig {
   const siteKey = (
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
     process.env.TURNSTILE_SITE_KEY ||
+    process.env.SITE_KEY ||
     ""
   ).trim();
   const secretKey = (

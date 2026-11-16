@@ -652,30 +652,33 @@ function Contact() {
   const contactDesc = sectionMeta.desc || contact.desc || t("contact.desc");
 
   return (
-    <section id="kontak" className="relative z-[2] mx-auto w-full max-w-5xl scroll-mt-24 px-4 sm:px-5 py-8 sm:py-20">
+    <section
+      id="kontak"
+      className="relative z-[2] mx-auto w-[calc(100%+3.5rem)] min-[480px]:w-[calc(100%+2.75rem)] md:w-full max-w-5xl scroll-mt-24 px-3 sm:px-5 py-6 sm:py-20 -mr-14 min-[480px]:-mr-11 md:mr-auto"
+    >
       <div id="contact" className="absolute top-0 -mt-24" aria-hidden="true" />
       <ScrollReveal y={24} className="w-full min-w-0">
-        <div className="relative overflow-hidden rounded-2xl border border-line bg-white dark:border-line/60 dark:bg-[#111422]">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-line/80 bg-white/95 shadow-sm dark:border-white/10 dark:bg-[#111422]/95 backdrop-blur-sm">
           <div className={`grid grid-cols-1 min-w-0 items-stretch ${contact.showProfileCard ? "lg:grid-cols-[0.95fr_1.15fr]" : "lg:grid-cols-1"}`}>
             {/* KIRI: Hologram Profile Card */}
             {contact.showProfileCard && (
-              <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-3 sm:p-8 max-h-[300px] sm:max-h-none overflow-hidden">
+              <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line/80 lg:border-b-0 lg:border-r dark:border-white/10 bg-slate-50/70 dark:bg-[#0b0e1a] p-3 sm:p-8 max-h-[220px] sm:max-h-none overflow-hidden">
                 <DynamicProfileCardStage />
               </div>
             )}
 
             {/* KANAN: Formulir Pesan Langsung (Turnstile & Anti-Spam) */}
-            <div className="relative min-w-0 flex flex-col justify-center p-4 sm:p-8 lg:p-10 space-y-4 sm:space-y-6">
+            <div className="relative min-w-0 flex flex-col justify-center p-3.5 sm:p-8 lg:p-10 space-y-3 sm:space-y-6">
               <div>
                 {(sectionMeta.eyebrow || contact.badge) && (
-                  <p className="mb-1 text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
+                  <p className="mb-1 text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-brand dark:text-blue-400">
                     {sectionMeta.eyebrow || contact.badge}
                   </p>
                 )}
-                <h2 className="font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">
+                <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-ink leading-tight">
                   {contactTitle}
                 </h2>
-                <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-sm leading-relaxed text-body">
+                <p className="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-body">
                   {contactDesc}
                 </p>
               </div>

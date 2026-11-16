@@ -60,17 +60,17 @@ const TILE_CARD='relative isolate aspect-[1457/2048] overflow-hidden rounded-[va
 const HOLO=`${LAYER} [mix-blend-mode:var(--pc-blend)]`;
 const HOLO_LAYER='absolute inset-0';
 const INFO='absolute bottom-[18px] left-5 right-5 text-white z-[6]';
-const NAME='m-0 text-[20px] font-semibold leading-[1.25] tracking-[-0.01em] text-[inherit]';
-const TITLE='mx-0 mb-0 mt-1 text-[14px] leading-[1.45] text-white/78';
+const NAME='m-0 text-[17px] sm:text-[20px] font-semibold leading-[1.25] tracking-[-0.01em] text-[inherit]';
+const TITLE='mx-0 mb-0 mt-1 text-[12px] sm:text-[14px] leading-[1.45] text-white/78';
 const TILE_RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight)]`;
-const FOOTER='flex min-w-0 items-center gap-2 sm:gap-3 px-2.5 sm:px-5 pb-2 pt-1.5';
-const AVATAR="relative h-8 w-8 sm:h-9 sm:w-9 flex-none overflow-hidden rounded-full [background:var(--pc-tile)] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:[box-shadow:inset_0_0_0_1px_var(--pc-tile-edge)]";
+const FOOTER='flex min-w-0 items-center gap-1.5 sm:gap-3 px-2 sm:px-5 pb-2 pt-1.5';
+const AVATAR="relative h-7 w-7 sm:h-9 sm:w-9 flex-none overflow-hidden rounded-full [background:var(--pc-tile)] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:[box-shadow:inset_0_0_0_1px_var(--pc-tile-edge)]";
 const AVATAR_IMAGE = 'block h-full w-full object-cover object-[50%_15%]';
 const AVATAR_IMAGE_CARD = 'block h-full w-full object-cover object-[50%_39%] scale-[1.75]';
 const META='flex min-w-0 flex-1 flex-col gap-[3px]';
-const HANDLE='overflow-hidden text-ellipsis whitespace-nowrap text-[13px] sm:text-[14px] font-semibold leading-[1.25] text-[var(--pc-ink)]';
-const STATUS="flex items-center gap-1.5 whitespace-nowrap text-[11.5px] sm:text-[12.5px] leading-[1.25] text-[var(--pc-muted)]";
-const CONTACT='flex h-8 sm:h-9 flex-none cursor-pointer items-center gap-1 sm:gap-1.5 rounded-[calc(var(--pc-radius)*0.75)] border-none px-2.5 sm:px-3.5 font-[inherit] text-[12px] sm:text-[13px] font-semibold text-[var(--pc-ink)] [background:var(--pc-tile)] [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight),var(--pc-tile-shadow)] transition-[filter,transform] duration-200 hover:[filter:var(--pc-hover)] active:scale-[0.96] active:duration-0 active:[filter:var(--pc-press)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-ink)]';
+const HANDLE='overflow-hidden text-ellipsis whitespace-nowrap text-[12px] sm:text-[14px] font-semibold leading-[1.25] text-[var(--pc-ink)]';
+const STATUS="flex items-center gap-1.5 whitespace-nowrap text-[10.5px] sm:text-[12.5px] leading-[1.25] text-[var(--pc-muted)]";
+const CONTACT='flex h-7 sm:h-9 flex-none cursor-pointer items-center gap-1 sm:gap-1.5 rounded-[calc(var(--pc-radius)*0.75)] border-none px-2 sm:px-3.5 font-[inherit] text-[11px] sm:text-[13px] font-semibold text-[var(--pc-ink)] [background:var(--pc-tile)] [box-shadow:inset_0_0_0_1px_var(--pc-tile-edge),inset_0_1px_0_var(--pc-tile-highlight),var(--pc-tile-shadow)] transition-[filter,transform] duration-200 hover:[filter:var(--pc-hover)] active:scale-[0.96] active:duration-0 active:[filter:var(--pc-press)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-ink)]';
 const GLARE=`${LAYER} mix-blend-overlay`;
 const RIM=`${LAYER} [box-shadow:inset_0_0_0_1px_var(--pc-frame-edge),inset_0_1px_0_var(--pc-frame-highlight)]`;
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
@@ -171,8 +171,12 @@ const ProfileCard=({avatarUrl='',secondaryAvatarUrl,iconUrl,miniAvatarUrl,imageF
   const foil:Palette=backdropColor?((isDark(backdropColor)??palette==='dark')?'dark':'light'):isBakedCard?'dark':palette;
   const themeVars=isBakedCard&&!backdropColor?CARD_BLUE_THEME:THEMES[palette];
   const backdrop=backdropColor?`linear-gradient(180deg,color-mix(in srgb,${backdropColor},#ffffff 12%) 0%,color-mix(in srgb,${backdropColor},#000000 18%) 100%)`:isBakedCard?'#0439c4':'var(--pc-tile)';
+  const responsiveMaxWidth = isBakedCard
+    ? 'max-w-[245px] min-[380px]:max-w-[268px] sm:max-w-[334px]'
+    : 'max-w-[245px] min-[380px]:max-w-[268px] sm:max-w-[340px]';
+
   return (
-    <div ref={rootRef} className={`${ROOT} ${isBakedCard ? 'max-w-[334px]' : 'max-w-[340px]'} ${className}`.trim()} style={{...ROOT_VARS,...themeVars,...FOILS[foil],'--pc-radius':`${Math.max(0,isBakedCard ? Math.min(radius, 12) : radius)}px`,'--pc-backdrop':backdrop,'--pc-holo':clamp(holo,0,1),'--pc-glare':clamp(glare,0,1),'--pc-parallax':`${Math.max(0,parallax)}px`,'--pc-status':statusColor,'--pc-grain':GRAIN,'--pc-pattern':iconUrl?`url("${iconUrl}")`:'linear-gradient(#000,#000)','--pc-pattern-size':iconUrl?'180% auto':'100% 100%','--pc-holo-gain':iconUrl?1.25:0.75,'--pc-holo-detail':iconUrl&&foil==='dark'?1:0} as CSSProperties}>
+    <div ref={rootRef} className={`${ROOT} ${responsiveMaxWidth} ${className}`.trim()} style={{...ROOT_VARS,...themeVars,...FOILS[foil],'--pc-radius':`${Math.max(0,isBakedCard ? Math.min(radius, 12) : radius)}px`,'--pc-backdrop':backdrop,'--pc-holo':clamp(holo,0,1),'--pc-glare':clamp(glare,0,1),'--pc-parallax':`${Math.max(0,parallax)}px`,'--pc-status':statusColor,'--pc-grain':GRAIN,'--pc-pattern':iconUrl?`url("${iconUrl}")`:'linear-gradient(#000,#000)','--pc-pattern-size':iconUrl?'180% auto':'100% 100%','--pc-holo-gain':iconUrl?1.25:0.75,'--pc-holo-detail':iconUrl&&foil==='dark'?1:0} as CSSProperties}>
       <div className={BODY}>
         <div className={isBakedCard ? TILE_CARD : TILE}>
           <span className={LAYER} style={SHEEN_STYLE}/>

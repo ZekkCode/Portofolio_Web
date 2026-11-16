@@ -196,11 +196,8 @@ function useNavScrollState(navHrefs: string[]) {
 
       let nextAtBottom = false;
       if (scrollY > 250) {
-        const contactSec = cachedSections.find((s) => s.id === "kontak");
-        if (contactSec && scrollY + windowHeight >= contactSec.top + 140) {
-          nextAtBottom = true;
-        } else if (cachedFooterTop !== null) {
-          nextAtBottom = cachedFooterTop - scrollY <= windowHeight - 40;
+        if (cachedFooterTop !== null) {
+          nextAtBottom = cachedFooterTop - scrollY <= windowHeight;
         } else {
           nextAtBottom = docHeight - (scrollY + windowHeight) < 140;
         }

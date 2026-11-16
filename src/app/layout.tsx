@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Plus_Jakarta_Sans, Space_Grotesk, Pixelify_Sans } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -90,7 +91,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const seo = getPublishedSeo(config, "id");
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
+  let siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
+
+  try {
+    const headerList = await headers();
+    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase();
+    if (reqHost.includes("zakariamp.my.id")) {
+      siteUrl = "https://www.zakariamp.my.id";
+    } else if (reqHost.includes("zakariamp.id")) {
+      siteUrl = "https://www.zakariamp.id";
+    }
+  } catch {}
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
   const metaDesc = seo.metaDesc || pub.heroDesc;
   const ogImage = seo.ogImage || "/opengraph-image";
@@ -226,7 +237,17 @@ export default async function RootLayout({
 
   const name = pub.name;
   const brand = pub.brand;
-  const siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
+  let siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
+
+  try {
+    const headerList = await headers();
+    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase();
+    if (reqHost.includes("zakariamp.my.id")) {
+      siteUrl = "https://www.zakariamp.my.id";
+    } else if (reqHost.includes("zakariamp.id")) {
+      siteUrl = "https://www.zakariamp.id";
+    }
+  } catch {}
   const email = pub.email;
   const phone = pub.phone;
   const bioIntro = pub.heroDesc;

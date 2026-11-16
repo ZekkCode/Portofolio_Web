@@ -1,12 +1,12 @@
 import { DEFAULT_PORTRAIT_AVATAR_URL } from "./content/identity-images";
 
-export const DEFAULT_CANONICAL_SITE_URL = "https://zakariamp.id";
+export const DEFAULT_CANONICAL_SITE_URL = "https://www.zakariamp.id";
 export const FALLBACK_DEPLOYMENT_SITE_URL = "https://zakariamp.vercel.app";
 
 /**
  * Menyelesaikan URL kanonikal publik secara aman.
  * Menomorsatukan NEXT_PUBLIC_SITE_URL jika disetel, atau kandidat yang diberikan,
- * dengan fallback ke https://zakariamp.id.
+ * dengan normalisasi www (karena Vercel me-redirect apex non-www ke www secara permanen 308).
  */
 export function resolveCanonicalSiteUrl(candidate?: string): string {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -16,7 +16,16 @@ export function resolveCanonicalSiteUrl(candidate?: string): string {
     parsed.hash = "";
     parsed.search = "";
     const cleanPath = parsed.pathname.replace(/\/+$/, "");
-    return `${parsed.origin}${cleanPath}`;
+    let hostname = parsed.hostname.toLowerCase();
+
+    // Normalisasi domain apex ke www agar tidak memicu 308 redirect loop di Googlebot
+    if (hostname === "zakariamp.id") {
+      hostname = "www.zakariamp.id";
+    } else if (hostname === "zakariamp.my.id") {
+      hostname = "www.zakariamp.my.id";
+    }
+
+    return `${parsed.protocol}//${hostname}${cleanPath}`;
   } catch {
     return DEFAULT_CANONICAL_SITE_URL;
   }

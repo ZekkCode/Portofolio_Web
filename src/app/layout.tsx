@@ -60,6 +60,30 @@ function resolveAbsoluteUrl(rawUrl: string | undefined, baseUrl: string, fallbac
   }
 }
 
+function resolveGoogleVerificationTokens(configured?: string): string[] | string | undefined {
+  const envTokens = [
+    process.env.GOOGLE_SITE_VERIFICATION,
+    process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  ]
+    .filter(Boolean)
+    .flatMap((s) => (s ? s.split(/[\s,]+/) : []));
+
+  const all = Array.from(
+    new Set([
+      "HotKWrpmgwE_rH-fDU1SdAtEAmRRdRcRX4jXCG84K9Q", // zakariamp.id
+      "zJPFsbAW4iSJjucKreBPM52cIAApE4NbeoIYI9OTSZ0", // zakariamp.my.id
+      ...(configured ? configured.split(/[\s,]+/) : []),
+      ...envTokens,
+    ])
+  )
+    .map((t) => t.trim().replace(/^google-site-verification=/i, ""))
+    .filter((t) => t.length > 0 && /^[a-zA-Z0-9_-]+$/.test(t));
+
+  if (all.length === 0) return undefined;
+  if (all.length === 1) return all[0];
+  return all;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const config = await fetchPublishedContent();
   const pub = getPublishedProfile(config, "id");
@@ -90,7 +114,7 @@ export async function generateMetadata(): Promise<Metadata> {
       canonical: "/",
     },
     verification: {
-      google: (seo.googleVerification || "").trim() || undefined,
+      google: resolveGoogleVerificationTokens(seo.googleVerification),
       yandex: (seo.yandexVerification || "").trim() || undefined,
       other: {
         ...(seo.bingVerification?.trim() ? { "msvalidate.01": seo.bingVerification.trim() } : {}),

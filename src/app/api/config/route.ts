@@ -19,6 +19,7 @@ import {
 import { toPublicSiteConfig } from "@/lib/content/public-config-sanitizer";
 import { triggerIndexNowIfConfigured } from "@/lib/indexnow";
 import {
+  deleteLocalCmsDoc,
   isStrictLocalCmsStore,
   readLocalCmsDoc,
   writeLocalCmsDoc,
@@ -294,15 +295,20 @@ export async function POST(request: Request) {
     try {
       const targetDocId = action === "draft" ? "draft" : "current";
       let serverUpdatedAt: string | undefined;
+      let serverConfig: SiteConfig | undefined;
 
       if (useLocalStore) {
-        const localDoc = await readLocalCmsDoc(targetDocId);
+        const localDoc = await readLocalCmsDoc<Partial<SiteConfig>>(targetDocId);
         if (localDoc?.updated_at) {
           serverUpdatedAt = localDoc.updated_at;
         }
+        if (localDoc?.config) {
+          serverConfig = normalizeConfig(localDoc.config);
+        }
       } else if (action === "publish") {
-        const meta = await fetchPublishedContentWithMeta();
+        const meta = await fetchPublishedContentWithMeta({ bypassCache: true });
         serverUpdatedAt = meta.updatedAt;
+        serverConfig = meta.config;
       }
 
       if (serverUpdatedAt && serverUpdatedAt !== expectedUpdatedAt) {
@@ -314,6 +320,7 @@ export async function POST(request: Request) {
               "Konflik versi: Konfigurasi di server telah diubah oleh sesi atau pengguna lain. Muat ulang versi terbaru atau pilih timpa paksa.",
             serverUpdatedAt,
             expectedUpdatedAt,
+            serverConfig,
           },
           { status: 409 }
         );
@@ -457,4 +464,44 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: "Permintaan lintas domain (Cross-Origin) ditolak" },
+      { status: 403 }
+    );
+  }
+
+  const auth = await verifyAdminRequest(request);
+  if (!auth.isAuthenticated) {
+    return NextResponse.json(
+      { success: false, error: "Akses ditolak: Hanya administrator yang diizinkan menghapus draf." },
+      { status: 401 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const mode = searchParams.get("mode") || "draft";
+  if (mode !== "draft") {
+    return NextResponse.json(
+      { success: false, error: "Hanya penghapusan mode=draft yang didukung." },
+      { status: 400 }
+    );
+  }
+
+  if (shouldUseLocalRevisions()) {
+    await deleteLocalCmsDoc("draft");
+    return NextResponse.json({ success: true, provider: "local-store" });
+  }
+
+  if (isSupabaseConfigured()) {
+    const supabase = getServiceRoleClient() || getSupabaseClient();
+    if (supabase) {
+      await supabase.from("site_config").delete().eq("id", "draft");
+    }
+  }
+
+  return NextResponse.json({ success: true, provider: "supabase" });
 }

@@ -6,6 +6,8 @@ import {
   normalizeConfig,
   resetConfig,
   saveCloudDraft,
+  discardCloudDraft,
+  persistLocalDraftBackup,
   publishCloudConfig,
   getServerUpdatedAt,
   useSiteConfig,
@@ -136,6 +138,10 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     serverUpdatedAt?: string | null;
     serverConfig?: SiteConfig;
   } | null>(null);
+  const [recoverableDraft, setRecoverableDraft] = useState<{
+    config: SiteConfig;
+    updatedAt?: string | null;
+  } | null>(null);
 
   const config = draft ?? storedConfig;
   const hasUnsavedChanges = useMemo(() => {
@@ -219,10 +225,37 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
 
     fetch("/api/config", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.updatedAt) {
-          setServerUpdatedAt(data.updatedAt);
+      .then((pubData) => {
+        if (pubData?.updatedAt) {
+          setServerUpdatedAt(pubData.updatedAt);
         }
+        const pubNorm = pubData?.config ? normalizeConfig(pubData.config) : null;
+        if (pubNorm) {
+          writeConfig(pubNorm);
+        }
+
+        const shouldAutoRestore =
+          typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("restoreDraft") === "1";
+
+        return fetch("/api/config?mode=draft", { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((draftData) => {
+            if (draftData?.mode === "draft" && draftData?.config) {
+              const draftNorm = normalizeConfig(draftData.config);
+              const differs =
+                !pubNorm || JSON.stringify(draftNorm) !== JSON.stringify(pubNorm);
+              if (shouldAutoRestore) {
+                setDraft(draftNorm);
+                setStatus("Draf pratinjau berhasil dimuat kembali ke editor.");
+              } else if (differs) {
+                setRecoverableDraft({
+                  config: draftNorm,
+                  updatedAt: draftData.updatedAt || null,
+                });
+              }
+            }
+          });
       })
       .catch(() => {});
   }, []);
@@ -317,13 +350,16 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
     setIsSavingDraft(true);
     setStatus("Menyinkronkan draf untuk pratinjau...");
     try {
-      await saveCloudDraft(config, {
-        expectedUpdatedAt: serverUpdatedAt ?? undefined,
-      });
-      setStatus("Membuka Pratinjau Draf di tab baru...");
-      window.open("/admin/preview", "_blank", "noopener,noreferrer");
+      const res = await saveCloudDraft(config);
+      if (res.success) {
+        setRecoverableDraft(null);
+        setStatus("Membuka Pratinjau Draf di tab baru...");
+        window.open("/admin/preview", "_blank", "noopener,noreferrer");
+      } else {
+        setStatus(`Gagal menyinkronkan draf pratinjau: ${res.message || "Periksa koneksi"}`);
+      }
     } catch {
-      window.open("/admin/preview", "_blank", "noopener,noreferrer");
+      setStatus("Gagal menyinkronkan draf pratinjau ke server.");
     } finally {
       setIsSavingDraft(false);
     }
@@ -375,6 +411,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
         if (res.updatedAt) {
           setServerUpdatedAt(res.updatedAt);
         }
+        setRecoverableDraft(null);
         setDraft((prev) => (prev === publishedSnapshot ? null : prev));
         const baseMsg =
           res.provider === "local-cms-store" || res.provider === "local-store"
@@ -398,13 +435,18 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
         setValidationErrors(errs);
         if (res.health) setShowHealthModal(true);
         setStatus(`Publikasi ditolak: ${errs[0]}`);
-      } else {
+      } else if (res.configured === false) {
+        // Fallback offline murni saat cloud & local-store belum dikonfigurasi
         writeConfig(publishedSnapshot);
-        setStatus(`Tersimpan lokal (${res.message || "Gagal sinkron server"})`);
+        setStatus("Tersimpan ke penyimpanan lokal browser (cloud belum dikonfigurasi)");
+      } else {
+        // Jangan menimpa cache publik saat gagal autentikasi / jaringan ke cloud
+        persistLocalDraftBackup(publishedSnapshot);
+        setStatus(`Gagal publikasi ke server: ${res.message || "Draf diamankan di lokal"}`);
       }
     } catch {
-      writeConfig(publishedSnapshot);
-      setStatus("Tersimpan lokal (gagal menghubungi endpoint publikasi)");
+      persistLocalDraftBackup(publishedSnapshot);
+      setStatus("Gagal menghubungi endpoint publikasi (perubahan diamankan sebagai draf lokal)");
     } finally {
       setIsSaving(false);
     }
@@ -624,6 +666,44 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
           </div>
         </div>
 
+        {/* Unsaved / Recoverable Server Draft Banner */}
+        {recoverableDraft && !draft && (
+          <div className="border-t border-sky-500/30 bg-sky-500/15 px-4 py-2.5 text-xs text-sky-950 dark:text-sky-200">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <span>
+                  <strong>Draf Tersimpan Ditemukan:</strong> Terdapat draf yang belum dipublikasikan di server.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft(recoverableDraft.config);
+                    setRecoverableDraft(null);
+                    setStatus("Draf tersimpan berhasil dipulihkan ke editor.");
+                  }}
+                  className="rounded-lg bg-sky-600 px-3 py-1 font-bold text-white shadow-sm hover:bg-sky-700"
+                >
+                  Pulihkan ke Editor
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await discardCloudDraft();
+                    setRecoverableDraft(null);
+                    setStatus("Draf lama di server telah dibuang.");
+                  }}
+                  className="rounded-lg border border-sky-500/40 bg-white/80 px-3 py-1 font-semibold text-slate-800 hover:bg-white dark:bg-slate-900/80 dark:text-slate-200"
+                >
+                  Buang Draf
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 409 Optimistic Concurrency Conflict Banner */}
         {conflictState && (
           <div className="border-t border-amber-500/30 bg-amber-500/15 px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200">
@@ -635,24 +715,27 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {conflictState.serverConfig && (
-                  <button
-                    type="button"
-                    onClick={() => {
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (conflictState.serverConfig) {
                       const next = normalizeConfig(conflictState.serverConfig);
-                      setDraft(next);
+                      setDraft(null);
                       writeConfig(next);
                       if (conflictState.serverUpdatedAt) {
                         setServerUpdatedAt(conflictState.serverUpdatedAt);
                       }
                       setConflictState(null);
                       setStatus("Versi terbaru dari server dimuat ke editor.");
-                    }}
-                    className="rounded-lg bg-white px-3 py-1 font-bold text-slate-900 shadow-sm hover:bg-slate-100"
-                  >
-                    Muat Versi Server
-                  </button>
-                )}
+                      return;
+                    }
+                    await pullFromCloud();
+                    setConflictState(null);
+                  }}
+                  className="rounded-lg bg-white px-3 py-1 font-bold text-slate-900 shadow-sm hover:bg-slate-100"
+                >
+                  Muat Versi Server
+                </button>
                 <button
                   type="button"
                   onClick={() => handlePublish(true)}
@@ -728,6 +811,7 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             onNavigateTab={(t) => setTab(t)}
             onOpenHealthModal={() => setShowHealthModal(true)}
             onOpenRevisionsModal={() => setShowRevisionsModal(true)}
+            onOpenPreview={handleOpenPreview}
           />
         )}
 
@@ -830,9 +914,19 @@ export default function AdminClient({ userEmail }: { userEmail?: string }) {
             config={config}
             cloudStatus={cloudStatus}
             healthReport={healthReport}
-            onApplyConfig={(newCfg) => {
-              setDraft(newCfg);
-              writeConfig(newCfg);
+            onApplyConfig={(newCfg, target = "draft", updatedAt) => {
+              const normalized = normalizeConfig(newCfg);
+              if (target === "publish") {
+                setDraft(null);
+                setRecoverableDraft(null);
+                writeConfig(normalized);
+                if (updatedAt) {
+                  setServerUpdatedAt(updatedAt);
+                }
+              } else {
+                setDraft(normalized);
+                persistLocalDraftBackup(normalized);
+              }
             }}
             onResetFactory={handleReset}
             onOpenRevisionsModal={() => setShowRevisionsModal(true)}

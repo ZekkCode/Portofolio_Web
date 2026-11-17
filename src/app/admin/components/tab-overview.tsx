@@ -36,6 +36,7 @@ interface TabOverviewProps {
   onNavigateTab: (tab: AdminTabKey) => void;
   onOpenHealthModal: () => void;
   onOpenRevisionsModal: () => void;
+  onOpenPreview?: () => void;
 }
 
 export function TabOverview({
@@ -44,6 +45,7 @@ export function TabOverview({
   onNavigateTab,
   onOpenHealthModal,
   onOpenRevisionsModal,
+  onOpenPreview,
 }: TabOverviewProps) {
   const projects = config.projects || [];
   const publishedProjects = projects.filter((p) => p.published !== false && p.visible !== false);
@@ -132,16 +134,28 @@ export function TabOverview({
               );
             })()}
 
-            <Link
-              href="/admin/preview"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs font-semibold text-body transition-colors hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/90"
-            >
-              <Eye className="size-3.5 text-brand" />
-              <span>Pratinjau Draf</span>
-              <ExternalLink className="size-3 text-muted" />
-            </Link>
+            {onOpenPreview ? (
+              <button
+                type="button"
+                onClick={onOpenPreview}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs font-semibold text-body transition-colors hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/90"
+              >
+                <Eye className="size-3.5 text-brand" />
+                <span>Pratinjau Draf</span>
+                <ExternalLink className="size-3 text-muted" />
+              </button>
+            ) : (
+              <Link
+                href="/admin/preview"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs font-semibold text-body transition-colors hover:bg-surface hover:text-ink dark:border-line/40 dark:bg-slate-900/90"
+              >
+                <Eye className="size-3.5 text-brand" />
+                <span>Pratinjau Draf</span>
+                <ExternalLink className="size-3 text-muted" />
+              </Link>
+            )}
           </div>
         </div>
       </div>

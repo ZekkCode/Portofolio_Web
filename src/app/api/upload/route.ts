@@ -273,12 +273,25 @@ export async function POST(request: Request) {
       }
     }
 
+    // Fallback lokal (Base64 Data URI <= 2 MB) saat Cloudflare R2 belum dikonfigurasi (AGENTS.md §5)
+    const MAX_INLINE_FALLBACK_BYTES = 2 * 1024 * 1024;
+    if (buffer.byteLength <= MAX_INLINE_FALLBACK_BYTES) {
+      const dataUri = `data:${verifiedType.mime};base64,${buffer.toString("base64")}`;
+      return NextResponse.json({
+        success: true,
+        url: dataUri,
+        provider: "local",
+        storage: "local",
+        contentType: verifiedType.mime,
+      });
+    }
+
     return NextResponse.json(
       {
         error:
-          "Storage Cloudflare R2 belum dikonfigurasi di server environment. Unggah berkas ditolak.",
+          "Storage Cloudflare R2 belum dikonfigurasi dan berkas melebihi batas fallback lokal 2 MB.",
       },
-      { status: 503 }
+      { status: 413 }
     );
   } catch {
     return NextResponse.json(

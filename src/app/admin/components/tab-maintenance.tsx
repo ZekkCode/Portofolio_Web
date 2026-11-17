@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef } from "react";
-import type { SiteConfig } from "@/lib/site-config";
+import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import type { ContentHealthReport } from "@/lib/content/types";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
 import {
-  auditContentHealth,
+  evaluatePublishReadiness,
   getContentReadinessSummary,
 } from "@/lib/content/content-health";
 import { getHealthToneClasses } from "../admin-navigation";
@@ -25,7 +25,11 @@ interface TabMaintenanceProps {
   config: SiteConfig;
   cloudStatus: { r2: boolean; supabase: boolean } | null;
   healthReport: ContentHealthReport;
-  onApplyConfig: (newConfig: SiteConfig) => void;
+  onApplyConfig: (
+    newConfig: SiteConfig,
+    target?: "draft" | "publish",
+    updatedAt?: string
+  ) => void;
   onResetFactory: () => void;
   onOpenRevisionsModal: () => void;
   onOpenHealthModal: () => void;
@@ -77,11 +81,11 @@ export function TabMaintenance({
           return;
         }
 
-        const valid = configObj as SiteConfig;
-        const health = auditContentHealth(valid);
+        const normalized = normalizeConfig(configObj as Partial<SiteConfig>);
+        const health = evaluatePublishReadiness(normalized, configObj);
         const readiness = getContentReadinessSummary(health);
 
-        setImportCandidate(valid);
+        setImportCandidate(normalized);
         setCandidateHealth(health);
         setStatus(`Berkas terbaca: ${readiness.badgeLabel} (Skor ${health.score}/100)`);
       } catch {
@@ -123,7 +127,10 @@ export function TabMaintenance({
         return;
       }
 
-      onApplyConfig(importCandidate);
+      const appliedConfig: SiteConfig = data.config
+        ? normalizeConfig(data.config)
+        : importCandidate;
+      onApplyConfig(appliedConfig, importTarget, data.updatedAt);
       setImportCandidate(null);
       setCandidateHealth(null);
       if (fileInputRef.current) fileInputRef.current.value = "";

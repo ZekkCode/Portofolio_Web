@@ -561,13 +561,8 @@ export function TabContent({
       allowedKeys.includes(k)
     );
     const missing = allowedKeys.filter((k) => !fromOrder.includes(k));
-    const combined = [...fromOrder, ...missing];
-    return combined.sort((a, b) => {
-      const sa = config.sections?.[a]?.sortOrder ?? combined.indexOf(a);
-      const sb = config.sections?.[b]?.sortOrder ?? combined.indexOf(b);
-      return sa - sb;
-    });
-  }, [config.sectionOrder, config.sections]);
+    return [...fromOrder, ...missing];
+  }, [config.sectionOrder]);
 
   const updateSectionConfig = (key: SectionKey, updates: Partial<SectionConfigItem>) => {
     const current: SectionConfigItem = config.sections?.[key] || { visible: true };

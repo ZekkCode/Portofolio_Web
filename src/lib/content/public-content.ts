@@ -1,4 +1,5 @@
 import { getSupabaseClient, getServiceRoleClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeConfig, defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import {
   isLocalCmsOverrideAllowed,
@@ -29,14 +30,16 @@ function getPublishedCache(): PublishedContentCache {
   return g[GLOBAL_CACHE_KEY];
 }
 
-export async function fetchPublishedContentWithMeta(): Promise<{
+export async function fetchPublishedContentWithMeta(options?: {
+  bypassCache?: boolean;
+}): Promise<{
   config: SiteConfig;
   updatedAt?: string;
   provider: "local-store" | "supabase" | "default";
 }> {
   const cache = getPublishedCache();
   const now = Date.now();
-  if (cache.snapshot && now - cache.timestamp < MEMORY_TTL_MS) {
+  if (!options?.bypassCache && cache.snapshot && now - cache.timestamp < MEMORY_TTL_MS) {
     return {
       config: cache.snapshot,
       updatedAt: cache.updatedAt,
@@ -129,7 +132,10 @@ export async function fetchDraftOrPublishedContent(): Promise<{
   config: SiteConfig;
   isDraft: boolean;
   updatedAt?: string;
+  publishedUpdatedAt?: string;
 }> {
+  const published = await fetchPublishedContentWithMeta({ bypassCache: true });
+
   if (isLocalCmsOverrideAllowed()) {
     const localDraft = await readLocalCmsDoc<Partial<SiteConfig>>("draft");
     if (localDraft?.config) {
@@ -137,13 +143,17 @@ export async function fetchDraftOrPublishedContent(): Promise<{
         config: normalizeConfig(localDraft.config),
         isDraft: true,
         updatedAt: localDraft.updated_at,
+        publishedUpdatedAt: published.updatedAt,
       };
     }
   }
 
   if (isSupabaseConfigured() && !isStrictLocalCmsStore()) {
     try {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
+      const supabase =
+        getServiceRoleClient() ||
+        (await createServerSupabaseClient().catch(() => null)) ||
+        getSupabaseClient();
       if (supabase) {
         const { data } = await supabase
           .from("site_config")
@@ -156,6 +166,7 @@ export async function fetchDraftOrPublishedContent(): Promise<{
             config: normalizeConfig(data.config as Partial<SiteConfig>),
             isDraft: true,
             updatedAt: data.updated_at,
+            publishedUpdatedAt: published.updatedAt,
           };
         }
       }
@@ -164,11 +175,11 @@ export async function fetchDraftOrPublishedContent(): Promise<{
     }
   }
 
-  const published = await fetchPublishedContentWithMeta();
   return {
     config: published.config,
     isDraft: false,
     updatedAt: published.updatedAt,
+    publishedUpdatedAt: published.updatedAt,
   };
 }
 

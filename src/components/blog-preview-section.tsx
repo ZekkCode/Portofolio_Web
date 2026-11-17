@@ -30,9 +30,23 @@ export function BlogPreviewSection() {
   const resolvedMeta = resolveBlogSyncMeta(blog);
   const effectiveMode = resolvedMeta.sourceMode;
 
+  const hasInitialCachedPosts = useMemo(() => {
+    const hasManual = (blog?.manualPosts || []).some(
+      (p) => p.published !== false && p.visible !== false
+    );
+    const hasSynced = (blog?.syncedPosts || []).some(
+      (p) => p.published !== false && p.visible !== false
+    );
+    return hasManual || hasSynced;
+  }, [blog?.manualPosts, blog?.syncedPosts]);
+
   const [externalSynced, setExternalSynced] = useState<BlogPost[] | undefined>(undefined);
   const [isLoadingFeed, setIsLoadingFeed] = useState<boolean>(
-    () => blog?.visible !== false && blog?.published !== false && effectiveMode !== "manual"
+    () =>
+      blog?.visible !== false &&
+      blog?.published !== false &&
+      effectiveMode !== "manual" &&
+      !hasInitialCachedPosts
   );
   const [syncFetchStatus, setSyncFetchStatus] = useState<BlogSyncStatus>(resolvedMeta.status);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
@@ -51,11 +65,13 @@ export function BlogPreviewSection() {
     }
 
     let active = true;
-    setIsLoadingFeed(true);
+    if (!hasInitialCachedPosts) {
+      setIsLoadingFeed(true);
+    }
 
     async function loadLatestPosts() {
       try {
-        const res = await fetch("/api/blog-feed?rawSync=1", { cache: "no-store" });
+        const res = await fetch("/api/blog-feed", { cache: "no-store" });
         const data = await res.json();
         if (!active) return;
 

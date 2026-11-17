@@ -284,7 +284,7 @@ export type ExperienceItem = {
   org: string;
   orgGroup?: string;
   orgUrl?: string;
-  type?: "organization" | "work" | "internship" | "volunteer" | "community" | "freelance";
+  type?: "organization" | "work" | "internship" | "volunteer" | "community" | "freelance" | "committee";
   place: string;
   placeEn?: string;
   period: string;
@@ -1356,13 +1356,13 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
 
   // 3. Lanyard
   const rawLanyard = raw.lanyard ? { ...raw.lanyard } : undefined;
-  if (rawLanyard && (rawLanyard.size === 0.58 || rawLanyard.size === 0.6 || rawLanyard.size === 0.36 || rawLanyard.size === 0.44)) {
+  if (rawLanyard && (!rawLanyard.size || Number.isNaN(rawLanyard.size))) {
     rawLanyard.size = defaultLanyard.size;
   }
-  if (rawLanyard && (rawLanyard.strapLength === 0.85 || rawLanyard.strapLength === 0.32 || rawLanyard.strapLength === 0.18 || !rawLanyard.strapLength)) {
+  if (rawLanyard && (!rawLanyard.strapLength || Number.isNaN(rawLanyard.strapLength))) {
     rawLanyard.strapLength = defaultLanyard.strapLength;
   }
-  if (rawLanyard && (rawLanyard.cornerRadius === undefined || rawLanyard.cornerRadius === 0.3)) {
+  if (rawLanyard && (rawLanyard.cornerRadius === undefined || Number.isNaN(rawLanyard.cornerRadius))) {
     rawLanyard.cornerRadius = defaultLanyard.cornerRadius;
   }
   const isLegacyFrontDefault =
@@ -1603,7 +1603,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
       org: typeof e.org === "string" ? e.org : "Organisasi",
       orgGroup: typeof e.orgGroup === "string" ? e.orgGroup : undefined,
       orgUrl: typeof e.orgUrl === "string" ? e.orgUrl : undefined,
-      type: (["organization", "work", "internship", "volunteer", "community", "freelance"].includes(e.type || "")
+      type: (["organization", "work", "internship", "volunteer", "community", "freelance", "committee"].includes(e.type || "")
         ? e.type
         : "organization") as ExperienceItem["type"],
       place: typeof e.place === "string" ? e.place : "Lokasi",
@@ -1696,20 +1696,6 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
         typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
       )
     );
-
-  // Pastikan sertifikat default baru terverifikasi ikut tersedia jika belum ada di data tersimpan
-  const existingCertIds = new Set(normalizedCertificates.map((c) => c.id));
-  const existingCertTitles = new Set(normalizedCertificates.map((c) => c.title.toLowerCase().trim()));
-  for (const def of defaultCertificates) {
-    if (!existingCertIds.has(def.id) && !existingCertTitles.has(def.title.toLowerCase().trim())) {
-      normalizedCertificates.push(
-        normalizeCertificateVerification(
-          { ...def, sortOrder: normalizedCertificates.length + 1 },
-          typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
-        )
-      );
-    }
-  }
 
   // 11. Tech Stack & Categories
   const normalizedTechStackCategories = normalizeTechStackCategories(
@@ -1906,6 +1892,7 @@ export const normalizeConfig = (input: unknown): SiteConfig => {
           visible: n.visible !== false,
           sortOrder: typeof n.sortOrder === "number" ? n.sortOrder : idx + 1,
           isExternal: Boolean(n.isExternal || /^https?:\/\//i.test(n.href)),
+          ...(typeof n.openInNewTab === "boolean" ? { openInNewTab: n.openInNewTab } : {}),
         }))
     : defaultNavigation;
 

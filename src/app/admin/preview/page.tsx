@@ -12,12 +12,17 @@ export default async function AdminPreviewPage() {
     redirect("/admin/login");
   }
 
-  const { config: draftConfig, updatedAt } = await fetchDraftOrPublishedContent();
+  const {
+    config: draftConfig,
+    isDraft,
+    publishedUpdatedAt,
+  } = await fetchDraftOrPublishedContent();
 
   return (
     <PreviewClient
       initialConfig={draftConfig}
-      initialUpdatedAt={updatedAt}
+      publishedUpdatedAt={publishedUpdatedAt}
+      isDraft={isDraft}
       userEmail={auth.userEmail || "admin"}
     />
   );

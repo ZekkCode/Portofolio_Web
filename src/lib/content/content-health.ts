@@ -356,6 +356,8 @@ export function auditCertificateVerificationIssues(
     if (!cert || typeof cert !== "object") return;
     const itemId = typeof cert.id === "string" && cert.id ? cert.id : `cert-${idx}`;
     const label = cert.title?.trim() || `#${idx + 1}`;
+    const isPublicCert = cert.published !== false && cert.visible !== false;
+    const missingSeverity = isPublicCert ? "error" : "warning";
 
     if (!cert.title || !cert.title.trim()) {
       issues.push({
@@ -363,7 +365,7 @@ export function auditCertificateVerificationIssues(
         itemId,
         field: `certificates[${idx}].title`,
         section: "Sertifikat",
-        severity: "error",
+        severity: missingSeverity,
         message: `Sertifikat #${idx + 1} tidak memiliki nama sertifikat.`,
       });
     }
@@ -400,7 +402,7 @@ export function auditCertificateVerificationIssues(
         itemId,
         field: `certificates[${idx}].verificationStatus`,
         section: "Sertifikat",
-        severity: "error",
+        severity: missingSeverity,
         message: `Sertifikat '${label}' tidak dapat ditandai terverifikasi tanpa minimal satu bukti (URL, PDF, atau gambar).`,
       });
       return;
@@ -412,7 +414,7 @@ export function auditCertificateVerificationIssues(
         itemId,
         field: `certificates[${idx}].verificationStatus`,
         section: "Sertifikat",
-        severity: "error",
+        severity: missingSeverity,
         message: `Bukti sertifikat '${label}' telah diubah sejak pemeriksaan terakhir dan harus diperiksa ulang sebelum berstatus terverifikasi.`,
       });
       return;
@@ -676,13 +678,15 @@ export function auditContentHealth(
   const currentYear = new Date().getFullYear();
   education.forEach((edu, idx) => {
     const itemId = typeof edu.id === "string" && edu.id ? edu.id : `education-${idx}`;
+    const isPublicEdu = edu.published !== false && edu.visible !== false;
+    const eduSeverity = isPublicEdu ? "error" : "warning";
     if (!edu.institution || !edu.institution.trim()) {
       rawIssues.push({
         id: `edu-institution-missing-${idx}`,
         itemId,
         field: `education[${idx}].institution`,
         section: "Pendidikan",
-        severity: "error",
+        severity: eduSeverity,
         message: `Riwayat pendidikan #${idx + 1} tidak memiliki nama institusi.`,
       });
     }
@@ -693,7 +697,7 @@ export function auditContentHealth(
         itemId,
         field: `education[${idx}].startYear`,
         section: "Pendidikan",
-        severity: "error",
+        severity: eduSeverity,
         message: `Tahun mulai (${edu.startYear}) lebih besar dari tahun lulus (${edu.endYear}) pada '${edu.institution}'.`,
       });
     }
@@ -715,13 +719,15 @@ export function auditContentHealth(
   const experience = config.experience || [];
   experience.forEach((exp, idx) => {
     const itemId = typeof exp.id === "string" && exp.id ? exp.id : `experience-${idx}`;
+    const isPublicExp = exp.published !== false && exp.visible !== false;
+    const expSeverity = isPublicExp ? "error" : "warning";
     if (!exp.role || !exp.role.trim()) {
       rawIssues.push({
         id: `exp-role-missing-${idx}`,
         itemId,
         field: `experience[${idx}].role`,
         section: "Karier",
-        severity: "error",
+        severity: expSeverity,
         message: `Pengalaman karier #${idx + 1} tidak memiliki jabatan/peran.`,
       });
     }
@@ -731,12 +737,11 @@ export function auditContentHealth(
         itemId,
         field: `experience[${idx}].org`,
         section: "Karier",
-        severity: "error",
+        severity: expSeverity,
         message: `Pengalaman karier #${idx + 1} tidak memiliki nama instansi/organisasi.`,
       });
     }
 
-    const isPublicExp = exp.published !== false && exp.visible !== false;
     const resolved = resolveExperienceRecord(exp, auditNow);
     const label = exp.org?.trim() || exp.role?.trim() || `#${idx + 1}`;
 
@@ -853,13 +858,15 @@ export function auditContentHealth(
   const faq = config.faq || [];
   faq.forEach((item, idx) => {
     const itemId = typeof item.id === "string" && item.id ? item.id : `faq-${idx}`;
+    const isPublicFaq = item.published !== false && item.visible !== false;
+    const faqSeverity = isPublicFaq ? "error" : "warning";
     if (!item.questionId || !item.questionId.trim()) {
       rawIssues.push({
         id: `faq-q-missing-${idx}`,
         itemId,
         field: `faq[${idx}].questionId`,
         section: "FAQ",
-        severity: "error",
+        severity: faqSeverity,
         message: `Pertanyaan FAQ #${idx + 1} kosong.`,
       });
     }
@@ -869,7 +876,7 @@ export function auditContentHealth(
         itemId,
         field: `faq[${idx}].answerId`,
         section: "FAQ",
-        severity: "error",
+        severity: faqSeverity,
         message: `Jawaban FAQ #${idx + 1} kosong.`,
       });
     }
@@ -905,6 +912,7 @@ export function auditContentHealth(
     }
     (config.blog?.manualPosts || []).forEach((post, idx) => {
       const itemId = typeof post.id === "string" && post.id ? post.id : `blog-${idx}`;
+      const isPublicPost = post.published !== false && post.visible !== false;
       const missingTitle = !post.title?.trim();
       const unsafeUrl = !isSafeUrl(post.url);
       if (missingTitle || unsafeUrl) {
@@ -917,7 +925,7 @@ export function auditContentHealth(
           itemId,
           field: `blog.manualPosts[${idx}]`,
           section: "Blog",
-          severity: "error",
+          severity: unsafeUrl || isPublicPost ? "error" : "warning",
           message: `Artikel manual #${idx + 1} belum memiliki judul atau URL tidak valid.`,
         });
       }
@@ -1223,26 +1231,14 @@ export function auditIdentityImageIssues(
   }
 
   const rawCardAvatar = config.profileCard?.avatarUrl?.trim() || "";
-  if (rawCardAvatar) {
-    if (isIdentityCardAssetUrl(rawCardAvatar, config)) {
-      issues.push({
-        id: "identity-hologram-avatar-uses-card",
-        field: "profileCard.avatarUrl",
-        section: "Tampilan",
-        severity: "warning",
-        message: `Avatar Hologram Card masih berisi desain ID card ('${rawCardAvatar}'). Situs publik otomatis fallback ke potret '${sourceMap.hologramAvatar.url}'.`,
-        suggestion:
-          "Kosongkan field ini agar mengikuti Foto Profil Global, atau unggah foto potret tersendiri (rasio 4:5).",
-      });
-    } else if (isMissingPortraitAliasUrl(rawCardAvatar)) {
-      issues.push({
-        id: "identity-hologram-avatar-missing-alias",
-        field: "profileCard.avatarUrl",
-        section: "Tampilan",
-        severity: "warning",
-        message: `Avatar Hologram Card merujuk '${LEGACY_MISSING_PORTRAIT_PLACEHOLDER}' yang tidak tersedia. Situs publik fallback ke '${sourceMap.hologramAvatar.url}'.`,
-      });
-    }
+  if (rawCardAvatar && isMissingPortraitAliasUrl(rawCardAvatar)) {
+    issues.push({
+      id: "identity-hologram-avatar-missing-alias",
+      field: "profileCard.avatarUrl",
+      section: "Tampilan",
+      severity: "warning",
+      message: `Avatar Hologram Card merujuk '${LEGACY_MISSING_PORTRAIT_PLACEHOLDER}' yang tidak tersedia. Situs publik fallback ke '${sourceMap.hologramAvatar.url}'.`,
+    });
   }
 
   const rawMiniAvatar = config.profileCard?.miniAvatarUrl?.trim() || "";

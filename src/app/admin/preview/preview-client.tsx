@@ -10,11 +10,16 @@ import Home from "@/app/page";
 
 interface PreviewClientProps {
   initialConfig: SiteConfig;
-  initialUpdatedAt?: string | null;
+  publishedUpdatedAt?: string | null;
+  isDraft?: boolean;
   userEmail: string;
 }
 
-export function PreviewClient({ initialConfig, initialUpdatedAt }: PreviewClientProps) {
+export function PreviewClient({
+  initialConfig,
+  publishedUpdatedAt,
+  isDraft = false,
+}: PreviewClientProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [publishStatus, setPublishStatus] = useState<string | null>(null);
@@ -24,7 +29,7 @@ export function PreviewClient({ initialConfig, initialUpdatedAt }: PreviewClient
     setPublishStatus(null);
     try {
       const res = await publishCloudConfig(initialConfig, {
-        expectedUpdatedAt: initialUpdatedAt ?? undefined,
+        expectedUpdatedAt: publishedUpdatedAt ?? undefined,
       });
       if (res.success) {
         setPublishStatus("Draf berhasil dipublikasikan ke situs publik!");
@@ -67,7 +72,7 @@ export function PreviewClient({ initialConfig, initialUpdatedAt }: PreviewClient
             )}
 
             <Link
-              href="/admin"
+              href={isDraft ? "/admin?restoreDraft=1" : "/admin"}
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800"
             >
               <ArrowLeft className="size-3.5" />

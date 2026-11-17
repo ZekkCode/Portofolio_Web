@@ -12,6 +12,7 @@ import {
   publishConfigWithRevision,
 } from "@/lib/content/revisions";
 import {
+  fetchDraftOrPublishedContent,
   fetchPublishedContent,
   invalidatePublishedContentCache,
 } from "@/lib/content/public-content";
@@ -22,7 +23,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Akses ditolak" }, { status: 401 });
   }
 
-  const configToExport: SiteConfig = await fetchPublishedContent();
+  const { searchParams } = new URL(request.url);
+  const mode = searchParams.get("mode") === "draft" ? "draft" : "published";
+  const configToExport: SiteConfig =
+    mode === "draft"
+      ? (await fetchDraftOrPublishedContent()).config
+      : await fetchPublishedContent();
   const timestamp = new Date().toISOString();
   const filename = `zekktech-backup-${timestamp.replace(/[:.]/g, "-")}.json`;
 
@@ -125,6 +131,9 @@ export async function POST(request: Request) {
       revalidatePath("/");
       revalidatePath("/admin");
       revalidatePath("/admin/preview");
+      revalidatePath("/sitemap.xml");
+      revalidatePath("/robots.txt");
+      revalidatePath("/opengraph-image");
     } catch {
       // ignore
     }

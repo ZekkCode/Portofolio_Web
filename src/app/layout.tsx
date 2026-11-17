@@ -8,7 +8,9 @@ import { BuddyClient } from "@/components/buddy/buddy-client";
 import { GlobalClickSound } from "@/components/global-click-sound";
 import { profile } from "@/lib/profile";
 import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
-import { fetchPublishedContent } from "@/lib/content/public-content";
+import { fetchPublishedContent, fetchPublishedContentWithMeta } from "@/lib/content/public-content";
+import { toPublicSiteConfig } from "@/lib/content/public-config-sanitizer";
+import { SiteStoreBootstrapProvider } from "@/lib/site-store";
 import {
   getPublishedCertificates,
   getPublishedEducation,
@@ -239,7 +241,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const config = await fetchPublishedContent();
+  const publishedMeta = await fetchPublishedContentWithMeta();
+  const config = publishedMeta.config;
+  const publicBootstrapConfig = toPublicSiteConfig(config);
   const pub = getPublishedProfile(config, "id");
   const seo = getPublishedSeo(config, "id");
   const pubFaq = getPublishedFAQ(config, "id");
@@ -385,15 +389,17 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AdaptivePerformanceProvider>
-            <SmoothScroll>
-              <GlobalClickSound />
-              {children}
-              <BuddyClient />
-            </SmoothScroll>
-          </AdaptivePerformanceProvider>
-        </ThemeProvider>
+        <SiteStoreBootstrapProvider initialConfig={publicBootstrapConfig} updatedAt={publishedMeta.updatedAt}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <AdaptivePerformanceProvider>
+              <SmoothScroll>
+                <GlobalClickSound />
+                {children}
+                <BuddyClient />
+              </SmoothScroll>
+            </AdaptivePerformanceProvider>
+          </ThemeProvider>
+        </SiteStoreBootstrapProvider>
       </body>
     </html>
   );

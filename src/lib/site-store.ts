@@ -130,9 +130,12 @@ let hydrated = false;
 let cloudSynced = false;
 let lastSyncCheck = 0;
 let lastServerUpdatedAt: string | undefined;
+let ssrSeedConfig: SiteConfig | null = null;
+let ssrSeedUpdatedAt: string | undefined;
 const listeners = new Set<() => void>();
 
 const SiteConfigOverrideContext = createContext<SiteConfig | null>(null);
+const ServerInitialConfigContext = createContext<SiteConfig | null>(null);
 
 export function SiteConfigOverrideProvider({
   value,
@@ -142,6 +145,29 @@ export function SiteConfigOverrideProvider({
   children: React.ReactNode;
 }) {
   return React.createElement(SiteConfigOverrideContext.Provider, { value }, children);
+}
+
+/**
+ * Menyediakan snapshot awal dari Server Component (SSR) tanpa mematikan reaktivitas store di klien (/admin).
+ */
+export function SiteStoreBootstrapProvider({
+  initialConfig,
+  updatedAt,
+  children,
+}: {
+  initialConfig: SiteConfig;
+  updatedAt?: string;
+  children: React.ReactNode;
+}) {
+  if (typeof window !== "undefined" && !hydrated && ssrSeedConfig === null) {
+    ssrSeedConfig = initialConfig;
+    ssrSeedUpdatedAt = updatedAt;
+  }
+  return React.createElement(
+    ServerInitialConfigContext.Provider,
+    { value: initialConfig },
+    children
+  );
 }
 
 const emit = () => listeners.forEach((listener) => listener());
@@ -191,11 +217,10 @@ export const syncCloudConfig = async (force = false) => {
       const cleanConfig = { ...normalized, projects: sanitizedProjects };
 
       const localTimestamp = window.localStorage.getItem(STORAGE_TIMESTAMP_KEY);
-      const isCloudNewer =
-        !localTimestamp ||
-        (data.updatedAt && new Date(data.updatedAt) > new Date(localTimestamp));
+      const hasCloudChange =
+        !localTimestamp || (Boolean(data.updatedAt) && data.updatedAt !== localTimestamp);
 
-      if (force || isCloudNewer || !hydrated) {
+      if (force || hasCloudChange || !hydrated) {
         snapshot = cleanConfig;
         hydrated = true;
         try {
@@ -208,6 +233,17 @@ export const syncCloudConfig = async (force = false) => {
         }
         emit();
       }
+    } else if (data.configured && data.config === null) {
+      // Cloud dikonfigurasi tetapi dokumen current dihapus/direset -> bersihkan cache usang
+      snapshot = defaultSiteConfig;
+      hydrated = true;
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+      } catch {
+        // ignore
+      }
+      emit();
     }
   } catch {
     // offline fallback
@@ -268,6 +304,31 @@ export const saveCloudDraft = async (
   }
 };
 
+export const persistLocalDraftBackup = (draft: SiteConfig) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // ignore quota
+  }
+};
+
+export const discardCloudDraft = async (): Promise<boolean> => {
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(STORAGE_DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  try {
+    const res = await fetch("/api/config?mode=draft", { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Publikasikan konfigurasi ke server / cloud (menjadi published version).
  */
@@ -276,6 +337,7 @@ export const publishCloudConfig = async (
   options?: { expectedUpdatedAt?: string; forceOverwrite?: boolean }
 ): Promise<{
   success: boolean;
+  configured?: boolean;
   httpStatus?: number;
   provider?: string;
   version?: number;
@@ -325,6 +387,7 @@ export const publishCloudConfig = async (
     }
     return {
       success: Boolean(data.success),
+      configured: data.configured !== false,
       httpStatus: res.status,
       provider: data.provider,
       version: data.version,
@@ -350,19 +413,29 @@ export const readConfig = (): SiteConfig => {
   if (!hydrated && typeof window !== "undefined") {
     hydrated = true;
     try {
+      const isAdminRoute = window.location.pathname.startsWith("/admin");
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
+      const localTs = window.localStorage.getItem(STORAGE_TIMESTAMP_KEY);
+
+      if (!isAdminRoute && ssrSeedConfig && (!raw || (ssrSeedUpdatedAt && ssrSeedUpdatedAt !== localTs))) {
+        snapshot = ssrSeedConfig;
+        if (ssrSeedUpdatedAt) {
+          lastServerUpdatedAt = ssrSeedUpdatedAt;
+        }
+      } else if (raw) {
         const parsed = JSON.parse(raw);
         const normalized = normalizeConfig(parsed);
         const sanitizedProjects = normalized.projects.filter(
           (project) => !project.id.startsWith("seed-") && !project.id.startsWith("profile-")
         );
         snapshot = { ...normalized, projects: sanitizedProjects };
+      } else if (ssrSeedConfig) {
+        snapshot = ssrSeedConfig;
       } else {
         snapshot = defaultSiteConfig;
       }
     } catch {
-      snapshot = defaultSiteConfig;
+      snapshot = ssrSeedConfig ?? defaultSiteConfig;
     }
 
     if (!cloudSynced) {
@@ -439,6 +512,11 @@ const subscribe = (listener: () => void) => {
 
 export const useSiteConfig = () => {
   const override = useContext(SiteConfigOverrideContext);
-  const storeValue = useSyncExternalStore(subscribe, readConfig, () => defaultSiteConfig);
+  const serverInitial = useContext(ServerInitialConfigContext);
+  const storeValue = useSyncExternalStore(
+    subscribe,
+    readConfig,
+    () => serverInitial ?? defaultSiteConfig
+  );
   return override ?? storeValue;
 };

@@ -225,9 +225,30 @@ export function TabWorks({
   };
 
   const updateCategory = (id: string, updates: Partial<ProjectCategoryConfig>) => {
+    const prevCat = categories.find((c) => c.id === id);
+    const nextKey = updates.key?.trim();
+    const isRenamingKey = Boolean(
+      prevCat &&
+        nextKey &&
+        nextKey !== prevCat.key &&
+        !categories.some((c) => c.id !== id && c.key === nextKey)
+    );
+
+    const effectiveUpdates =
+      updates.key && !isRenamingKey && prevCat && updates.key !== prevCat.key
+        ? { ...updates, key: prevCat.key }
+        : updates;
+
     setDraft({
       ...config,
-      projectCategories: categories.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      projectCategories: categories.map((c) => (c.id === id ? { ...c, ...effectiveUpdates } : c)),
+      ...(isRenamingKey && prevCat && nextKey
+        ? {
+            projects: projects.map((p) =>
+              p.category === prevCat.key ? { ...p, category: nextKey } : p
+            ),
+          }
+        : {}),
     });
   };
 
@@ -423,7 +444,7 @@ export function TabWorks({
         filterOptions={[
           { value: "all", label: "Semua Kategori" },
           ...categories
-            .filter((c) => c.key !== "all")
+            .filter((c) => c.key !== "all" && c.key !== "both")
             .map((c) => ({ value: c.key, label: c.labelId })),
           { value: "both", label: "Both (IT & Design)" },
         ]}
@@ -490,7 +511,9 @@ export function TabWorks({
               <div
                 key={project.id}
                 data-admin-item-id={itemKey}
-                {...getDragProps(globalIdx)}
+                {...(search.trim() || filterCategory !== "all" || statusFilter !== "all"
+                  ? {}
+                  : getDragProps(globalIdx))}
                 className={`rounded-2xl border bg-white p-5 dark:bg-[#0c0e17] ${
                   cardErrors.length > 0
                     ? "border-rose-500/60 dark:border-rose-500/50"
@@ -554,9 +577,19 @@ export function TabWorks({
                       onToggleVisible={() =>
                         updateProject(project.id, { visible: project.visible === false })
                       }
-                      dragHandleProps={getHandleProps(globalIdx)}
-                      disableMoveUp={globalIdx === 0}
-                      disableMoveDown={globalIdx === projects.length - 1}
+                      dragHandleProps={
+                        search.trim() || filterCategory !== "all" || statusFilter !== "all"
+                          ? undefined
+                          : getHandleProps(globalIdx)
+                      }
+                      disableMoveUp={
+                        globalIdx === 0 ||
+                        Boolean(search.trim() || filterCategory !== "all" || statusFilter !== "all")
+                      }
+                      disableMoveDown={
+                        globalIdx === projects.length - 1 ||
+                        Boolean(search.trim() || filterCategory !== "all" || statusFilter !== "all")
+                      }
                       onMoveUp={() =>
                         setProjectsReordered(
                           reorderItemsWithSortOrder(projects, globalIdx, globalIdx - 1)
@@ -664,7 +697,7 @@ export function TabWorks({
                     >
                       <option value="both">Both (IT & Design)</option>
                       {categories
-                        .filter((c) => c.key !== "all")
+                        .filter((c) => c.key !== "all" && c.key !== "both")
                         .map((c) => (
                           <option key={c.key} value={c.key}>
                             {c.labelId}

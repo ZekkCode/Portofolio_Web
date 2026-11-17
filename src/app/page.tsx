@@ -720,7 +720,7 @@ function Footer() {
                 className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs font-medium text-brand hover:underline dark:text-blue-400"
               >
                 <Mail className="size-3.5" />
-                <span>{footer.email}</span>
+                <span>{footer.emailLabel || footer.email}</span>
               </a>
             )}
           </div>

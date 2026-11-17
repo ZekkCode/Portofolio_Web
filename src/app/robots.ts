@@ -45,6 +45,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       },
     ],
     sitemap: allowRoot ? [`${baseUrl}/sitemap.xml`] : [],
-    host: baseUrl,
+    ...(allowRoot ? { host: baseUrl } : {}),
   };
 }

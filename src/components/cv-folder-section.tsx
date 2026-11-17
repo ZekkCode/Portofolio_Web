@@ -361,6 +361,23 @@ export function CvFolderSection() {
                 : `Semua peran di atas membuka satu berkas CV gabungan (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`}
             </p>
           )}
+          {cvSettings.allowDownload !== false && cvDocs[0]?.pdfUrl && (
+            <div className="mt-2.5 flex justify-center">
+              <a
+                href={cvDocs[0].pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline dark:text-blue-400"
+              >
+                <FileText className="size-3.5" />
+                <span>
+                  {cvSettings.downloadLabel ||
+                    (locale === "en" ? "Open ATS CV PDF" : "Buka Berkas PDF CV ATS")}
+                </span>
+                <ArrowUpRight className="size-3.5" />
+              </a>
+            </div>
+          )}
         </div>
       )}
 

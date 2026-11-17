@@ -11,6 +11,7 @@ import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
 import { fetchPublishedContent, fetchPublishedContentWithMeta } from "@/lib/content/public-content";
 import { toPublicSiteConfig } from "@/lib/content/public-config-sanitizer";
 import { SiteStoreBootstrapProvider } from "@/lib/site-store";
+import { I18nLocaleProvider } from "@/components/i18n-locale-provider";
 import {
   getPublishedCertificates,
   getPublishedEducation,
@@ -19,6 +20,7 @@ import {
   getPublishedSeo,
   getPublishedServices,
   getPublishedTechStack,
+  isSectionVisible,
 } from "@/lib/content/selectors";
 import "./globals.css";
 
@@ -99,24 +101,44 @@ function resolveYandexVerificationToken(configured?: string): string | undefined
   return token || undefined;
 }
 
+function inferImageMimeType(url: string): string {
+  const lower = url.split("?")[0].toLowerCase();
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".svg")) return "image/svg+xml";
+  return "image/png";
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const config = await fetchPublishedContent();
-  const pub = getPublishedProfile(config, "id");
-  const seo = getPublishedSeo(config, "id");
-  const name = pub.name;
-  const brand = pub.brand;
   let rawHost = "";
+  let reqLocale: "id" | "en" = "id";
+  let explicitLang = "";
+  let pathname = "/";
   try {
     const headerList = await headers();
     rawHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
+    const hdrLang = headerList.get("x-zekk-lang")?.trim().toLowerCase();
+    if (hdrLang === "en") reqLocale = "en";
+    explicitLang = headerList.get("x-zekk-explicit-lang")?.trim().toLowerCase() || "";
+    pathname = headerList.get("x-zekk-pathname") || "/";
   } catch {}
+
+  const pub = getPublishedProfile(config, reqLocale);
+  const seo = getPublishedSeo(config, reqLocale);
+  const name = pub.name;
+  const brand = pub.brand;
   const hostCtx = resolveSafeHostContext(rawHost, seo.canonicalUrl || pub.site);
   const siteUrl = hostCtx.siteUrl;
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
   const metaDesc = seo.metaDesc || pub.heroDesc;
   const ogImage = seo.ogImage || "/opengraph-image";
   const ogAlt = seo.ogImageAlt || `${name} - ${brand}`;
-  const allowIndex = seo.robotsIndex !== false && hostCtx.isIndexableHost;
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const allowIndex = seo.robotsIndex !== false && hostCtx.isIndexableHost && !isAdminRoute;
+  const canonicalPath =
+    explicitLang === "en" ? "/?lang=en" : explicitLang === "id" ? "/?lang=id" : "/";
+  const ogUrl = canonicalPath === "/" ? siteUrl : `${siteUrl}${canonicalPath}`;
 
   return {
     metadataBase: new URL(siteUrl),
@@ -124,18 +146,18 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "32x32" },
-        { url: "/Profil-Zakaria Mujur Prasetyo.png", type: "image/png", sizes: "192x192" },
+        { url: "/icons/site-icon-192.png", type: "image/png", sizes: "192x192" },
       ],
       apple: [
-        { url: "/Profil-Zakaria Mujur Prasetyo.png", sizes: "180x180", type: "image/png" },
+        { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
       ],
       shortcut: ["/favicon.ico"],
     },
     alternates: {
-      canonical: "/",
+      canonical: canonicalPath,
       languages: {
-        "id-ID": "/",
-        "en-US": "/",
+        "id-ID": "/?lang=id",
+        "en-US": "/?lang=en",
         "x-default": "/",
       },
     },
@@ -193,8 +215,9 @@ export async function generateMetadata(): Promise<Metadata> {
       lastName: name.split(" ").slice(1).join(" ") || "Mujur Prasetyo",
       username: "zekksparow",
       gender: "male",
-      locale: "id_ID",
-      url: siteUrl,
+      locale: reqLocale === "en" ? "en_US" : "id_ID",
+      alternateLocale: reqLocale === "en" ? ["id_ID"] : ["en_US"],
+      url: ogUrl,
       siteName: brand,
       title: metaTitle,
       description: metaDesc,
@@ -204,7 +227,7 @@ export async function generateMetadata(): Promise<Metadata> {
           width: 1200,
           height: 630,
           alt: ogAlt,
-          type: "image/png",
+          type: inferImageMimeType(ogImage),
         },
       ],
     },
@@ -244,21 +267,31 @@ export default async function RootLayout({
   const publishedMeta = await fetchPublishedContentWithMeta();
   const config = publishedMeta.config;
   const publicBootstrapConfig = toPublicSiteConfig(config);
-  const pub = getPublishedProfile(config, "id");
-  const seo = getPublishedSeo(config, "id");
-  const pubFaq = getPublishedFAQ(config, "id");
-  const pubEducation = getPublishedEducation(config, "id");
-  const pubCertificates = getPublishedCertificates(config, undefined, "id");
-  const pubServices = getPublishedServices(config, "id");
-  const pubStack = getPublishedTechStack(config, undefined, { locale: "id" });
 
-  const name = pub.name;
-  const brand = pub.brand;
   let rawLayoutHost = "";
+  let locale: "id" | "en" = "id";
+  let pathname = "/";
   try {
     const headerList = await headers();
     rawLayoutHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
+    const hdrLang = headerList.get("x-zekk-lang")?.trim().toLowerCase();
+    if (hdrLang === "en") locale = "en";
+    pathname = headerList.get("x-zekk-pathname") || "/";
   } catch {}
+
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const inLanguageTag = locale === "en" ? "en-US" : "id-ID";
+
+  const pub = getPublishedProfile(config, locale);
+  const seo = getPublishedSeo(config, locale);
+  const pubFaq = isSectionVisible(config, "faq") ? getPublishedFAQ(config, locale) : [];
+  const pubEducation = getPublishedEducation(config, locale);
+  const pubCertificates = getPublishedCertificates(config, undefined, locale);
+  const pubServices = getPublishedServices(config, locale);
+  const pubStack = getPublishedTechStack(config, undefined, { locale });
+
+  const name = pub.name;
+  const brand = pub.brand;
   const siteUrl = resolveSafeHostContext(rawLayoutHost, seo.canonicalUrl || pub.site).siteUrl;
   const email = pub.email;
   const phone = pub.phone;
@@ -315,8 +348,10 @@ export default async function RootLayout({
         "@id": `${siteUrl}/#website`,
         url: siteUrl,
         name: brand,
-        description: seo.metaDesc || `Portfolio resmi ${name} (${brand})`,
-        inLanguage: "id-ID",
+        description:
+          seo.metaDesc ||
+          (locale === "en" ? `Official portfolio of ${name} (${brand})` : `Portfolio resmi ${name} (${brand})`),
+        inLanguage: inLanguageTag,
         publisher: {
           "@id": `${siteUrl}/#person`,
         },
@@ -347,9 +382,9 @@ export default async function RootLayout({
       {
         "@type": "ProfilePage",
         "@id": `${siteUrl}/#profilepage`,
-        url: siteUrl,
+        url: locale === "en" ? `${siteUrl}/?lang=en` : siteUrl,
         name: `${name} | Portfolio`,
-        inLanguage: "id-ID",
+        inLanguage: inLanguageTag,
         ...(config.updatedAt ? { dateModified: config.updatedAt } : {}),
         isPartOf: {
           "@id": `${siteUrl}/#website`,
@@ -367,6 +402,7 @@ export default async function RootLayout({
             {
               "@type": "FAQPage",
               "@id": `${siteUrl}/#faq`,
+              inLanguage: inLanguageTag,
               mainEntity: pubFaq.map((item) => ({
                 "@type": "Question",
                 name: item.question,
@@ -382,23 +418,27 @@ export default async function RootLayout({
   };
 
   return (
-    <html lang="id" suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
+    <html lang={locale} suppressHydrationWarning className={`${fontBody.variable} ${fontDisplay.variable} ${fontPixel.variable}`}>
       <body className="antialiased">
-        <script
-          id="structured-data"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-        />
+        {!isAdminRoute && (
+          <script
+            id="structured-data"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+          />
+        )}
         <SiteStoreBootstrapProvider initialConfig={publicBootstrapConfig} updatedAt={publishedMeta.updatedAt}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <AdaptivePerformanceProvider>
-              <SmoothScroll>
-                <GlobalClickSound />
-                {children}
-                <BuddyClient />
-              </SmoothScroll>
-            </AdaptivePerformanceProvider>
-          </ThemeProvider>
+          <I18nLocaleProvider initialLocale={locale}>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              <AdaptivePerformanceProvider>
+                <SmoothScroll>
+                  <GlobalClickSound />
+                  {children}
+                  <BuddyClient />
+                </SmoothScroll>
+              </AdaptivePerformanceProvider>
+            </ThemeProvider>
+          </I18nLocaleProvider>
         </SiteStoreBootstrapProvider>
       </body>
     </html>

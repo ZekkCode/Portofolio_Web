@@ -425,6 +425,12 @@ export async function POST(request: Request) {
       revalidatePath("/admin");
       revalidatePath("/admin/preview");
       revalidatePath("/sitemap.xml");
+      revalidatePath("/sitemap-main.xml");
+      revalidatePath("/sitemap-services.xml");
+      revalidatePath("/sitemap-projects.xml");
+      revalidatePath("/sitemap-certificates.xml");
+      revalidatePath("/sitemap-career.xml");
+      revalidatePath("/sitemap-images.xml");
       revalidatePath("/robots.txt");
       revalidatePath("/opengraph-image");
     } catch {

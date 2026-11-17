@@ -1181,7 +1181,7 @@ export const defaultSections: Record<string, SectionConfigItem> = {
   cv: { visible: true, sortOrder: 5, titleId: "Folder Berkas Karir", titleEn: "Career Resume Folder", descId: "Kumpulan CV ATS untuk empat jalur keahlian utama.", descEn: "ATS-tailored resumes across core engineering and design disciplines." },
   stack: { visible: true, sortOrder: 6, titleId: "Tech Stack & Alat", titleEn: "Tech Stack & Tools", descId: "Alat desain, bahasa pemrograman, framework, dan utilitas produksi.", descEn: "Design tools, programming languages, frameworks, and production utilities." },
   projects: { visible: true, sortOrder: 7, titleId: "Proyek Terpilih", titleEn: "Selected Projects", descId: "Eksplorasi produk web, antarmuka pengguna, dan rekayasa frontend.", descEn: "Web products, UI architecture, and frontend engineering explorations." },
-  blog: { visible: true, sortOrder: 8, titleId: "Latest from ZekkTech Blog", titleEn: "Latest from ZekkTech Blog", descId: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.", descEn: "Notes, thoughts, and technical articles on design and web engineering.", ctaLabelId: "Semua Artikel di Blog", ctaLabelEn: "All Articles on Blog" },
+  blog: { visible: true, sortOrder: 8, titleId: "Artikel Terbaru ZekkTech Blog", titleEn: "Latest from ZekkTech Blog", descId: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.", descEn: "Notes, thoughts, and technical articles on design and web engineering.", ctaLabelId: "Semua Artikel di Blog", ctaLabelEn: "All Articles on Blog" },
   certificates: { visible: true, sortOrder: 9, titleId: "Sertifikasi & Kredensial", titleEn: "Certifications & Credentials", descId: "Daftar sertifikasi kompetensi profesional dan pelatihan yang telah diselesaikan.", descEn: "Completed professional competency certifications and training programs." },
   faq: { visible: true, sortOrder: 10, titleId: "Pertanyaan Umum", titleEn: "FAQ", descId: "Jawaban singkat mengenai alur kerja, waktu pengerjaan, dan kolaborasi.", descEn: "Quick answers regarding scope, timelines, and collaboration." },
   contact: { visible: true, sortOrder: 11, titleId: "Mulai Diskusi", titleEn: "Start a Conversation", descId: "Terbuka untuk kolaborasi proyek desain produk dan web engineering.", descEn: "Open for product design and frontend engineering collaborations." },
@@ -1194,7 +1194,7 @@ export const defaultBlogConfig: BlogConfig = {
   displayCount: 4,
   visible: true,
   published: true,
-  titleId: "Latest from ZekkTech Blog",
+  titleId: "Artikel Terbaru ZekkTech Blog",
   titleEn: "Latest from ZekkTech Blog",
   descId: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.",
   descEn: "Notes, thoughts, and technical articles on design and web engineering.",
@@ -1209,7 +1209,7 @@ export const defaultBlogConfig: BlogConfig = {
 export const defaultSiteConfig: SiteConfig = {
   version: 1,
   schemaVersion: 2,
-  headerLogoUrl: "/Profil-Zakaria Mujur Prasetyo.png",
+  headerLogoUrl: "/profile.webp",
   generalProfile: defaultGeneralProfile,
   stats: defaultStats,
   lanyard: defaultLanyard,
@@ -1276,7 +1276,11 @@ export function slugifyProjectTitle(input: string, fallback = "proyek"): string 
 
 export const normalizeConfig = (input: unknown): SiteConfig => {
   const raw = (input ?? {}) as Partial<SiteConfig>;
-  const headerLogoUrl = typeof raw.headerLogoUrl === "string" ? raw.headerLogoUrl : "";
+  const rawHeaderLogo = typeof raw.headerLogoUrl === "string" ? raw.headerLogoUrl.trim() : "";
+  const headerLogoUrl =
+    !rawHeaderLogo || rawHeaderLogo === "/Profil-Zakaria Mujur Prasetyo.png"
+      ? "/profile.webp"
+      : rawHeaderLogo;
 
   // 1. General Profile
   const rawProfile = raw.generalProfile;

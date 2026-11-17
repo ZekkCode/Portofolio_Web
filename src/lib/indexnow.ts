@@ -1,3 +1,5 @@
+import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
+
 /**
  * Utilitas Integrasi IndexNow Protocol
  * Mendukung notifikasi perubahan URL instan ke mesin pencari yang kompatibel (Bing, Yandex, dll.)
@@ -90,8 +92,9 @@ export async function triggerIndexNowIfConfigured(
   }
 
   try {
-    const host = (canonicalUrl || "https://zakariamp.id").replace(/^https?:\/\//i, "").split("/")[0];
-    const fullUrls = urls.map((path) => (path.startsWith("http") ? path : `https://${host}${path.startsWith("/") ? path : `/${path}`}`));
+    const safeOrigin = resolveSafeHostContext("", canonicalUrl || "https://www.zakariamp.id").siteUrl;
+    const host = safeOrigin.replace(/^https?:\/\//i, "").split("/")[0];
+    const fullUrls = urls.map((path) => (path.startsWith("http") ? path : `${safeOrigin}${path.startsWith("/") ? path : `/${path}`}`));
 
     // Jalankan pengiriman
     const result = await submitIndexNow({

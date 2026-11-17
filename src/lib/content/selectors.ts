@@ -34,6 +34,7 @@ import {
   defaultProjectCategories,
   defaultSectionOrder,
   defaultSections,
+  defaultSiteConfig,
   slugifyProjectTitle,
   type ContactConfig,
   type CvDocConfig,
@@ -733,16 +734,22 @@ export function getPublishedSeo(config?: Partial<SiteConfig>, locale: Locale = "
   const isEn = locale === "en";
   const raw = config?.seo || {};
   const gp = config?.generalProfile;
-  const fallbackTitle = `${gp?.name || profile.name} — ${gp?.brand || profile.brand}`;
+  const fallbackTitle = isEn
+    ? `${gp?.name || profile.name} | ${gp?.rolesEn || defaultSiteConfig.seo?.personJobTitle || "UI/UX & Frontend Dev"}`
+    : `${gp?.name || profile.name} — ${gp?.brand || profile.brand}`;
   const fallbackDesc = isEn
-    ? gp?.heroDescEn || gp?.heroDesc || profile.bio[0]
-    : gp?.heroDesc || profile.bio[0];
+    ? gp?.heroDescEn || defaultSiteConfig.seo?.metaDescEn || gp?.heroDesc || profile.bio[0]
+    : gp?.heroDesc || defaultSiteConfig.seo?.metaDesc || profile.bio[0];
 
   return {
-    metaTitle: (isEn && raw.metaTitleEn ? raw.metaTitleEn : raw.metaTitle) || fallbackTitle,
-    metaTitleEn: raw.metaTitleEn,
-    metaDesc: (isEn && raw.metaDescEn ? raw.metaDescEn : raw.metaDesc) || fallbackDesc,
-    metaDescEn: raw.metaDescEn,
+    metaTitle: isEn
+      ? raw.metaTitleEn || defaultSiteConfig.seo?.metaTitleEn || fallbackTitle
+      : raw.metaTitle || defaultSiteConfig.seo?.metaTitle || fallbackTitle,
+    metaTitleEn: raw.metaTitleEn || defaultSiteConfig.seo?.metaTitleEn,
+    metaDesc: isEn
+      ? raw.metaDescEn || defaultSiteConfig.seo?.metaDescEn || fallbackDesc
+      : raw.metaDesc || defaultSiteConfig.seo?.metaDesc || fallbackDesc,
+    metaDescEn: raw.metaDescEn || defaultSiteConfig.seo?.metaDescEn,
     keywords: raw.keywords && raw.keywords.length > 0 ? raw.keywords : undefined,
     ogImage: raw.ogImage,
     ogImageAlt: raw.ogImageAlt || `${gp?.name || profile.name} Portfolio`,

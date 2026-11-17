@@ -45,24 +45,26 @@ export function FaqSection() {
 
             return (
               <div key={item.id || idx}>
-                <button
-                  id={`faq-question-${item.id}`}
-                  type="button"
-                  onClick={() => setOpenId(isOpen ? null : item.id)}
-                  aria-expanded={isOpen}
-                  aria-controls={`faq-answer-${item.id}`}
-                  className="flex w-full items-center justify-between gap-3.5 px-4 py-3.5 sm:px-5 sm:py-4 text-left transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <span className="text-xs sm:text-[13.5px] font-semibold text-ink leading-snug sm:leading-relaxed">
-                    {item.question}
-                  </span>
-                  <ChevronDown
-                    className={`size-4 shrink-0 text-muted transition-transform duration-300 ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
+                <h3 className="m-0">
+                  <button
+                    id={`faq-question-${item.id}`}
+                    type="button"
+                    onClick={() => setOpenId(isOpen ? null : item.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${item.id}`}
+                    className="flex w-full items-center justify-between gap-3.5 px-4 py-3.5 sm:px-5 sm:py-4 text-left transition-colors hover:bg-slate-50/50 dark:hover:bg-[#161a2b]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    <span className="text-xs sm:text-[13.5px] font-semibold text-ink leading-snug sm:leading-relaxed">
+                      {item.question}
+                    </span>
+                    <ChevronDown
+                      className={`size-4 shrink-0 text-muted transition-transform duration-300 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </h3>
                 <div
                   id={`faq-answer-${item.id}`}
                   role="region"

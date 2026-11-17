@@ -46,19 +46,7 @@ import { FaqSection } from "@/components/faq-section";
 import { SocialIcon, getSocialHoverClasses } from "@/components/social-icon";
 import { AnimatedHeroTitle } from "@/components/animated-hero-title";
 import { ContactForm } from "@/components/contact-form";
-
-// Dynamically code-split heavy 3D/physics modules
-const DynamicCvFolderSection = dynamic(
-  () => import("@/components/cv-folder-section").then((m) => m.CvFolderSection),
-  {
-    ssr: false,
-    loading: () => (
-      <section id="cv" className="relative mx-auto w-full max-w-5xl scroll-mt-24 px-5 py-20 sm:py-28 min-h-[520px]">
-        <div id="resume" className="absolute top-0 -mt-24" aria-hidden="true" />
-      </section>
-    ),
-  }
-);
+import { CvFolderSection } from "@/components/cv-folder-section";
 
 const DynamicProfileCardStage = dynamic(
   () => import("@/components/profile-card-stage").then((m) => m.ProfileCardStage),
@@ -76,7 +64,10 @@ function Header() {
   const config = useSiteConfig();
   const pubProfile = getPublishedProfile(config, locale);
   const brandName = pubProfile.brand && pubProfile.brand !== "ZekkTech" ? pubProfile.brand : "ZakariaMP";
-  const logoUrl = config.headerLogoUrl || "/Profil-Zakaria Mujur Prasetyo.png";
+  const logoUrl =
+    !config.headerLogoUrl || config.headerLogoUrl === "/Profil-Zakaria Mujur Prasetyo.png"
+      ? "/profile.webp"
+      : config.headerLogoUrl;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 pt-[env(safe-area-inset-top,0px)] dark:border-line dark:bg-[#08090e]/95">
@@ -89,6 +80,9 @@ function Header() {
           <img
             src={logoUrl}
             alt={brandName}
+            width={32}
+            height={32}
+            decoding="async"
             className="size-8 rounded-full object-cover border border-brand/35 shadow-xs"
           />
           <span className="font-display text-base font-bold tracking-tight text-ink">
@@ -876,7 +870,7 @@ export default function Home() {
           : <div key={key} id="services" className="sr-only" aria-hidden="true" />;
       case "cv":
         return isSectionVisible(siteConfig, "cv")
-          ? <DynamicCvFolderSection key={key} />
+          ? <CvFolderSection key={key} />
           : <div key={key} id="cv" className="sr-only" aria-hidden="true" />;
       case "stack":
         return isSectionVisible(siteConfig, "stack")

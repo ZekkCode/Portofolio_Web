@@ -142,7 +142,7 @@ export const translations = {
       emptyDesc: "Dokumentasi dan studi kasus proyek sedang dikurasi dan diperbarui secara berkala. Kunjungi repositori GitHub untuk melihat kode sumber langsung.",
     },
     blog: {
-      title: "Latest from ZekkTech Blog",
+      title: "Artikel Terbaru ZekkTech Blog",
       desc: "Catatan, pembahasan, dan artikel seputar teknologi serta dunia digital.",
       allPostsBtn: "Lihat Semua Artikel",
       readBtn: "Baca",

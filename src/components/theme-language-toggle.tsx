@@ -73,7 +73,6 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
 
 export function LanguageToggle({ className = "" }: { className?: string }) {
   const { i18n } = useTranslation();
-  const mounted = useMounted();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -81,23 +80,38 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       const urlLang = searchParams.get("lang")?.toLowerCase();
       if (urlLang === "en" || urlLang === "id") {
         if (!i18n.language?.startsWith(urlLang)) {
-          void i18n.changeLanguage(urlLang);
+          setLanguage(urlLang, i18n);
+        } else {
+          document.documentElement.lang = urlLang;
         }
         return;
       }
     }
     const saved = getSavedLanguage();
     if (saved && !i18n.language?.startsWith(saved)) {
-      void i18n.changeLanguage(saved);
+      setLanguage(saved, i18n);
     }
   }, [i18n]);
 
-  const currentLang = mounted ? (i18n.language?.startsWith("en") ? "en" : "id") : "id";
+  const currentLang: "id" | "en" = i18n.language?.startsWith("en") ? "en" : "id";
 
   const toggle = () => {
     playSwitchSound();
     const next = currentLang === "id" ? "en" : "id";
-    setLanguage(next);
+    setLanguage(next, i18n);
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        if (next === "en") {
+          url.searchParams.set("lang", "en");
+        } else if (url.searchParams.has("lang")) {
+          url.searchParams.delete("lang");
+        }
+        window.history.replaceState(window.history.state, "", url.toString());
+      } catch {
+        // ignore history API failures
+      }
+    }
   };
 
   return (

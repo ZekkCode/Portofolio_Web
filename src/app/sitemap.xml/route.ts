@@ -8,14 +8,13 @@ export async function GET(request: Request) {
   const config = await fetchPublishedContent();
   const baseUrl = resolveSitemapBaseUrl(request, config);
   const lastMod = getSafeLastMod(config);
-  const xml = buildSitemapIndexXml(baseUrl, lastMod);
+  const xml = buildSitemapIndexXml(baseUrl, lastMod, config);
 
   return new NextResponse(xml, {
     status: 200,
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
-      "X-Robots-Tag": "noindex, follow",
     },
   });
 }

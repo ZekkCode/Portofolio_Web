@@ -174,13 +174,15 @@ function ProjectTiltedCard({
                 className="size-7 shrink-0 rounded-lg border border-line/60 bg-white object-contain p-0.5 dark:border-line/40 dark:bg-slate-900"
               />
             )}
-            <button
-              type="button"
-              onClick={() => onPreview(project)}
-              className="text-left font-display text-lg font-bold tracking-tight text-ink hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-            >
-              {project.title}
-            </button>
+            <h3 className="m-0">
+              <button
+                type="button"
+                onClick={() => onPreview(project)}
+                className="text-left font-display text-lg font-bold tracking-tight text-ink hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+              >
+                {project.title}
+              </button>
+            </h3>
           </div>
           {summaryText && (
             <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body line-clamp-3">

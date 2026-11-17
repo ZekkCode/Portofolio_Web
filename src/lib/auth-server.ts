@@ -5,6 +5,26 @@ import { createClient as createServerSupabaseClient } from "@/lib/supabase/serve
 export const ADMIN_COOKIE_NAME = "zekk_admin_session";
 export const SESSION_DURATION_SECONDS = 8 * 60 * 60; // 8 jam
 
+const SESSION_KEY_CONTEXT = "zekk:admin-session-signing:v1";
+const MAX_RATE_LIMIT_ENTRIES = 5000;
+
+/**
+ * Perbandingan string waktu-konstan tanpa membocorkan panjang rahasia (zero length side-channel).
+ */
+export function timingSafeEqualStrings(a: string, b: string): boolean {
+  const hashA = crypto.createHash("sha256").update(a, "utf8").digest();
+  const hashB = crypto.createHash("sha256").update(b, "utf8").digest();
+  const hashesEqual = crypto.timingSafeEqual(hashA, hashB);
+  return hashesEqual && a.length === b.length;
+}
+
+function deriveSigningSubkey(masterSecret: string): string {
+  return crypto
+    .createHmac("sha256", masterSecret)
+    .update(SESSION_KEY_CONTEXT)
+    .digest("hex");
+}
+
 function getSigningKey(): string | null {
   const secret =
     process.env.ADMIN_SESSION_SECRET ||
@@ -12,19 +32,20 @@ function getSigningKey(): string | null {
     process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (secret && secret.length >= 16) {
-    return secret;
+    return deriveSigningSubkey(secret);
   }
 
-  // Di produksi, tolak penggunaan salt default publik jika secret belum disetel
-  if (process.env.NODE_ENV === "production") {
+  // Di seluruh deployment cloud Vercel (preview maupun production), tolak kunci fallback lokal
+  if (Boolean(process.env.VERCEL) || process.env.VERCEL_ENV === "production") {
     return null;
   }
 
-  // Fallback deterministik di host untuk testing lokal & check.mjs
-  return crypto
+  // Fallback deterministik khusus loopback lokal (untuk pengujian lokal & scripts/check.mjs)
+  const devSeed = crypto
     .createHash("sha256")
     .update("zekktech-admin-default-signing-key-salt")
     .digest("hex");
+  return deriveSigningSubkey(devSeed);
 }
 
 export function signSessionToken(payload: { email: string; role: "admin"; exp: number }): string {
@@ -41,27 +62,29 @@ export function signSessionToken(payload: { email: string; role: "admin"; exp: n
 }
 
 export function verifySessionToken(token: string): { valid: boolean; email?: string } {
-  if (!token || typeof token !== "string" || !token.includes(".")) {
+  if (!token || typeof token !== "string") {
     return { valid: false };
   }
+
+  const parts = token.split(".");
+  if (parts.length !== 2) {
+    return { valid: false };
+  }
+
+  const [dataPart, signaturePart] = parts;
+  if (!dataPart || !signaturePart) return { valid: false };
 
   const key = getSigningKey();
   if (!key) {
     return { valid: false };
   }
 
-  const [dataPart, signaturePart] = token.split(".");
-  if (!dataPart || !signaturePart) return { valid: false };
-
   const expectedSignature = crypto
     .createHmac("sha256", key)
     .update(dataPart)
     .digest("base64url");
 
-  // Constant-time comparison untuk mencegah timing attacks
-  const a = Buffer.from(signaturePart);
-  const b = Buffer.from(expectedSignature);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+  if (!timingSafeEqualStrings(signaturePart, expectedSignature)) {
     return { valid: false };
   }
 
@@ -70,7 +93,7 @@ export function verifySessionToken(token: string): { valid: boolean; email?: str
     if (typeof json.exp !== "number" || Date.now() / 1000 > json.exp) {
       return { valid: false };
     }
-    if (json.role !== "admin") {
+    if (json.role !== "admin" || typeof json.email !== "string" || !json.email) {
       return { valid: false };
     }
     return { valid: true, email: json.email };
@@ -88,10 +111,6 @@ export interface AdminAuthResult {
 
 /**
  * Validasi otentikasi administrator secara server-side.
- * Memeriksa:
- * 1. Supabase Auth via SSR cookie (memverifikasi token ke Supabase)
- * 2. Signed Admin Cookie (HMAC-SHA256)
- * 3. Bearer/Secret header (server-to-server)
  */
 export async function verifyAdminRequest(request?: Request): Promise<AdminAuthResult> {
   const adminEmail = (process.env.ADMIN_EMAIL || "zakariamujur6@gmail.com").toLowerCase().trim();
@@ -133,9 +152,10 @@ export async function verifyAdminRequest(request?: Request): Promise<AdminAuthRe
       if (!error && user && user.email) {
         const email = user.email.toLowerCase().trim();
         const role = user.app_metadata?.role;
+        const isEmailConfirmed = Boolean(user.email_confirmed_at);
 
-        // Hanya izinkan jika email sesuai ADMIN_EMAIL atau memiliki app_metadata role admin
-        if (email === adminEmail || role === "admin") {
+        // Hanya izinkan jika memiliki app_metadata role 'admin' ATAU email admin yang sudah terverifikasi
+        if (role === "admin" || (email === adminEmail && isEmailConfirmed)) {
           return {
             isAuthenticated: true,
             userEmail: email,
@@ -148,7 +168,7 @@ export async function verifyAdminRequest(request?: Request): Promise<AdminAuthRe
     }
   }
 
-  // 3. Periksa Authorization header jika ada request
+  // 3. Periksa Authorization header jika ada request (server-to-server)
   if (request) {
     const authHeader = request.headers.get("authorization");
     const secretHeader = request.headers.get("x-admin-secret");
@@ -159,16 +179,12 @@ export async function verifyAdminRequest(request?: Request): Promise<AdminAuthRe
         ? authHeader.slice(7).trim()
         : secretHeader?.trim();
 
-      if (token && token.length === adminSecret.length) {
-        const a = Buffer.from(token);
-        const b = Buffer.from(adminSecret);
-        if (crypto.timingSafeEqual(a, b)) {
-          return {
-            isAuthenticated: true,
-            userEmail: adminEmail,
-            authMethod: "secret_header",
-          };
-        }
+      if (token && timingSafeEqualStrings(token, adminSecret)) {
+        return {
+          isAuthenticated: true,
+          userEmail: adminEmail,
+          authMethod: "secret_header",
+        };
       }
     }
   }
@@ -180,58 +196,106 @@ export async function verifyAdminRequest(request?: Request): Promise<AdminAuthRe
 }
 
 /**
- * Validasi CSRF / Origin untuk seluruh mutasi (POST, PUT, DELETE, PATCH).
+ * Validasi CSRF / Origin ketat (fail-closed) untuk seluruh mutasi (POST, PUT, DELETE, PATCH).
  */
 export function verifyCsrfOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
+  const isCloudDeploy = Boolean(process.env.VERCEL) || process.env.VERCEL_ENV === "production";
+  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const host = rawHost.split(",")[0].trim().toLowerCase();
 
-  if (!origin || !host) {
-    // Jika diakses via direct API tool tanpa browser Origin, periksa referer
-    const referer = request.headers.get("referer");
-    if (referer) {
-      try {
-        const refUrl = new URL(referer);
-        return refUrl.host === host;
-      } catch {
+  const allowedHosts = new Set<string>([
+    "zakariamp.id",
+    "www.zakariamp.id",
+    "zakariamp.my.id",
+    "www.zakariamp.my.id",
+    "zakariamp.vercel.app",
+  ]);
+
+  if (host) {
+    allowedHosts.add(host);
+  }
+
+  if (!isCloudDeploy) {
+    allowedHosts.add("localhost:3000");
+    allowedHosts.add("127.0.0.1:3000");
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    try {
+      allowedHosts.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).host.toLowerCase());
+    } catch {}
+  }
+
+  const isAllowedUrl = (candidate: string): boolean => {
+    try {
+      const parsed = new URL(candidate);
+      if (isCloudDeploy && parsed.protocol !== "https:") {
         return false;
       }
+      if (!isCloudDeploy && parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return false;
+      }
+      return allowedHosts.has(parsed.host.toLowerCase());
+    } catch {
+      return false;
     }
-    // Jika tidak ada origin dan tidak ada referer, izinkan hanya jika bukan browser fetch
-    const secFetchSite = request.headers.get("sec-fetch-site");
-    if (secFetchSite === "cross-site") return false;
+  };
+
+  const origin = request.headers.get("origin");
+  if (origin) {
+    return isAllowedUrl(origin);
+  }
+
+  const referer = request.headers.get("referer");
+  if (referer) {
+    return isAllowedUrl(referer);
+  }
+
+  // Tanpa Origin maupun Referer: hanya izinkan panggilan server-to-server yang membawa header rahasia eksplisit
+  const hasExplicitApiSecret = Boolean(
+    request.headers.get("authorization")?.startsWith("Bearer ") ||
+      request.headers.get("x-admin-secret")
+  );
+  if (hasExplicitApiSecret && request.headers.get("sec-fetch-site") !== "cross-site") {
     return true;
   }
 
-  try {
-    const originUrl = new URL(origin);
-    const allowedHosts = new Set([
-      host,
-      "zakariamp.id",
-      "www.zakariamp.id",
-      "zakariamp.my.id",
-      "www.zakariamp.my.id",
-      "zakariamp.vercel.app",
-      "localhost:3000",
-      "127.0.0.1:3000",
-    ]);
-
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      try {
-        allowedHosts.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).host);
-      } catch {}
-    }
-
-    return allowedHosts.has(originUrl.host);
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 /**
- * Rate Limiter sederhana untuk lingkungan Serverless.
- * Menggunakan Map dengan pembersihan otomatis dan IP sliding window.
+ * Ekstraksi IP klien tepercaya yang kebal terhadap spoofing header CF-Connecting-IP / XFF di Vercel.
  */
+export function extractTrustedClientIp(request: Request): string {
+  const trustCloudflare = process.env.TRUST_CLOUDFLARE_PROXY === "1";
+
+  if (trustCloudflare) {
+    const cfIp = request.headers.get("cf-connecting-ip")?.trim();
+    if (cfIp) return cfIp.slice(0, 64);
+  }
+
+  if (Boolean(process.env.VERCEL)) {
+    const vercelForwarded = request.headers.get("x-vercel-forwarded-for");
+    if (vercelForwarded) {
+      const first = vercelForwarded.split(",")[0]?.trim();
+      if (first) return first.slice(0, 64);
+    }
+    const realIp = request.headers.get("x-real-ip")?.trim();
+    if (realIp) return realIp.slice(0, 64);
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp.slice(0, 64);
+
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first.slice(0, 64);
+  }
+
+  return "127.0.0.1";
+}
+
 interface RateLimitBucket {
   tokens: number;
   lastRefill: number;
@@ -239,12 +303,30 @@ interface RateLimitBucket {
 
 const rateLimitMap = new Map<string, RateLimitBucket>();
 
+function pruneRateLimitMap(now: number, windowMs: number) {
+  if (rateLimitMap.size <= 1000) return;
+
+  for (const [key, b] of rateLimitMap.entries()) {
+    if (now - b.lastRefill > windowMs * 2) {
+      rateLimitMap.delete(key);
+    }
+  }
+
+  // Hard cap FIFO eviction untuk mencegah unbounded memory growth DoS
+  while (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) {
+    const oldestKey = rateLimitMap.keys().next().value;
+    if (oldestKey === undefined) break;
+    rateLimitMap.delete(oldestKey);
+  }
+}
+
 export function checkRateLimit(
-  ip: string,
+  key: string,
   options: { maxRequests: number; windowMs: number }
 ): { allowed: boolean; remaining: number } {
   const now = Date.now();
-  const bucket = rateLimitMap.get(ip) || {
+  const existing = rateLimitMap.get(key);
+  const bucket: RateLimitBucket = existing || {
     tokens: options.maxRequests,
     lastRefill: now,
   };
@@ -257,20 +339,13 @@ export function checkRateLimit(
 
   if (bucket.tokens > 0) {
     bucket.tokens -= 1;
-    rateLimitMap.set(ip, bucket);
-
-    // Garbage collection jika map terlalu besar
-    if (rateLimitMap.size > 1000) {
-      for (const [key, b] of rateLimitMap.entries()) {
-        if (now - b.lastRefill > options.windowMs * 2) {
-          rateLimitMap.delete(key);
-        }
-      }
-    }
-
+    // Refresh insertion order for active key
+    rateLimitMap.delete(key);
+    rateLimitMap.set(key, bucket);
+    pruneRateLimitMap(now, options.windowMs);
     return { allowed: true, remaining: bucket.tokens };
   }
 
+  pruneRateLimitMap(now, options.windowMs);
   return { allowed: false, remaining: 0 };
 }
-

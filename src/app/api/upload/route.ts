@@ -134,6 +134,14 @@ export async function GET(request: Request) {
     });
   }
 
+  const statusAuth = await verifyAdminRequest(request);
+  if (!statusAuth.isAuthenticated) {
+    return NextResponse.json(
+      { error: "Akses ditolak: Status storage internal hanya untuk administrator." },
+      { status: 401 }
+    );
+  }
+
   return NextResponse.json({
     r2: isR2Configured(),
     supabase: isSupabaseConfigured(),

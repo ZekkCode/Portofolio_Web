@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { getServiceRoleClient, getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeConfig, type SiteConfig } from "@/lib/site-config";
 import { validateSiteConfigPayload } from "@/lib/config-validator";
 import { evaluatePublishReadiness } from "@/lib/content/content-health";
@@ -109,10 +110,20 @@ export function createDefaultRevisionAdapter(): RevisionStorageAdapter {
     };
   }
 
+  async function getPrivilegedSupabase() {
+    const service = getServiceRoleClient();
+    if (service) return service;
+    try {
+      return await createServerSupabaseClient();
+    } catch {
+      return getSupabaseClient();
+    }
+  }
+
   return {
     provider: "supabase",
     async readDoc<T = unknown>(id: string): Promise<DocReadOutcome<T>> {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
+      const supabase = await getPrivilegedSupabase();
       if (!supabase) {
         return { status: "error", error: "Klien database Supabase tidak tersedia." };
       }
@@ -148,7 +159,7 @@ export function createDefaultRevisionAdapter(): RevisionStorageAdapter {
       }
     },
     async writeDoc(id: string, config: unknown, updatedAt?: string): Promise<DocWriteOutcome> {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
+      const supabase = await getPrivilegedSupabase();
       if (!supabase) {
         return { ok: false, error: "Klien database Supabase tidak tersedia." };
       }
@@ -180,7 +191,7 @@ export function createDefaultRevisionAdapter(): RevisionStorageAdapter {
       }
     },
     async deleteDoc(id: string) {
-      const supabase = getServiceRoleClient() || getSupabaseClient();
+      const supabase = await getPrivilegedSupabase();
       if (!supabase) {
         return { ok: false, error: "Klien database Supabase tidak tersedia." };
       }

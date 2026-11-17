@@ -1,6 +1,6 @@
 import type { SiteConfig } from "@/lib/site-config";
 import { getPublishedProfile, getPublishedSeo } from "@/lib/content/selectors";
-import { resolveCanonicalSiteUrl } from "@/lib/profile";
+import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
 
 export function xmlEscape(value: string): string {
   return value
@@ -14,28 +14,9 @@ export function xmlEscape(value: string): string {
 export function resolveSitemapBaseUrl(request: Request, config: SiteConfig): string {
   const seo = getPublishedSeo(config, "id");
   const prof = getPublishedProfile(config, "id");
-  let fallback = resolveCanonicalSiteUrl(seo.canonicalUrl || prof.site).replace(/\/$/, "");
-
-  const hostHeader = (
-    request.headers.get("x-forwarded-host") ||
-    request.headers.get("host") ||
-    ""
-  ).toLowerCase().trim();
-
-  if (hostHeader) {
-    const cleanHost = hostHeader.split(":")[0];
-    if (
-      cleanHost.endsWith("zakariamp.my.id") ||
-      cleanHost.endsWith("zakariamp.id") ||
-      cleanHost.endsWith("vercel.app") ||
-      cleanHost.includes("localhost")
-    ) {
-      const proto = request.headers.get("x-forwarded-proto") || (cleanHost.includes("localhost") ? "http" : "https");
-      return `${proto}://${hostHeader.replace(/\/$/, "")}`;
-    }
-  }
-
-  return fallback;
+  const hostHeader =
+    request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  return resolveSafeHostContext(hostHeader, seo.canonicalUrl || prof.site).siteUrl;
 }
 
 export function getSafeLastMod(config: SiteConfig): string {

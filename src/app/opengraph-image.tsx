@@ -37,7 +37,8 @@ export default async function Image() {
   const pub = getPublishedProfile(config, "id");
   const canonical = resolveCanonicalSiteUrl(pub.site);
   const siteHost = canonical.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const accent = config.lanyard?.cardColor || "#1b45c4";
+  const rawAccent = (config.lanyard?.cardColor || "").trim();
+  const accent = /^#[0-9a-fA-F]{3,8}$/.test(rawAccent) ? rawAccent : "#1b45c4";
   const portraitSrc = getPortraitDataUri();
 
   return new ImageResponse(

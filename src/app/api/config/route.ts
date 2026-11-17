@@ -16,6 +16,7 @@ import {
   invalidatePublishedContentCache,
   fetchPublishedContentWithMeta,
 } from "@/lib/content/public-content";
+import { toPublicSiteConfig } from "@/lib/content/public-config-sanitizer";
 import { triggerIndexNowIfConfigured } from "@/lib/indexnow";
 import {
   isStrictLocalCmsStore,
@@ -93,17 +94,24 @@ export async function GET(request: Request) {
     }
   }
 
-  // 2. Mode 'published'
+  // 2. Mode 'published' (admin menerima snapshot utuh dengan Cache-Control private; publik disanitasi via toPublicSiteConfig)
+  const viewerAuth = await verifyAdminRequest(request);
+  const isAdminViewer = viewerAuth.isAuthenticated;
+  const responseCacheHeader = isAdminViewer
+    ? "private, no-cache, no-store, must-revalidate"
+    : PUBLISHED_CACHE_HEADER;
+
   if (shouldUseLocalRevisions()) {
     const localCurrent = await readLocalCmsDoc<Partial<SiteConfig>>("current");
     if (localCurrent?.config) {
       const normalized = normalizeConfig(localCurrent.config);
-      const etag = `"${Buffer.from(localCurrent.updated_at || "local").toString("base64")}"`;
+      const outputConfig = isAdminViewer ? normalized : toPublicSiteConfig(normalized);
+      const etag = `"${Buffer.from(`${localCurrent.updated_at || "local"}:${isAdminViewer ? "adm" : "pub"}`).toString("base64")}"`;
       const ifNoneMatch = request.headers.get("if-none-match");
-      if (ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `W/${etag}`)) {
+      if (!isAdminViewer && ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `W/${etag}`)) {
         return new NextResponse(null, {
           status: 304,
-          headers: { ETag: etag, "Cache-Control": PUBLISHED_CACHE_HEADER },
+          headers: { ETag: etag, "Cache-Control": responseCacheHeader, Vary: "Cookie" },
         });
       }
       return NextResponse.json(
@@ -111,11 +119,11 @@ export async function GET(request: Request) {
           configured: true,
           provider: "local-store",
           mode: "published",
-          config: normalized,
+          config: outputConfig,
           updatedAt: localCurrent.updated_at,
         },
         {
-          headers: { ETag: etag, "Cache-Control": PUBLISHED_CACHE_HEADER },
+          headers: { ETag: etag, "Cache-Control": responseCacheHeader, Vary: "Cookie" },
         }
       );
     }
@@ -188,12 +196,13 @@ export async function GET(request: Request) {
     }
 
     const normalized = normalizeConfig(data.config as Partial<SiteConfig>);
-    const etag = `"${Buffer.from(data.updated_at || "initial").toString("base64")}"`;
+    const outputConfig = isAdminViewer ? normalized : toPublicSiteConfig(normalized);
+    const etag = `"${Buffer.from(`${data.updated_at || "initial"}:${isAdminViewer ? "adm" : "pub"}`).toString("base64")}"`;
     const ifNoneMatch = request.headers.get("if-none-match");
-    if (ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `W/${etag}`)) {
+    if (!isAdminViewer && ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `W/${etag}`)) {
       return new NextResponse(null, {
         status: 304,
-        headers: { ETag: etag, "Cache-Control": PUBLISHED_CACHE_HEADER },
+        headers: { ETag: etag, "Cache-Control": responseCacheHeader, Vary: "Cookie" },
       });
     }
 
@@ -202,11 +211,11 @@ export async function GET(request: Request) {
         configured: true,
         provider: "supabase",
         mode: "published",
-        config: normalized,
+        config: outputConfig,
         updatedAt: data.updated_at,
       },
       {
-        headers: { ETag: etag, "Cache-Control": PUBLISHED_CACHE_HEADER },
+        headers: { ETag: etag, "Cache-Control": responseCacheHeader, Vary: "Cookie" },
       }
     );
   } catch {

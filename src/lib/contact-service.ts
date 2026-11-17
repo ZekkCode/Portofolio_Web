@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { getServiceRoleClient, isSupabaseConfigured } from "@/lib/supabase";
+import { extractTrustedClientIp } from "@/lib/auth-server";
 
 export interface ContactSubmissionInput {
   name: string;
@@ -114,26 +115,23 @@ export function getContactRuntimeConfig(): ContactRuntimeConfig {
       process.env.ADMIN_EMAIL ||
       "zakariamujur6@gmail.com"
     ).trim(),
-    isProductionDeploy: process.env.VERCEL_ENV === "production",
+    isProductionDeploy:
+      process.env.VERCEL_ENV === "production" ||
+      (process.env.NODE_ENV === "production" && Boolean(process.env.VERCEL)),
   };
 }
 
 export function extractClientIpInfo(request: Request): { ip: string; ipHash: string } {
-  const cfIp = request.headers.get("cf-connecting-ip");
-  const realIp = request.headers.get("x-real-ip");
-  const vercelIp = request.headers.get("x-vercel-forwarded-for");
-  const forwarded = request.headers.get("x-forwarded-for");
-
-  const rawIp =
-    cfIp ||
-    realIp ||
-    (vercelIp ? vercelIp.split(",")[0] : "") ||
-    (forwarded ? forwarded.split(",")[0] : "") ||
-    "127.0.0.1";
-
-  const ip = rawIp.trim().slice(0, 64) || "127.0.0.1";
-  const salt = process.env.ADMIN_SESSION_SECRET || "zekktech-contact-guard";
-  const ipHash = crypto.createHash("sha256").update(`${ip}::${salt}`).digest("hex");
+  const ip = extractTrustedClientIp(request);
+  const rawSecret =
+    process.env.ADMIN_SESSION_SECRET ||
+    process.env.ADMIN_SECRET ||
+    "zekktech-contact-guard";
+  const derivedSalt = crypto
+    .createHmac("sha256", rawSecret)
+    .update("zekk:contact-ip-salt:v1")
+    .digest("hex");
+  const ipHash = crypto.createHash("sha256").update(`${ip}::${derivedSalt}`).digest("hex");
 
   return { ip, ipHash };
 }

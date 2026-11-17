@@ -1,21 +1,14 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifySessionToken } from "@/lib/auth-server";
+import { verifyAdminRequest } from "@/lib/auth-server";
 import { PreviewClient } from "./preview-client";
 import { fetchDraftOrPublishedContent } from "@/lib/content/public-content";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPreviewPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("zekk_admin_session")?.value;
+  const auth = await verifyAdminRequest();
 
-  if (!token) {
-    redirect("/admin/login");
-  }
-
-  const verified = verifySessionToken(token);
-  if (!verified.valid) {
+  if (!auth.isAuthenticated) {
     redirect("/admin/login");
   }
 
@@ -25,7 +18,7 @@ export default async function AdminPreviewPage() {
     <PreviewClient
       initialConfig={draftConfig}
       initialUpdatedAt={updatedAt}
-      userEmail={verified.email || "admin"}
+      userEmail={auth.userEmail || "admin"}
     />
   );
 }

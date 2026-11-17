@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import crypto from "node:crypto";
 import {
   ADMIN_COOKIE_NAME,
   checkRateLimit,
+  extractTrustedClientIp,
   SESSION_DURATION_SECONDS,
   signSessionToken,
+  timingSafeEqualStrings,
   verifyCsrfOrigin,
 } from "@/lib/auth-server";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
@@ -19,9 +20,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Rate Limiting: Maksimal 5 percobaan per 15 menit per IP
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = (forwarded ? forwarded.split(",")[0].trim() : "127.0.0.1").trim();
+  // 2. Rate Limiting: Maksimal 5 percobaan per 15 menit per IP tepercaya
+  const ip = extractTrustedClientIp(request);
   const rate = checkRateLimit(`login:${ip}`, { maxRequests: 5, windowMs: 15 * 60 * 1000 });
 
   if (!rate.allowed) {
@@ -30,14 +30,14 @@ export async function POST(request: Request) {
         success: false,
         error: "Terlalu banyak percobaan login gagal. Silakan coba lagi dalam 15 menit.",
       },
-      { status: 429 }
+      { status: 429, headers: { "Retry-After": "900" } }
     );
   }
 
   try {
     const body = (await request.json()) as { email?: string; password?: string };
     const email = (body.email || "").toLowerCase().trim();
-    const password = body.password || "";
+    const password = typeof body.password === "string" ? body.password : "";
 
     if (!email || !password) {
       return NextResponse.json(
@@ -68,7 +68,10 @@ export async function POST(request: Request) {
 
         if (!error && data.user) {
           const userRole = data.user.app_metadata?.role;
-          if (data.user.email?.toLowerCase().trim() === adminEmail || userRole === "admin") {
+          const isEmailConfirmed = Boolean(data.user.email_confirmed_at);
+          const normalizedUserEmail = data.user.email?.toLowerCase().trim();
+
+          if (userRole === "admin" || (normalizedUserEmail === adminEmail && isEmailConfirmed)) {
             const exp = Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS;
             const token = signSessionToken({ email: data.user.email!, role: "admin", exp });
 
@@ -87,10 +90,12 @@ export async function POST(request: Request) {
               email: data.user.email,
             });
           } else {
-            // Pengguna terdaftar tetapi bukan akun admin
             await supabase.auth.signOut();
             return NextResponse.json(
-              { success: false, error: "Akses ditolak: Akun ini tidak memiliki hak administrator" },
+              {
+                success: false,
+                error: "Akses ditolak: Akun belum terverifikasi atau tidak memiliki hak administrator",
+              },
               { status: 403 }
             );
           }
@@ -102,15 +107,8 @@ export async function POST(request: Request) {
 
     // B. Pengecekan Kredensial Langsung Server-Side (ADMIN_PASSWORD / ADMIN_SECRET)
     if (adminPassword && adminPassword.length >= 8) {
-      const isEmailValid = email === adminEmail;
-
-      // Constant time check password
-      const inputPassBuffer = Buffer.from(password);
-      const targetPassBuffer = Buffer.from(adminPassword);
-
-      const isPasswordValid =
-        inputPassBuffer.length === targetPassBuffer.length &&
-        crypto.timingSafeEqual(inputPassBuffer, targetPassBuffer);
+      const isEmailValid = timingSafeEqualStrings(email, adminEmail);
+      const isPasswordValid = timingSafeEqualStrings(password, adminPassword);
 
       if (isEmailValid && isPasswordValid) {
         const exp = Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS;
@@ -133,7 +131,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // C. Jika kredensial tidak cocok atau env belum diset
+    // C. Proteksi global terhadap brute-force terdistribusi (rotasi IP) pada akun admin tunggal
+    const globalFail = checkRateLimit("login:global-failed", {
+      maxRequests: 25,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!globalFail.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sistem autentikasi sedang membatasi percobaan gagal global. Coba lagi nanti.",
+        },
+        { status: 429, headers: { "Retry-After": "900" } }
+      );
+    }
+
     if (!adminPassword && !hasSupabaseUrl) {
       return NextResponse.json(
         {
@@ -156,4 +168,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

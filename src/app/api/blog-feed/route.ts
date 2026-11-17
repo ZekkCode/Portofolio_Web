@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { verifyAdminRequest, verifyCsrfOrigin } from "@/lib/auth-server";
+import {
+  checkRateLimit,
+  extractTrustedClientIp,
+  verifyAdminRequest,
+  verifyCsrfOrigin,
+} from "@/lib/auth-server";
 import type { BlogPost } from "@/lib/blog-feed";
 import type { ManualBlogPostConfig } from "@/lib/site-config";
 import type { BlogFeedErrorCode } from "@/lib/content/blog-sync";
@@ -44,9 +49,26 @@ function toManualPostShapes(posts: BlogPost[]): ManualBlogPostConfig[] {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const rawSync = searchParams.get("rawSync") === "1";
-  const refresh = searchParams.get("refresh") === "1";
+  const rawSyncRequested = searchParams.get("rawSync") === "1";
+  const refreshRequested = searchParams.get("refresh") === "1";
   const locale = searchParams.get("locale") === "en" ? "en" : "id";
+
+  const ip = extractTrustedClientIp(request);
+  const rate = checkRateLimit(`blog-feed:${ip}`, { maxRequests: 30, windowMs: 60 * 1000 });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Terlalu banyak permintaan feed blog. Coba lagi sebentar." },
+      { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60" } }
+    );
+  }
+
+  let isAdminCaller = false;
+  if (rawSyncRequested || refreshRequested) {
+    const auth = await verifyAdminRequest(request);
+    isAdminCaller = auth.isAuthenticated;
+  }
+  const rawSync = rawSyncRequested && isAdminCaller;
+  const refresh = refreshRequested && isAdminCaller;
 
   const config = await fetchPublishedContent();
   const blogConfig = config?.blog;

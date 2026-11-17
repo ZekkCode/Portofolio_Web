@@ -101,6 +101,7 @@ export function scanReferencedMedia(config: Partial<SiteConfig>): MediaCatalogIt
   if (config.lanyard?.backImage) add(config.lanyard.backImage, "Lanyard 3D (Sisi Belakang / Graphic Designer)", "appearance");
   if (config.lanyard?.strapImage) add(config.lanyard.strapImage, "Lanyard 3D (Tekstur Tali)", "appearance");
   if (config.profileCard?.avatarUrl) add(config.profileCard.avatarUrl, "Hologram Card (Avatar Potret Utama)", "appearance");
+  if (config.profileCard?.secondaryAvatarUrl) add(config.profileCard.secondaryAvatarUrl, "Hologram Card (Kartu Sekunder)", "appearance");
   if (config.profileCard?.iconUrl) add(config.profileCard.iconUrl, "Hologram Card (Watermark/Ikon Latar)", "appearance");
   if (config.profileCard?.miniAvatarUrl) add(config.profileCard.miniAvatarUrl, "Hologram Card (Avatar Mini Footer)", "appearance");
 
@@ -152,6 +153,9 @@ export function scanReferencedMedia(config: Partial<SiteConfig>): MediaCatalogIt
   // 8. Blog & SEO
   (config.blog?.manualPosts || []).forEach((post) => {
     if (post.coverImage) add(post.coverImage, `Cover Blog Manual: ${post.title}`, "blog");
+  });
+  (config.blog?.syncedPosts || []).forEach((post) => {
+    if (post.coverImage) add(post.coverImage, `Cover Blog Tersinkron: ${post.title}`, "blog");
   });
   Object.entries(config.blog?.syncedOverrides || {}).forEach(([id, ov]) => {
     if (ov.coverImage) add(ov.coverImage, `Cover Blog Override (${id})`, "blog");

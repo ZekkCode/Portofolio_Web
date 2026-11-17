@@ -142,24 +142,39 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const isSvg =
-      object.contentType.toLowerCase().includes("svg") ||
-      filename.toLowerCase().endsWith(".svg");
+    const lowerFilename = filename.toLowerCase();
+    const rawContentType = (object.contentType || "").split(";")[0].trim().toLowerCase();
+    const isSvg = rawContentType === "image/svg+xml" || lowerFilename.endsWith(".svg");
+
+    const SAFE_MIME_MAP: Record<string, string> = {
+      "image/png": "image/png",
+      "image/jpeg": "image/jpeg",
+      "image/webp": "image/webp",
+      "image/gif": "image/gif",
+      "application/pdf": "application/pdf",
+    };
+
+    const resolvedMime = isSvg
+      ? "image/svg+xml; charset=utf-8"
+      : SAFE_MIME_MAP[rawContentType] || "application/octet-stream";
+    const isPdf = resolvedMime === "application/pdf";
+    const forceAttachment = wantsDownload || (!isSvg && !SAFE_MIME_MAP[rawContentType]);
+    const safeDispositionFilename = filename.replace(/["\\\r\n]/g, "_");
 
     const headers: Record<string, string> = {
-      "Content-Type": isSvg ? "image/svg+xml; charset=utf-8" : object.contentType,
+      "Content-Type": resolvedMime,
       "Cache-Control": cacheControl,
       "X-Content-Type-Options": "nosniff",
       "Accept-Ranges": "bytes",
     };
 
-    if (isSvg) {
-      // Paksa sandbox SVG agar skrip inline apa pun tidak dapat dieksekusi oleh browser
+    if (isPdf) {
       headers["Content-Security-Policy"] =
-        "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'";
+        "default-src 'none'; object-src 'self'; frame-ancestors 'self'; form-action 'none'";
     } else {
+      // Paksa sandbox pada SVG, gambar, maupun berkas biner agar eksekusi skrip/form mustahil terjadi
       headers["Content-Security-Policy"] =
-        "default-src 'none'; object-src 'self'; frame-ancestors 'self'";
+        "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; form-action 'none'";
     }
 
     if (object.contentLength !== undefined) {
@@ -174,10 +189,10 @@ export async function GET(request: NextRequest) {
       headers["ETag"] = object.eTag;
     }
 
-    if (wantsDownload) {
-      headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+    if (forceAttachment) {
+      headers["Content-Disposition"] = `attachment; filename="${safeDispositionFilename}"`;
     } else {
-      headers["Content-Disposition"] = `inline; filename="${filename}"`;
+      headers["Content-Disposition"] = `inline; filename="${safeDispositionFilename}"`;
     }
 
     return new NextResponse(object.stream, {

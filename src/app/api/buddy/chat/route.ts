@@ -2,46 +2,61 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { queryBuddyKnowledge } from "@/lib/buddy/buddy-knowledge";
 import { fetchPublishedContent } from "@/lib/content/public-content";
+import { checkRateLimit, extractTrustedClientIp, verifyCsrfOrigin } from "@/lib/auth-server";
 
-// In-memory sliding rate limiter per IP hash
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 30;
+const MAX_BUDDY_PAYLOAD_BYTES = 4096;
 
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
+async function readBoundedText(request: Request, maxBytes: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let output = "";
 
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => {});
+          return null;
+        }
+        output += decoder.decode(value, { stream: true });
+      }
+    }
+    output += decoder.decode();
+    return output;
+  } catch {
+    return null;
   }
-
-  if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
-    return true;
-  }
-
-  entry.count++;
-  return false;
 }
 
 export async function POST(request: Request) {
+  if (!verifyCsrfOrigin(request)) {
+    return NextResponse.json(
+      { error: "Permintaan lintas domain tidak diizinkan." },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   try {
-    // 1. Content-Length check
+    // 1. Batas ukuran body (mencakup Content-Length maupun Chunked Transfer-Encoding)
     const contentLength = Number(request.headers.get("content-length") || 0);
-    if (contentLength > 4096) {
+    if (contentLength > MAX_BUDDY_PAYLOAD_BYTES) {
       return NextResponse.json(
         { error: "Payload too large" },
         { status: 413, headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    // 2. IP Rate limiting
-    const forwarded = request.headers.get("x-forwarded-for") || "unknown";
-    const ip = forwarded.split(",")[0].trim();
+    // 2. IP Rate limiting dengan bounded Map & anti-spoofing IP
+    const ip = extractTrustedClientIp(request);
     const ipHash = crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
+    const rate = checkRateLimit(`buddy:${ipHash}`, { maxRequests: 30, windowMs: 60 * 1000 });
 
-    if (isRateLimited(ipHash)) {
+    if (!rate.allowed) {
       return NextResponse.json(
         {
           error: "Terlalu banyak pesan. Silakan tunggu sebentar.",
@@ -53,7 +68,21 @@ export async function POST(request: Request) {
     }
 
     // 3. Body parsing & validation
-    const body = await request.json().catch(() => null);
+    const rawText = await readBoundedText(request, MAX_BUDDY_PAYLOAD_BYTES);
+    if (rawText === null) {
+      return NextResponse.json(
+        { error: "Payload too large" },
+        { status: 413, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    let body: { message?: unknown; lang?: unknown } | null = null;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      body = null;
+    }
+
     const message = body?.message;
 
     if (typeof message !== "string" || !message.trim()) {

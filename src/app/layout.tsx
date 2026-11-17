@@ -6,7 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AdaptivePerformanceProvider } from "@/lib/device-performance";
 import { BuddyClient } from "@/components/buddy/buddy-client";
 import { GlobalClickSound } from "@/components/global-click-sound";
-import { profile, resolveCanonicalSiteUrl } from "@/lib/profile";
+import { profile } from "@/lib/profile";
+import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
 import { fetchPublishedContent } from "@/lib/content/public-content";
 import {
   getPublishedCertificates,
@@ -102,27 +103,18 @@ export async function generateMetadata(): Promise<Metadata> {
   const seo = getPublishedSeo(config, "id");
   const name = pub.name;
   const brand = pub.brand;
-  let siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
-
+  let rawHost = "";
   try {
     const headerList = await headers();
-    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase().trim();
-    if (reqHost) {
-      const cleanHost = reqHost.split(":")[0];
-      if (
-        cleanHost.endsWith("zakariamp.my.id") ||
-        cleanHost.endsWith("zakariamp.id") ||
-        cleanHost.endsWith("vercel.app")
-      ) {
-        siteUrl = `https://${reqHost}`;
-      }
-    }
+    rawHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
   } catch {}
+  const hostCtx = resolveSafeHostContext(rawHost, seo.canonicalUrl || pub.site);
+  const siteUrl = hostCtx.siteUrl;
   const metaTitle = seo.metaTitle || `${name} | ${pub.roles}`;
   const metaDesc = seo.metaDesc || pub.heroDesc;
   const ogImage = seo.ogImage || "/opengraph-image";
   const ogAlt = seo.ogImageAlt || `${name} - ${brand}`;
-  const allowIndex = seo.robotsIndex !== false;
+  const allowIndex = seo.robotsIndex !== false && hostCtx.isIndexableHost;
 
   return {
     metadataBase: new URL(siteUrl),
@@ -258,22 +250,12 @@ export default async function RootLayout({
 
   const name = pub.name;
   const brand = pub.brand;
-  let siteUrl = resolveCanonicalSiteUrl(seo.canonicalUrl || pub.site);
-
+  let rawLayoutHost = "";
   try {
     const headerList = await headers();
-    const reqHost = (headerList.get("x-forwarded-host") || headerList.get("host") || "").toLowerCase().trim();
-    if (reqHost) {
-      const cleanHost = reqHost.split(":")[0];
-      if (
-        cleanHost.endsWith("zakariamp.my.id") ||
-        cleanHost.endsWith("zakariamp.id") ||
-        cleanHost.endsWith("vercel.app")
-      ) {
-        siteUrl = `https://${reqHost}`;
-      }
-    }
+    rawLayoutHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
   } catch {}
+  const siteUrl = resolveSafeHostContext(rawLayoutHost, seo.canonicalUrl || pub.site).siteUrl;
   const email = pub.email;
   const phone = pub.phone;
   const bioIntro = pub.heroDesc;

@@ -30,14 +30,23 @@ export interface StructuredValidationResult {
   issues: ContentHealthIssue[];
 }
 
-function isSafeUrl(url?: string): boolean {
+const SAFE_RASTER_DATA_URI_REGEX =
+  /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
+export function isSafeUrl(url?: string): boolean {
   if (!url) return true;
-  const trimmed = url.trim().toLowerCase();
+  const rawTrimmed = url.trim();
+  if (!rawTrimmed || /[\u0000-\u001f\u007f]/.test(rawTrimmed)) {
+    return false;
+  }
+  const trimmed = rawTrimmed.toLowerCase();
   if (
     trimmed.startsWith("javascript:") ||
     trimmed.startsWith("vbscript:") ||
-    trimmed.startsWith("data:text/html") ||
-    trimmed.startsWith("data:application/")
+    trimmed.startsWith("data:text/") ||
+    trimmed.startsWith("data:application/") ||
+    trimmed.startsWith("data:image/svg") ||
+    trimmed.startsWith("//")
   ) {
     return false;
   }
@@ -46,17 +55,14 @@ function isSafeUrl(url?: string): boolean {
     trimmed.startsWith("#") ||
     trimmed.startsWith("https://") ||
     trimmed.startsWith("http://localhost") ||
+    trimmed.startsWith("http://127.0.0.1") ||
     trimmed.startsWith("mailto:") ||
     trimmed.startsWith("tel:")
   ) {
     return true;
   }
-  if (trimmed.startsWith("data:image/") && !trimmed.startsWith("data:image/svg+xml;")) {
+  if (SAFE_RASTER_DATA_URI_REGEX.test(trimmed)) {
     return true;
-  }
-  // Allow clean base64 SVG only without active scripts/event handlers
-  if (trimmed.startsWith("data:image/svg+xml")) {
-    return !trimmed.includes("<script") && !trimmed.includes("onload=") && !trimmed.includes("onerror=");
   }
   return false;
 }
@@ -175,6 +181,20 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
         section: "Profil",
         field: "generalProfile.avatarUrl",
         message: "URL foto profil tidak valid atau menggunakan protokol tidak aman",
+      });
+      checkSafeUrlField(prof.ctaPrimaryHref, {
+        id: "identity-unsafe-cta-primary",
+        dedupeKey: "unsafe-url:generalProfile.ctaPrimaryHref",
+        section: "Profil",
+        field: "generalProfile.ctaPrimaryHref",
+        message: "URL tombol utama Hero tidak aman",
+      });
+      checkSafeUrlField(prof.ctaSecondaryHref, {
+        id: "identity-unsafe-cta-secondary",
+        dedupeKey: "unsafe-url:generalProfile.ctaSecondaryHref",
+        section: "Profil",
+        field: "generalProfile.ctaSecondaryHref",
+        message: "URL tombol sekunder Hero tidak aman",
       });
       if (prof.email && typeof prof.email === "string" && !prof.email.includes("@")) {
         pushIssue({
@@ -452,14 +472,18 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
         if (Array.isArray(edu.projects)) {
           for (const proj of edu.projects) {
             if (proj && typeof proj === "object") {
-              checkSafeUrlField(proj.repo, {
-                id: `schema-edu-proj-repo-${i}`,
-                dedupeKey: `unsafe-url:education[${i}].projects.repo:${proj.title || ""}`,
-                section: "Pendidikan",
-                field: `education[${i}].projects`,
-                itemId,
-                message: `Tautan repositori proyek akademik '${proj.title || ""}' tidak valid`,
-              });
+              const rawRepo = typeof proj.repo === "string" ? proj.repo.trim() : "";
+              const isGithubShorthand = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(rawRepo);
+              if (rawRepo && !isGithubShorthand) {
+                checkSafeUrlField(proj.repo, {
+                  id: `schema-edu-proj-repo-${i}`,
+                  dedupeKey: `unsafe-url:education[${i}].projects.repo:${proj.title || ""}`,
+                  section: "Pendidikan",
+                  field: `education[${i}].projects`,
+                  itemId,
+                  message: `Tautan repositori proyek akademik '${proj.title || ""}' tidak valid`,
+                });
+              }
               checkSafeUrlField(proj.url, {
                 id: `schema-edu-proj-url-${i}`,
                 dedupeKey: `unsafe-url:education[${i}].projects.url:${proj.title || ""}`,
@@ -535,6 +559,28 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
           itemId,
           message: `URL logo pengalaman '${exp.org || i}' tidak valid`,
         });
+        checkSafeUrlField(exp.orgUrl, {
+          id: `schema-exp-orgUrl-${i}`,
+          dedupeKey: `unsafe-url:experience[${i}].orgUrl`,
+          section: "Karier",
+          field: `experience[${i}].orgUrl`,
+          itemId,
+          message: `URL organisasi pengalaman '${exp.org || i}' tidak valid`,
+        });
+        if (Array.isArray(exp.media)) {
+          exp.media.forEach((m, mIdx) => {
+            if (m && typeof m === "object") {
+              checkSafeUrlField(m.url, {
+                id: `schema-exp-media-${i}-${mIdx}`,
+                dedupeKey: `unsafe-url:experience[${i}].media[${mIdx}].url`,
+                section: "Karier",
+                field: `experience[${i}].media[${mIdx}].url`,
+                itemId,
+                message: `URL media pengalaman '${exp.org || i}' tidak valid`,
+              });
+            }
+          });
+        }
         const startCheck = parseStructuredYearMonth(exp.startDate);
         if (startCheck.status === "invalid") {
           pushIssue({
@@ -636,6 +682,22 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
           itemId,
           message: `Gambar prestasi '${ach.title || i}' tidak valid`,
         });
+        checkSafeUrlField(ach.evidencePdf, {
+          id: `schema-ach-evidencePdf-${i}`,
+          dedupeKey: `unsafe-url:achievements[${i}].evidencePdf`,
+          section: "Prestasi",
+          field: `achievements[${i}].evidencePdf`,
+          itemId,
+          message: `URL PDF bukti prestasi '${ach.title || i}' tidak valid`,
+        });
+        checkSafeUrlField(ach.organizerLogo, {
+          id: `schema-ach-organizerLogo-${i}`,
+          dedupeKey: `unsafe-url:achievements[${i}].organizerLogo`,
+          section: "Prestasi",
+          field: `achievements[${i}].organizerLogo`,
+          itemId,
+          message: `URL logo penyelenggara prestasi '${ach.title || i}' tidak valid`,
+        });
       }
     }
   }
@@ -697,6 +759,14 @@ export function validateSiteConfigStructured(raw: unknown): StructuredValidation
           field: `certificates[${i}].credentialPdf`,
           itemId,
           message: `URL PDF sertifikat '${cert.title || i}' tidak valid`,
+        });
+        checkSafeUrlField(cert.issuerLogo, {
+          id: `cert-url-unsafe-${i}-issuerLogo`,
+          dedupeKey: `unsafe-url:certificates[${i}].issuerLogo`,
+          section: "Sertifikat",
+          field: `certificates[${i}].issuerLogo`,
+          itemId,
+          message: `URL logo penerbit sertifikat '${cert.title || i}' tidak valid`,
         });
         checkSafeUrlField(cert.image, {
           id: `cert-url-unsafe-${i}-image`,

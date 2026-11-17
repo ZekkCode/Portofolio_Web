@@ -39,20 +39,7 @@ import {
   resolveBlogSyncMeta,
   validatePublicFeedUrlSyntax,
 } from "./blog-sync";
-
-function isSafeUrl(url?: string): boolean {
-  if (!url) return true;
-  const trimmed = url.trim().toLowerCase();
-  if (
-    trimmed.startsWith("javascript:") ||
-    trimmed.startsWith("vbscript:") ||
-    trimmed.startsWith("data:text/html") ||
-    trimmed.startsWith("data:application/")
-  ) {
-    return false;
-  }
-  return true;
-}
+import { isSafeUrl } from "@/lib/config-validator";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SLUG_FORMAT_REGEX = /^[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*$/;

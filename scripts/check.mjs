@@ -148,10 +148,14 @@ try {
 
   // Injeksi session cookie admin agar pengujian admin terverifikasi secara aman
   const secret = process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const key =
+  const masterSeed =
     secret && secret.length >= 16
       ? secret
       : crypto.createHash("sha256").update("zekktech-admin-default-signing-key-salt").digest("hex");
+  const key = crypto
+    .createHmac("sha256", masterSeed)
+    .update("zekk:admin-session-signing:v1")
+    .digest("hex");
   const payload = {
     email: process.env.ADMIN_EMAIL || "zakariamujur6@gmail.com",
     role: "admin",

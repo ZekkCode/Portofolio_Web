@@ -9,7 +9,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { fetchPublishedContent } from "@/lib/content/public-content";
-import { defaultCvDocs } from "@/lib/site-config";
+import { toPublicSiteConfig } from "@/lib/content/public-config-sanitizer";
+import { scanReferencedMedia } from "@/lib/content/media-catalog";
 import { extractR2Key } from "@/lib/content/r2-key";
 
 export { extractR2Key };
@@ -251,39 +252,31 @@ export async function getR2Object(keyOrUrl: string): Promise<{
 
 /**
  * Menentukan apakah suatu R2 key diizinkan diakses secara publik:
- * Hanya objek yang direferensikan oleh konfigurasi terpublikasi (`current`)
- * atau allowlist dokumen CV aktif. Draf yang belum dipublikasikan ditolak (`false`).
+ * Hanya objek yang secara eksplisit direferensikan oleh item yang aktif & terpublikasi
+ * (`published !== false && visible !== false`) pada konfigurasi `current`, serta menghormati `allowDownload`.
  */
 export async function isAssetPubliclyPublished(key: string): Promise<boolean> {
   if (!key || typeof key !== "string") return false;
 
-  const parts = key.split("/");
+  const normalizedTargetKey = key.trim();
+  const parts = normalizedTargetKey.split("/");
   const folder = parts[0]?.toLowerCase();
   if (!folder) return false;
 
   try {
     const publishedConfig = await fetchPublishedContent();
-    const configJson = JSON.stringify(publishedConfig);
-    if (configJson.includes(key) || configJson.includes(encodeURIComponent(key))) {
-      return true;
+    const publicSafeConfig = toPublicSiteConfig(publishedConfig);
+    const referencedItems = scanReferencedMedia(publicSafeConfig);
+    const bucketName = getR2Config()?.bucketName;
+
+    for (const item of referencedItems) {
+      const extracted = item.key || extractR2Key(item.url, bucketName);
+      if (extracted && extracted === normalizedTargetKey) {
+        return true;
+      }
     }
   } catch {
-    // Fallback check below
-  }
-
-  if (folder === "cv") {
-    const filename = parts.slice(1).join("/").toLowerCase();
-    if (
-      filename.includes("cv-ats") ||
-      filename.includes("cv-uiux") ||
-      filename.includes("cv-frontend") ||
-      filename.includes("cv-graphic") ||
-      filename.includes("cv-itsupport") ||
-      filename.includes("zakariamp") ||
-      defaultCvDocs.some((d) => d.pdfUrl?.toLowerCase().includes(filename))
-    ) {
-      return true;
-    }
+    return false;
   }
 
   return false;

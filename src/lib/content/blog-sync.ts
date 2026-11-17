@@ -105,6 +105,16 @@ export function isPrivateOrReservedIp(rawIp: string): boolean {
     return isPrivateOrReservedIpv4(cleaned);
   }
 
+  // Block integer/hex/octal IPv4 obfuscations (e.g. 2130706433, 0x7f000001, 0177.0.0.1)
+  if (/^(?:0x[0-9a-f]+|\d+)$/i.test(cleaned) || /^(?:0[0-7]+\.){1,3}[0-9.]+$/.test(cleaned)) {
+    return true;
+  }
+
+  // Non-IP domain hostnames do not contain ':' — let hostname rules evaluate them
+  if (!cleaned.includes(":")) {
+    return false;
+  }
+
   // IPv6 checks
   if (cleaned === "::" || cleaned === "::1") return true;
 
@@ -121,29 +131,20 @@ export function isPrivateOrReservedIp(rawIp: string): boolean {
     return isPrivateOrReservedIpv4(dotted);
   }
 
-  // IPv6 ULA fc00::/7 (fc.. or fd..), link-local fe80::/10 (fe8..feb), multicast ff00::/8
-  if (/^f[cd][0-9a-f]{2}:/.test(cleaned)) return true;
-  if (/^fe[89ab][0-9a-f]:/.test(cleaned)) return true;
-  if (/^ff[0-9a-f]{2}:/.test(cleaned)) return true;
-  if (/^64:ff9b::/.test(cleaned)) {
-    // RFC 6052 Well-Known Prefix 64:ff9b::/96: periksa apakah IPv4 yang tertanam adalah privat
-    const suffix = cleaned.replace(/^64:ff9b::/i, "");
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(suffix)) {
-      return isPrivateOrReservedIpv4(suffix);
-    }
-    const hexParts = suffix.split(":");
-    if (hexParts.length === 2) {
-      const p1 = parseInt(hexParts[0], 16);
-      const p2 = parseInt(hexParts[1], 16);
-      if (!Number.isNaN(p1) && !Number.isNaN(p2)) {
-        const dotted = `${(p1 >>> 8) & 0xff}.${p1 & 0xff}.${(p2 >>> 8) & 0xff}.${p2 & 0xff}`;
-        return isPrivateOrReservedIpv4(dotted);
-      }
-    }
+  // IPv6 reserved sub-prefixes inside Global Unicast 2000::/3:
+  // - 2001:0000::/32 (Teredo)
+  // - 2001:db8::/32 (Documentation)
+  // - 2002::/16 (6to4 tunneling — can embed private IPv4)
+  if (/^2001:(?:0{1,4}|db8):/i.test(cleaned)) return true;
+  if (/^2002:/i.test(cleaned)) return true;
+
+  // Allowlist strict IPv6 Global Unicast (2000::/3 -> starts with hex digit 2 or 3 followed by 3 hex chars and ':')
+  if (/^[23][0-9a-f]{3}:/i.test(cleaned)) {
     return false;
   }
 
-  return false;
+  // Tolak seluruh format IPv6 lainnya (termasuk ::169.254.x.x IPv4-compatible, ULA fc00::/7, fe80::/10, 100::/64, dll.)
+  return true;
 }
 
 export function isBlockedInternalHostname(rawHostname: string): boolean {
@@ -734,11 +735,13 @@ export function parseHtmlPortalArticleCards(
   const sourceHost = safeHostLabel(sourceUrl);
   const maxScan = Math.max(limit * 4, 48);
   const collected: BlogPost[] = [];
+  // Batasi ukuran teks HTML yang dipindai regex ke 256 KB untuk mencegah backtracking kuadratik (ReDoS)
+  const boundedHtml = htmlText.length > 262_144 ? htmlText.slice(0, 262_144) : htmlText;
 
   // Pola 1: <a href="/post/...">...<article>...</article>...</a> (struktur Next.js portal blog)
   const wrappedAnchorRegex = /<a\b[^>]*\bhref=(["'])([^"'#][^"']*)\1[^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
-  while ((m = wrappedAnchorRegex.exec(htmlText)) !== null && collected.length < maxScan) {
+  while ((m = wrappedAnchorRegex.exec(boundedHtml)) !== null && collected.length < maxScan) {
     const href = m[2];
     const inner = m[3];
     const hasStructuredCard =
@@ -753,7 +756,7 @@ export function parseHtmlPortalArticleCards(
   // Pola 2: <article>...<a href="..."><h3>Title</h3></a>...</article>
   if (collected.length === 0) {
     const articleBlockRegex = /<article\b[^>]*>([\s\S]*?)<\/article>/gi;
-    while ((m = articleBlockRegex.exec(htmlText)) !== null && collected.length < maxScan) {
+    while ((m = articleBlockRegex.exec(boundedHtml)) !== null && collected.length < maxScan) {
       const inner = m[1];
       if (!/<h[1-4]\b/i.test(inner)) continue;
       const anchorMatch = inner.match(/<a\b[^>]*\bhref=(["'])([^"'#][^"']*)\1/i);

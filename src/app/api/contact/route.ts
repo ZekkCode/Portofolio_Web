@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const cfg = getContactRuntimeConfig();
-  const hasMailProvider = Boolean(cfg.resendApiKey || cfg.brevoApiKey || cfg.webhookUrl);
   const hasTurnstileSecret = Boolean(cfg.secretKey);
   const turnstileEnabled = Boolean(cfg.siteKey && hasTurnstileSecret);
 
@@ -23,8 +22,6 @@ export async function GET() {
     {
       turnstileEnabled,
       siteKey: cfg.siteKey || "",
-      emailConfigured: hasMailProvider,
-      turnstileSecretConfigured: hasTurnstileSecret,
     },
     { headers: { "Cache-Control": "no-store" } }
   );
@@ -64,9 +61,24 @@ export async function POST(request: Request) {
     );
   }
 
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 32_768) {
+    return NextResponse.json(
+      { ok: false, code: "PAYLOAD_TOO_LARGE", error: "Ukuran pesan terlalu besar." },
+      { status: 413, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   let rawBody: unknown;
   try {
-    rawBody = await request.json();
+    const rawText = await request.text();
+    if (Buffer.byteLength(rawText, "utf8") > 32_768) {
+      return NextResponse.json(
+        { ok: false, code: "PAYLOAD_TOO_LARGE", error: "Ukuran pesan terlalu besar." },
+        { status: 413, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    rawBody = JSON.parse(rawText);
   } catch {
     return NextResponse.json(
       { ok: false, code: "INVALID_JSON", error: "Format JSON tidak valid." },

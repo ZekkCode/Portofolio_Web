@@ -43,9 +43,9 @@ const ALLOWED_EXTENSIONS = new Set([".pdf", ".png", ".jpg", ".jpeg", ".webp"]);
 const NO_STORE_CACHE = "private, no-store, max-age=0";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://www.zakariamp.id",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Range, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Range",
   "Access-Control-Expose-Headers": "Content-Length, Content-Range, Content-Disposition",
   "X-Content-Type-Options": "nosniff",
   "Cache-Control": NO_STORE_CACHE,
@@ -250,11 +250,17 @@ export async function GET(request: NextRequest) {
 
   const { doc, pool, cvSettings } = stored;
 
-  // Tegakkan izin unduh global maupun per dokumen
+  // Tegakkan izin unduh global maupun per dokumen (hanya izinkan iframe pratinjau same-origin saat unduhan dikunci)
   const permissionAllowed =
     includeDrafts ||
     (cvSettings?.allowDownload !== false && doc?.allowDownload !== false);
-  if (wantsDownload && !permissionAllowed) {
+  const isSameOriginPreviewIframe =
+    !wantsDownload &&
+    !wantsJson &&
+    request.headers.get("sec-fetch-dest") === "iframe" &&
+    request.headers.get("sec-fetch-site") === "same-origin";
+
+  if (!permissionAllowed && !isSameOriginPreviewIframe) {
     return NextResponse.json(
       { error: "Unduhan dokumen CV saat ini dinonaktifkan oleh administrator." },
       { status: 403, headers: CORS_HEADERS }

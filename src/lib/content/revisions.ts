@@ -662,8 +662,11 @@ export async function publishConfigWithRevision(params: {
   const timestamp = normalized.updatedAt || new Date(nowMs).toISOString();
   const editor = params.editor || "admin";
 
-  // 1. Baca indeks revisi saat ini (jangan timpa produksi jika indeks gagal dibaca)
-  const historyRes = await getRevisionHistoryDetailed(adapter);
+  // 1 & 2. Baca indeks revisi dan state 'current' secara paralel untuk memangkas latensi waterfall
+  const [historyRes, prevCurrentRes] = await Promise.all([
+    getRevisionHistoryDetailed(adapter),
+    adapter.readDoc<unknown>("current"),
+  ]);
   if (!historyRes.ok) {
     return {
       success: false,
@@ -673,8 +676,6 @@ export async function publishConfigWithRevision(params: {
   }
   const prevHistory = historyRes.revisions;
 
-  // 2. Baca state 'current' sebelum ditimpa untuk dif & pengamanan baseline
-  const prevCurrentRes = await adapter.readDoc<unknown>("current");
   if (prevCurrentRes.status === "error") {
     return {
       success: false,
@@ -797,14 +798,15 @@ export async function publishConfigWithRevision(params: {
     };
   }
 
-  // 7. Bersihkan 'draft' & snapshot kedaluwarsa (hanya yang terlempar dari kept!)
-  await adapter.deleteDoc("draft");
+  // 7. Bersihkan 'draft' & snapshot kedaluwarsa secara paralel (hanya yang terlempar dari kept!)
   const keptSet = new Set(kept.map((r) => r.revisionId));
+  const cleanupTasks: Array<Promise<unknown>> = [adapter.deleteDoc("draft")];
   for (const oldId of prunedIds) {
     if (!keptSet.has(oldId)) {
-      await adapter.deleteDoc(`rev_${oldId}`);
+      cleanupTasks.push(adapter.deleteDoc(`rev_${oldId}`));
     }
   }
+  await Promise.all(cleanupTasks);
 
   return {
     success: true,

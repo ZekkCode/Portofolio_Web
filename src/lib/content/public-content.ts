@@ -2,10 +2,10 @@ import { getSupabaseClient, getServiceRoleClient, isSupabaseConfigured } from "@
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeConfig, defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import {
-  isLocalCmsOverrideAllowed,
   isStrictLocalCmsStore,
   readLocalCmsDoc,
 } from "@/lib/content/local-cms-store";
+import { shouldUseLocalRevisions } from "@/lib/content/revisions";
 
 type PublishedContentCache = {
   snapshot: SiteConfig | null;
@@ -39,16 +39,17 @@ export async function fetchPublishedContentWithMeta(options?: {
 }> {
   const cache = getPublishedCache();
   const now = Date.now();
+  const useLocalStore = shouldUseLocalRevisions();
   if (!options?.bypassCache && cache.snapshot && now - cache.timestamp < MEMORY_TTL_MS) {
     return {
       config: cache.snapshot,
       updatedAt: cache.updatedAt,
-      provider: isLocalCmsOverrideAllowed() ? "local-store" : "supabase",
+      provider: useLocalStore ? "local-store" : "supabase",
     };
   }
 
-  // Prefer local override store in non-Vercel local mode if written
-  if (isLocalCmsOverrideAllowed()) {
+  // Gunakan penyimpan lokal hanya jika mode local store memang aktif (konsisten dengan /api/config)
+  if (useLocalStore) {
     const localDoc = await readLocalCmsDoc<Partial<SiteConfig>>("current");
     if (localDoc?.config) {
       cache.snapshot = normalizeConfig(localDoc.config);
@@ -136,7 +137,7 @@ export async function fetchDraftOrPublishedContent(): Promise<{
 }> {
   const published = await fetchPublishedContentWithMeta({ bypassCache: true });
 
-  if (isLocalCmsOverrideAllowed()) {
+  if (shouldUseLocalRevisions()) {
     const localDraft = await readLocalCmsDoc<Partial<SiteConfig>>("draft");
     if (localDraft?.config) {
       return {

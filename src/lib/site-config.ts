@@ -973,23 +973,31 @@ export const defaultAchievements: AchievementItem[] = [
   },
 ];
 
-export const defaultCertificates: CertificateItem[] = (profile.certificates || []).map((c, idx) => ({
-  id: ("id" in c && typeof c.id === "string" && c.id) ? c.id : `cert-${idx + 1}`,
-  title: c.title,
-  issuer: c.issuer,
-  date: c.date,
-  credentialUrl: c.credentialUrl || "",
-  credentialPdf: ("credentialPdf" in c && typeof c.credentialPdf === "string") ? c.credentialPdf : undefined,
-  credentialId: ("credentialId" in c && typeof c.credentialId === "string") ? c.credentialId : undefined,
-  image: ("image" in c && typeof c.image === "string") ? c.image : undefined,
-  category: (c.category || "design") as "design" | "frontend" | "systems" | "all",
-  verificationStatus: ("verificationStatus" in c && typeof c.verificationStatus === "string")
-    ? (c.verificationStatus as CertificateVerificationStatus)
-    : "unverified",
-  published: true,
-  allowDownload: true,
-  sortOrder: idx + 1,
-}));
+export const defaultCertificates: CertificateItem[] = (profile.certificates || []).map((c, idx) =>
+  normalizeCertificateVerification(
+    {
+      id: ("id" in c && typeof c.id === "string" && c.id) ? c.id : `cert-${idx + 1}`,
+      title: c.title,
+      titleEn: ("titleEn" in c && typeof c.titleEn === "string") ? c.titleEn : undefined,
+      issuer: c.issuer,
+      date: c.date,
+      expiryDate: ("expiryDate" in c && typeof c.expiryDate === "string") ? c.expiryDate : undefined,
+      credentialUrl: c.credentialUrl || "",
+      credentialPdf: ("credentialPdf" in c && typeof c.credentialPdf === "string") ? c.credentialPdf : undefined,
+      credentialId: ("credentialId" in c && typeof c.credentialId === "string") ? c.credentialId : undefined,
+      image: ("image" in c && typeof c.image === "string") ? c.image : undefined,
+      category: (c.category || "design") as "design" | "frontend" | "systems" | "all",
+      verificationStatus: ("verificationStatus" in c && typeof c.verificationStatus === "string")
+        ? (c.verificationStatus as CertificateVerificationStatus)
+        : "unverified",
+      featured: ("featured" in c && typeof c.featured === "boolean") ? c.featured : undefined,
+      published: true,
+      allowDownload: true,
+      sortOrder: idx + 1,
+    },
+    "2026-11-18T00:00:00.000Z"
+  )
+);
 
 export const defaultTechStack: TechStackItem[] = [
   { id: "ts-figma", name: "Figma", category: "uiux", icon: "/icons/figma.svg", sortOrder: 1, visible: true },

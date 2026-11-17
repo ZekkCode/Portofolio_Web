@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
 import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
@@ -25,7 +25,9 @@ export function CertificatesSection() {
   const [filter, setFilter] = useState<string>("all");
   const [previewCert, setPreviewCert] = useState<CertificateItem | null>(null);
   const [currentCertIndex, setCurrentCertIndex] = useState(0);
+  const [showAllDesktop, setShowAllDesktop] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const DESKTOP_INITIAL_COUNT = 8;
 
   useEffect(() => {
     setMounted(true);
@@ -60,7 +62,7 @@ export function CertificatesSection() {
   const availableCategories = useMemo(() => {
     const cats = new Set<string>();
     publishedCertificates.forEach((c) => {
-      if (c.category) cats.add(c.category);
+      if (c.category && c.category !== "all") cats.add(c.category);
     });
     const base = ["design", "frontend", "systems"].filter((k) => cats.has(k));
     cats.forEach((k) => {
@@ -77,6 +79,7 @@ export function CertificatesSection() {
   const handleFilterChange = (cat: string) => {
     setFilter(cat);
     setCurrentCertIndex(0);
+    setShowAllDesktop(false);
   };
 
   useEffect(() => {
@@ -123,6 +126,8 @@ export function CertificatesSection() {
         return t("certificates.filterFrontend", "Frontend & Web");
       case "systems":
         return t("certificates.filterSystems", "Sistem & Jaringan");
+      case "all":
+        return isEn ? "Cross-Disciplinary" : "Lintas Bidang";
       default:
         return cat;
     }
@@ -436,8 +441,37 @@ export function CertificatesSection() {
                 </div>
 
                 {/* DESKTOP ONLY: Grid Kredensial Asli */}
-                <div role="tabpanel" className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                  {filtered.map((cert) => renderCertCard(cert, false))}
+                <div className="hidden sm:block">
+                  <div role="tabpanel" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    {(showAllDesktop ? filtered : filtered.slice(0, DESKTOP_INITIAL_COUNT)).map((cert) =>
+                      renderCertCard(cert, false)
+                    )}
+                  </div>
+                  {filtered.length > DESKTOP_INITIAL_COUNT && (
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllDesktop((prev) => !prev)}
+                        className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-line/80 bg-white px-5 py-2 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-colors duration-150 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422] dark:text-slate-200 dark:hover:border-brand/50 dark:hover:text-blue-400"
+                      >
+                        {showAllDesktop ? (
+                          <>
+                            <span>{isEn ? "Show Less" : "Ringkas Tampilan"}</span>
+                            <ChevronUp className="size-4" />
+                          </>
+                        ) : (
+                          <>
+                            <span>
+                              {isEn
+                                ? `Show All Credentials (${filtered.length})`
+                                : `Lihat Semua Kredensial (${filtered.length})`}
+                            </span>
+                            <ChevronDown className="size-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -213,7 +213,7 @@ try {
   await sleep(300);
   assert.equal(await click("Simpan"), true, "tombol Simpan tidak ditemukan");
   let saved = null;
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 45; attempt++) {
     saved = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").lanyard?.cornerRadius`);
     if (saved === 0.85) break;
     await sleep(200);

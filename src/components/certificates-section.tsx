@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowUpRight, Eye, FileText, X, Award, ShieldCheck, Clock, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
+import { useMounted } from "@/lib/use-mounted";
 import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
 import {
   getPublishedCertificates,
@@ -26,12 +27,8 @@ export function CertificatesSection() {
   const [previewCert, setPreviewCert] = useState<CertificateItem | null>(null);
   const [currentCertIndex, setCurrentCertIndex] = useState(0);
   const [showAllDesktop, setShowAllDesktop] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const DESKTOP_INITIAL_COUNT = 8;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Lock body scroll and listen for Escape key when preview modal is open
   useEffect(() => {
@@ -82,20 +79,17 @@ export function CertificatesSection() {
     setShowAllDesktop(false);
   };
 
-  useEffect(() => {
-    if (filtered.length > 0 && currentCertIndex >= filtered.length) {
-      setCurrentCertIndex(0);
-    }
-  }, [filtered.length, currentCertIndex]);
+  const safeCertIndex =
+    filtered.length > 0 && currentCertIndex < filtered.length ? currentCertIndex : 0;
 
   const handlePrevCert = () => {
     if (filtered.length <= 1) return;
-    setCurrentCertIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
+    setCurrentCertIndex((safeCertIndex - 1 + filtered.length) % filtered.length);
   };
 
   const handleNextCert = () => {
     if (filtered.length <= 1) return;
-    setCurrentCertIndex((prev) => (prev + 1) % filtered.length);
+    setCurrentCertIndex((safeCertIndex + 1) % filtered.length);
   };
 
   const handleCertTouchStart = (e: React.TouchEvent) => {
@@ -231,7 +225,7 @@ export function CertificatesSection() {
 
       {/* Helper Card Render */}
       {(() => {
-        const renderCertCard = (cert: CertificateItem, isMobile: boolean) => {
+        const renderCertCard = (cert: CertificateItem) => {
           const proofLink =
             cert.credentialUrl ||
             (cert.allowDownload !== false ? cert.credentialPdf : undefined);
@@ -404,7 +398,7 @@ export function CertificatesSection() {
                   onTouchEnd={handleCertTouchEnd}
                 >
                   <div role="tabpanel">
-                    {renderCertCard(filtered[currentCertIndex] || filtered[0], true)}
+                    {renderCertCard(filtered[safeCertIndex] || filtered[0])}
                   </div>
 
                   {filtered.length > 1 ? (
@@ -419,7 +413,7 @@ export function CertificatesSection() {
                       </button>
 
                       <span data-carousel-indicator className="font-mono text-xs font-semibold text-muted">
-                        {currentCertIndex + 1} / {filtered.length}
+                        {safeCertIndex + 1} / {filtered.length}
                       </span>
 
                       <button
@@ -444,7 +438,7 @@ export function CertificatesSection() {
                 <div className="hidden sm:block">
                   <div role="tabpanel" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     {(showAllDesktop ? filtered : filtered.slice(0, DESKTOP_INITIAL_COUNT)).map((cert) =>
-                      renderCertCard(cert, false)
+                      renderCertCard(cert)
                     )}
                   </div>
                   {filtered.length > DESKTOP_INITIAL_COUNT && (

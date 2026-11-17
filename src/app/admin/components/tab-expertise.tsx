@@ -151,7 +151,7 @@ export function TabExpertise({
   // ===================== TECH STACK CATEGORIES CRUD =====================
   const addCategory = () => {
     const existingKeys = new Set(categories.map((c) => c.key.toLowerCase()));
-    let suffix = Date.now().toString().slice(-4);
+    const suffix = Date.now().toString().slice(-4);
     let key = `cat-${suffix}`;
     let counter = 1;
     while (existingKeys.has(key.toLowerCase())) {

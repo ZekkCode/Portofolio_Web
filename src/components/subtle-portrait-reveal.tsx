@@ -44,8 +44,7 @@ export function SubtlePortraitReveal({
 
     let targetX = -999;
     let targetY = -999;
-    let currentOpacity = 0;
-    let currentRadius = defaultRadius;
+    const currentRadius = defaultRadius;
     let isHovering = false;
     let isClicking = false;
 

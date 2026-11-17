@@ -308,12 +308,6 @@ function Stack() {
     [config, locale, t]
   );
 
-  useEffect(() => {
-    if (disciplines.length > 0 && !disciplines.some((d) => d.key === activeMobileCategory)) {
-      setActiveMobileCategory(disciplines[0].key);
-    }
-  }, [disciplines, activeMobileCategory]);
-
   const toggleCategoryExpand = (catKey: string) => {
     setExpandedCategories((prev) => ({ ...prev, [catKey]: !prev[catKey] }));
   };

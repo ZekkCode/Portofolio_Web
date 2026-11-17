@@ -1245,7 +1245,7 @@ export const defaultSiteConfig: SiteConfig = {
     personJobTitle: "UI/UX Designer & Frontend Developer",
     googleVerification: "zJPFsbAW4iSJjucKreBPM52cIAApE4NbeoIYI9OTSZ0",
     bingVerification: "",
-    yandexVerification: "",
+    yandexVerification: "046d77b02ac682b5",
     indexNowKey: "",
   },
   sections: defaultSections,

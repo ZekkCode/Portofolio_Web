@@ -85,6 +85,17 @@ function resolveGoogleVerificationTokens(configured?: string): string[] | string
   return all;
 }
 
+function resolveYandexVerificationToken(configured?: string): string | undefined {
+  const envToken =
+    process.env.YANDEX_SITE_VERIFICATION ||
+    process.env.YANDEX_VERIFICATION ||
+    process.env.NEXT_PUBLIC_YANDEX_VERIFICATION;
+  const token = (configured || envToken || "046d77b02ac682b5")
+    .trim()
+    .replace(/^yandex-verification=/i, "");
+  return token || undefined;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const config = await fetchPublishedContent();
   const pub = getPublishedProfile(config, "id");
@@ -136,7 +147,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     verification: {
       google: resolveGoogleVerificationTokens(seo.googleVerification),
-      yandex: (seo.yandexVerification || "").trim() || undefined,
+      yandex: resolveYandexVerificationToken(seo.yandexVerification),
       other: {
         ...(seo.bingVerification?.trim() ? { "msvalidate.01": seo.bingVerification.trim() } : {}),
       },

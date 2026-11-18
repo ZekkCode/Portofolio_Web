@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   RotateCcw,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import { useSiteConfig, type CertificateItem } from "@/lib/site-store";
 import {
@@ -152,11 +151,7 @@ export function CertificatesClient() {
         </nav>
 
         {/* Hero Section */}
-        <div className="mb-10">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/5 px-3 py-1 text-xs font-semibold text-brand dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400 mb-3">
-            <Award className="size-3.5" />
-            <span>{isEn ? "Verified Credentials Directory" : "Direktori Kredensial Terverifikasi"}</span>
-          </div>
+        <div className="mb-8">
           <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-ink">
             {isEn ? "Certifications & Technical Credentials" : "Arsip Kredensial & Sertifikasi"}
           </h1>
@@ -166,46 +161,22 @@ export function CertificatesClient() {
               : "Daftar lengkap sertifikasi resmi, pelatihan kompetensi, dan kredensial teknis terverifikasi di bidang IT Support, Rekayasa Frontend, Desain Antarmuka UI/UX, dan Jaringan Komputer."}
           </p>
 
-          {/* Quick Metrics */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Award className="size-4 text-brand dark:text-blue-400" />
-                <span className="text-xs font-medium">{isEn ? "Total Credentials" : "Total Kredensial"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink">
-                {allCertificates.length}
-              </p>
+          {/* Hanya Total Terverifikasi dan Bidang Keahlian (Tanpa Kotak Border Bertumpuk) */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted">
+            <div className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <span>
+                <strong className="font-semibold text-ink">{totalVerifiedCount}</strong>{" "}
+                {isEn ? "Verified Credentials" : "Kredensial Terverifikasi"}
+              </span>
             </div>
-
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-xs font-medium">{isEn ? "Verified" : "Terverifikasi"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink text-emerald-600 dark:text-emerald-400">
-                {totalVerifiedCount}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Layers className="size-4 text-purple-600 dark:text-purple-400" />
-                <span className="text-xs font-medium">{isEn ? "Core Tracks" : "Bidang Keahlian"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink">
-                {availableCategories.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Sparkles className="size-4 text-amber-500" />
-                <span className="text-xs font-medium">{isEn ? "Featured" : "Unggulan"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink">
-                {allCertificates.filter((c) => c.featured).length}
-              </p>
+            <span className="text-line" aria-hidden="true">•</span>
+            <div className="inline-flex items-center gap-1.5">
+              <Layers className="size-4 text-brand dark:text-blue-400" />
+              <span>
+                <strong className="font-semibold text-ink">{availableCategories.length}</strong>{" "}
+                {isEn ? "Specialized Tracks" : "Bidang Keahlian"}
+              </span>
             </div>
           </div>
         </div>

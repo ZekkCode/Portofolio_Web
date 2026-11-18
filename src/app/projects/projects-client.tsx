@@ -12,7 +12,6 @@ import {
   Briefcase,
   Layers,
   RotateCcw,
-  Code2,
 } from "lucide-react";
 import { useSiteConfig, type Project, type TechStackItem } from "@/lib/site-store";
 import {
@@ -124,11 +123,7 @@ export function ProjectsClient() {
         </nav>
 
         {/* Hero Section */}
-        <div className="mb-10">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/5 px-3 py-1 text-xs font-semibold text-brand dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400 mb-3">
-            <Briefcase className="size-3.5" />
-            <span>{isEn ? "Engineering & Creative Showcase" : "Portofolio Proyek & Rekayasa"}</span>
-          </div>
+        <div className="mb-8">
           <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-ink">
             {isEn ? "Featured Works & Software Projects" : "Katalog Proyek & Portofolio"}
           </h1>
@@ -138,43 +133,33 @@ export function ProjectsClient() {
               : "Koleksi aplikasi web, sistem informasi terintegrasi, dan antarmuka digital yang dirancang dengan arsitektur modern serta standar pengalaman pengguna yang tinggi."}
           </p>
 
-          {/* Quick Metrics */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Briefcase className="size-4 text-brand dark:text-blue-400" />
-                <span className="text-xs font-medium">{isEn ? "Published Projects" : "Proyek Dipublikasikan"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink">
-                {allProjects.length}
-              </p>
+          {/* Metadata Ringkas Tanpa Box Border */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted">
+            <div className="inline-flex items-center gap-1.5">
+              <Briefcase className="size-4 text-brand dark:text-blue-400" />
+              <span>
+                <strong className="font-semibold text-ink">{allProjects.length}</strong>{" "}
+                {isEn ? "Projects" : "Proyek Terdaftar"}
+              </span>
             </div>
-
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422]">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Layers className="size-4 text-purple-600 dark:text-purple-400" />
-                <span className="text-xs font-medium">{isEn ? "Categories" : "Kategori Bidang"}</span>
-              </div>
-              <p className="font-display text-xl sm:text-2xl font-bold text-ink">
-                {categories.length}
-              </p>
+            <span className="text-line" aria-hidden="true">•</span>
+            <div className="inline-flex items-center gap-1.5">
+              <Layers className="size-4 text-purple-600 dark:text-purple-400" />
+              <span>
+                <strong className="font-semibold text-ink">{categories.length}</strong>{" "}
+                {isEn ? "Categories" : "Kategori Bidang"}
+              </span>
             </div>
-
-            <div className="rounded-2xl border border-line/70 bg-white p-3.5 shadow-2xs dark:border-line/40 dark:bg-[#111422] col-span-2 sm:col-span-1">
-              <div className="flex items-center gap-2 text-muted mb-1">
-                <Code2 className="size-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-xs font-medium">GitHub Repository</span>
-              </div>
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-display text-sm font-bold text-brand hover:underline dark:text-blue-400"
-              >
-                <span>@{pubProfile.githubUsername || "ZekkCode"}</span>
-                <ArrowUpRight className="size-3.5" />
-              </a>
-            </div>
+            <span className="text-line" aria-hidden="true">•</span>
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline dark:text-blue-400"
+            >
+              <span>GitHub @{pubProfile.githubUsername || "ZekkCode"}</span>
+              <ArrowUpRight className="size-3.5" />
+            </a>
           </div>
         </div>
 

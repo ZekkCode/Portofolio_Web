@@ -51,6 +51,18 @@ const nextConfig: NextConfig = {
         source: "/:key([a-zA-Z0-9_-]{8,128})\\.txt",
         destination: "/api/indexnow?key=:key",
       },
+      {
+        source: "/sertifikasi",
+        destination: "/certificates",
+      },
+      {
+        source: "/proyek",
+        destination: "/projects",
+      },
+      {
+        source: "/portofolio",
+        destination: "/projects",
+      },
     ];
   },
   images: {

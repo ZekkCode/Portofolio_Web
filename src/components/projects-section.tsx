@@ -2,6 +2,7 @@
 
 import { useRef, useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Parallax, ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
@@ -20,7 +21,7 @@ const RepoPreviewModal = dynamic(
   { ssr: false }
 );
 
-interface ProjectCardProps {
+export interface ProjectCardProps {
   project: Project;
   categoryLabel: string;
   techItems: TechStackItem[];
@@ -28,7 +29,7 @@ interface ProjectCardProps {
   isEn: boolean;
 }
 
-function ProjectTiltedCard({
+export function ProjectTiltedCard({
   project,
   categoryLabel,
   techItems,
@@ -437,6 +438,17 @@ export function ProjectsSection() {
           </div>
         </Parallax>
       )}
+
+      {/* Tautan Navigasi ke Halaman Khusus Portofolio Proyek */}
+      <div className="relative z-[2] mt-8 flex justify-center">
+        <Link
+          href="/projects"
+          className="group inline-flex min-h-[44px] items-center gap-2.5 rounded-xl border border-line/80 bg-white px-6 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-2xs transition-all duration-150 hover:border-brand/40 hover:text-brand hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-line/60 dark:bg-[#111422] dark:text-slate-200 dark:hover:border-brand/50 dark:hover:text-blue-400"
+        >
+          <span>{isEn ? "View Projects Directory" : "Jelajahi Arsip Proyek"}</span>
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
 
       {/* Repository Full Preview Modal (lazy-loaded on demand) */}
       {selectedProject && (

@@ -135,6 +135,8 @@ export function buildMainSitemapXml(baseUrl: string, _config: SiteConfig, lastMo
     { loc: rootUrl, priority: "1.0", changefreq: "weekly" },
     { loc: idUrl, priority: "0.9", changefreq: "weekly" },
     { loc: enUrl, priority: "0.9", changefreq: "weekly" },
+    { loc: encodeSafeSitemapUri(`${baseUrl}/certificates`), priority: "0.9", changefreq: "weekly" },
+    { loc: encodeSafeSitemapUri(`${baseUrl}/projects`), priority: "0.9", changefreq: "weekly" },
   ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>

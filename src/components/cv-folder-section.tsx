@@ -400,13 +400,6 @@ export function CvFolderSection() {
               {cvSettings.folderHint}
             </p>
           )}
-          {cvSummary.allShareSinglePdf && cvSummary.sharedGroups[0] && (
-            <p className="mt-1.5 text-center text-[11px] text-muted">
-              {locale === "en"
-                ? `All listed roles currently open the same combined CV file (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`
-                : `Semua peran di atas membuka satu berkas CV gabungan (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`}
-            </p>
-          )}
           {cvSettings.allowDownload !== false && cvDocs[0]?.pdfUrl && (
             <div className="mt-2.5 flex justify-center">
               <a

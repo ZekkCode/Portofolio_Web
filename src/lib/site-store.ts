@@ -265,6 +265,9 @@ export const saveCloudDraft = async (
   serverConfig?: SiteConfig;
   message?: string;
 }> => {
+  // Selalu amankan ke penyimpanan draf lokal browser terlebih dahulu
+  persistLocalDraftBackup(draft);
+
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (options?.expectedUpdatedAt) {

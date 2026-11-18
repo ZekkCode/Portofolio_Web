@@ -221,6 +221,13 @@ try {
   assert.equal(saved, 0.85, "nilai slider tidak tersimpan");
   console.log("ok  admin: ubah slider lalu Simpan menulis localStorage");
 
+  // Tunggu hingga proses simpan publikasi pertama selesai di server
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const isStillSaving = await evaluate(`[...document.querySelectorAll("button")].some(b => b.textContent.trim() === "Menyimpan...")`);
+    if (!isStillSaving) break;
+    await sleep(250);
+  }
+
   assert.equal(await click("Proyek"), true, "tab Proyek tidak ditemukan");
   await sleep(300);
   const before = await evaluate(`document.querySelectorAll("textarea").length`);
@@ -268,6 +275,14 @@ try {
   await sleep(250);
   const inlineErrorsVisible = await evaluate(`document.querySelectorAll('[role="alert"]').length > 0`);
   assert.equal(inlineErrorsVisible, true, "validasi inline tidak muncul saat proyek belum lengkap diubah ke Publik");
+
+  // Tunggu jika simpan draf sebelumnya masih menyelesaikan request network
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const isStillSaving = await evaluate(`[...document.querySelectorAll("button")].some(b => b.textContent.trim() === "Menyimpan...")`);
+    if (!isStillSaving) break;
+    await sleep(250);
+  }
+
   assert.equal(await click("Simpan"), true, "tombol Simpan tidak ditemukan");
   await sleep(400);
   const publishedStored = await evaluate(`JSON.parse(localStorage.getItem("zekk:site:v1") ?? "{}").projects ?? []`);

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
@@ -113,14 +114,28 @@ export function StaticCvFolder({
                 </div>
                 <div className="relative mt-2.5 h-16 sm:h-20 w-full rounded-md overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center">
                   {p.image ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                    p.image.startsWith("/") && !p.image.startsWith("//") ? (
+                      <Image
+                        src={p.image}
+                        alt={p.title}
+                        width={240}
+                        height={324}
+                        sizes="240px"
+                        loading="lazy"
+                        className="size-full object-cover object-top opacity-85"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={p.image}
                         alt={p.title}
+                        width={240}
+                        height={324}
+                        loading="lazy"
+                        decoding="async"
                         className="size-full object-cover object-top opacity-85"
                       />
-                    </>
+                    )
                   ) : (
                     <div className="px-2 text-center">
                       <span className="block text-[9px] font-mono font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[170px]">
@@ -183,6 +198,7 @@ export function CvFolderSection() {
     return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   });
   const [isMobile, setIsMobile] = useState(false);
+  const [folderStageNear, setFolderStageNear] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
@@ -190,6 +206,26 @@ export function CvFolderSection() {
     window.addEventListener("resize", checkMobile, { passive: true });
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || folderStageNear || typeof window === "undefined") return;
+    if (typeof IntersectionObserver === "undefined") {
+      setFolderStageNear(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setFolderStageNear(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "650px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [folderStageNear]);
 
   // GSAP ScrollTrigger: tutup di atas, buka otomatis di tengah, tutup saat scroll lewat ke bawah
   useEffect(() => {
@@ -306,33 +342,43 @@ export function CvFolderSection() {
           className="relative z-[2] mt-8 flex min-h-[400px] sm:min-h-[460px] flex-col items-center justify-center py-6 [contain:layout_style]"
         >
           <div className="relative flex w-full items-center justify-center">
-            <ThemedFolder
-              label={cvSettings.folderLabel || "CV / Zekk"}
-              mode="flap"
-              variant="solid"
-              open={isFolderOpen}
-              onOpenChange={setIsFolderOpen}
-              size={isMobile ? 0.95 : 1.25}
-              items={folderItems}
-              paperColor="#ffffff"
-              tabPosition="right"
-              layout="spread"
-              openOn="click"
-              draggable={true}
-              zoomOnClick={false}
-              peek={true}
-              intro={false}
-              tilt={isMobile ? 0.35 : 0.6}
-              bounce={0.35}
-              speed={1.15}
-              frost={0.3}
-              onItemClick={(_item, index) => {
-                const item = cvPages[index];
-                if (item) {
-                  openPreview(item.roleKey);
-                }
-              }}
-            />
+            {folderStageNear || isFolderOpen ? (
+              <ThemedFolder
+                label={cvSettings.folderLabel || "CV / Zekk"}
+                mode="flap"
+                variant="solid"
+                open={isFolderOpen}
+                onOpenChange={setIsFolderOpen}
+                size={isMobile ? 0.95 : 1.25}
+                items={folderItems}
+                paperColor="#ffffff"
+                tabPosition="right"
+                layout="spread"
+                openOn="click"
+                draggable={true}
+                zoomOnClick={false}
+                peek={true}
+                intro={false}
+                tilt={isMobile ? 0.35 : 0.6}
+                bounce={0.35}
+                speed={1.15}
+                frost={0.3}
+                onItemClick={(_item, index) => {
+                  const item = cvPages[index];
+                  if (item) {
+                    openPreview(item.roleKey);
+                  }
+                }}
+              />
+            ) : (
+              <StaticCvFolder
+                isOpen={isFolderOpen}
+                pages={cvPages}
+                folderLabel={cvSettings.folderLabel || "CV / Zekk"}
+                hintLabel={cvSettings.folderHint || undefined}
+                onOpenPreview={openPreview}
+              />
+            )}
 
             {/* Floating Center Button */}
             <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
@@ -355,7 +401,7 @@ export function CvFolderSection() {
             </p>
           )}
           {cvSummary.allShareSinglePdf && cvSummary.sharedGroups[0] && (
-            <p className="mt-1.5 text-center text-[11px] text-muted/85">
+            <p className="mt-1.5 text-center text-[11px] text-muted">
               {locale === "en"
                 ? `All listed roles currently open the same combined CV file (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`
                 : `Semua peran di atas membuka satu berkas CV gabungan (${cvSummary.sharedGroups[0].effectiveDownloadFilename}).`}

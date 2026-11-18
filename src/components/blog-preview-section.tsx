@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { ScrollReveal } from "@/components/parallax";
 import { SectionTitle } from "@/components/section-title";
@@ -16,6 +17,31 @@ import {
   mergeBlogPostsWithOverrides,
 } from "@/lib/content/selectors";
 import { ArrowRight, ArrowUpRight, Calendar, Loader2, Newspaper, ChevronLeft, ChevronRight } from "lucide-react";
+
+function canOptimizeBlogCover(src?: string): boolean {
+  if (!src) return false;
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  try {
+    const { protocol, hostname } = new URL(src);
+    if (protocol !== "https:") return false;
+    const h = hostname.toLowerCase();
+    return (
+      h.endsWith(".workers.dev") ||
+      h.endsWith(".r2.dev") ||
+      h.endsWith(".supabase.co") ||
+      h === "zekktech.biz.id" ||
+      h === "raw.githubusercontent.com" ||
+      h === "avatars.githubusercontent.com" ||
+      h === "zakariamp.id" ||
+      h.endsWith(".zakariamp.id") ||
+      h === "zakariamp.my.id" ||
+      h.endsWith(".zakariamp.my.id") ||
+      h === "zakariamp.vercel.app"
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function BlogPreviewSection() {
   const { t, i18n } = useTranslation();
@@ -314,21 +340,34 @@ export function BlogPreviewSection() {
                               href={post.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              aria-label={`${post.title} (Buka di tab baru)`}
                               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-3.5 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] min-h-[300px]"
                             >
                               <div>
                                 <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-line/50 dark:border-line/30">
                                   {post.coverImage && !hasError ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={post.coverImage}
-                                      alt={post.coverAlt || post.title}
-                                      loading="eager"
-                                      decoding="async"
-                                      onError={() => handleImageError(post.id)}
-                                      className="size-full object-cover"
-                                    />
+                                    canOptimizeBlogCover(post.coverImage) ? (
+                                      <Image
+                                        src={post.coverImage}
+                                        alt={post.coverAlt || post.title}
+                                        fill
+                                        sizes="(max-width: 767px) 92vw, 320px"
+                                        loading="lazy"
+                                        onError={() => handleImageError(post.id)}
+                                        className="object-cover"
+                                      />
+                                    ) : (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={post.coverImage}
+                                        alt={post.coverAlt || post.title}
+                                        width={640}
+                                        height={360}
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={() => handleImageError(post.id)}
+                                        className="size-full object-cover"
+                                      />
+                                    )
                                   ) : (
                                     <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-muted bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
                                       <Newspaper className="size-7 text-brand/60 dark:text-blue-400/60" />
@@ -386,7 +425,6 @@ export function BlogPreviewSection() {
                           href={blogUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label={`${ctaLabel} (${displayHost})`}
                           className="group relative flex flex-col justify-between gap-3 overflow-hidden rounded-2xl border border-dashed border-brand/50 bg-brand/[0.03] p-4.5 dark:border-blue-500/50 dark:bg-blue-500/[0.06] min-h-[300px]"
                         >
                           <div className="space-y-2">
@@ -454,21 +492,34 @@ export function BlogPreviewSection() {
                     href={post.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${post.title} (Buka di tab baru)`}
                     className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-white p-4 sm:p-5 transition-colors duration-200 hover:border-brand/40 dark:border-line/60 dark:bg-[#111422] dark:hover:border-blue-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                   >
                     <div>
                       <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-line/50 dark:border-line/30">
                         {post.coverImage && !hasError ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={post.coverImage}
-                            alt={post.coverAlt || post.title}
-                            loading="eager"
-                            decoding="async"
-                            onError={() => handleImageError(post.id)}
-                            className="size-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
-                          />
+                          canOptimizeBlogCover(post.coverImage) ? (
+                            <Image
+                              src={post.coverImage}
+                              alt={post.coverAlt || post.title}
+                              fill
+                              sizes="(max-width: 1023px) 46vw, 320px"
+                              loading="lazy"
+                              onError={() => handleImageError(post.id)}
+                              className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={post.coverImage}
+                              alt={post.coverAlt || post.title}
+                              width={640}
+                              height={360}
+                              loading="lazy"
+                              decoding="async"
+                              onError={() => handleImageError(post.id)}
+                              className="size-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                            />
+                          )
                         ) : (
                           <div className="flex size-full flex-col items-center justify-center gap-2 p-4 text-muted bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
                             <Newspaper className="size-8 text-brand/60 dark:text-blue-400/60" />
@@ -527,7 +578,6 @@ export function BlogPreviewSection() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-blog-see-all="true"
-                aria-label={`${ctaLabel} (${displayHost})`}
                 className={`group relative flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-dashed border-line/90 bg-slate-50/75 p-5 sm:p-6 transition-colors duration-200 hover:border-brand/50 hover:bg-brand/[0.03] dark:border-line/60 dark:bg-[#111422]/75 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${mdSeeAllSpan} ${lgSeeAllSpan}`}
               >
                 <div className="space-y-3">

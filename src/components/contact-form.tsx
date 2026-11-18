@@ -69,17 +69,40 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
   } | null>(null);
 
   const startedAtRef = useRef<number>(0);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [formEngaged, setFormEngaged] = useState(false);
 
   useEffect(() => {
     startedAtRef.current = Date.now();
   }, []);
 
-  // Sinkronisasi konfigurasi runtime Turnstile (mendukung env dinamis tanpa rebuild)
   useEffect(() => {
+    const el = formRef.current;
+    if (!el || formEngaged || typeof window === "undefined") return;
+    if (typeof IntersectionObserver === "undefined") {
+      setFormEngaged(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setFormEngaged(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "550px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [formEngaged]);
+
+  // Sinkronisasi konfigurasi runtime Turnstile saat seksi kontak didekati / difokuskan
+  useEffect(() => {
+    if (!formEngaged) return;
     let active = true;
-    fetch("/api/contact", { cache: "no-store" })
+    fetch("/api/contact")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { siteKey?: string; turnstileEnabled?: boolean } | null) => {
         if (!active || !data) return;
@@ -96,7 +119,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [formEngaged]);
 
   // Hitung mundur batas cooldown 429
   useEffect(() => {
@@ -127,9 +150,9 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
           ? "dark"
           : "light";
 
-  // Muat skrip & render widget Cloudflare Turnstile
+  // Muat skrip & render widget Cloudflare Turnstile saat seksi kontak didekati / difokuskan
   useEffect(() => {
-    if (!turnstileSiteKey) return;
+    if (!turnstileSiteKey || !formEngaged) return;
 
     let cancelled = false;
     let mountedInRun = false;
@@ -233,7 +256,7 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
         widgetIdRef.current = null;
       }
     };
-  }, [turnstileSiteKey, effectiveTheme, locale]);
+  }, [formEngaged, turnstileSiteKey, effectiveTheme, locale]);
 
   const validateClient = (): boolean => {
     const errors: Partial<Record<FieldKey, string>> = {};
@@ -422,7 +445,14 @@ export function ContactForm({ submitLabel, recipientEmail }: ContactFormProps) {
     "w-full rounded-xl border border-line/80 bg-slate-50/80 px-3.5 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted/60 transition-all duration-150 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-white/[0.07] dark:focus:ring-blue-500/20";
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-3 sm:space-y-4">
+    <form
+      ref={formRef}
+      onFocusCapture={() => setFormEngaged(true)}
+      onPointerEnter={() => setFormEngaged(true)}
+      onSubmit={handleSubmit}
+      noValidate
+      className="space-y-3 sm:space-y-4"
+    >
       {/* Honeypot anti-bot tersembunyi */}
       <div
         aria-hidden="true"

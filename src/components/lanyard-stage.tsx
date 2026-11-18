@@ -6,7 +6,7 @@ import {
   resolveLanyardImages,
 } from "@/lib/content/identity-images";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSiteConfig } from "@/lib/site-store";
@@ -35,6 +35,12 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
       className="relative flex h-full w-full flex-col items-center justify-start select-none pt-1 min-[390px]:pt-2 sm:pt-3"
       aria-label="Zakaria Mujur P. ID Card"
     >
+      <canvas
+        aria-hidden="true"
+        width={300}
+        height={420}
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+      />
       {/* 1. Hanging Lanyard Strap Ribbon (comes down from behind the header) */}
       <div className="relative flex flex-col items-center z-10">
         <div
@@ -82,7 +88,8 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
             fill
             sizes="(max-width: 389px) 150px, (max-width: 639px) 180px, (max-width: 1023px) 225px, 250px"
             priority
-            unoptimized
+            fetchPriority="high"
+            unoptimized={cardImage.startsWith("data:") || cardImage.startsWith("blob:")}
             className="object-cover"
           />
         </div>
@@ -91,42 +98,97 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
   );
 }
 
-// Dynamically code-split Three.js so visitors in Lite mode do not download Three.js
+// Dynamically code-split Three.js so initial LCP renders instantaneously without blocking main thread
 const DynamicLanyard = dynamic(() => import("@/components/lanyard"), {
   ssr: false,
-  loading: () => <StaticLanyardCard />,
 });
 
 export function LanyardStage({ className = "" }: { className?: string }) {
   const { lanyard } = useSiteConfig();
   const { hasWebGL } = useAdaptivePerformance();
+  const [interacted, setInteracted] = useState(false);
+  const [webglReady, setWebglReady] = useState(false);
   const [contextLost, setContextLost] = useState(false);
   const [initFailed, setInitFailed] = useState(false);
 
+  useEffect(() => {
+    if (!hasWebGL || interacted || typeof window === "undefined") return;
+
+    let originX: number | null = null;
+    let originY: number | null = null;
+    const activate = () => {
+      setInteracted(true);
+      cleanup();
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (originX === null || originY === null) {
+        originX = e.clientX;
+        originY = e.clientY;
+        return;
+      }
+      if (Math.hypot(e.clientX - originX, e.clientY - originY) > 6) {
+        activate();
+      }
+    };
+    const onScroll = () => {
+      if (window.scrollY > 24) activate();
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerdown", activate);
+      window.removeEventListener("touchstart", activate);
+      window.removeEventListener("wheel", activate);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("keydown", activate);
+    };
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerdown", activate, { once: true, passive: true });
+    window.addEventListener("touchstart", activate, { once: true, passive: true });
+    window.addEventListener("wheel", activate, { once: true, passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("keydown", activate, { once: true, passive: true });
+
+    return cleanup;
+  }, [hasWebGL, interacted]);
+
   const shouldUnmount3D = !hasWebGL || initFailed;
-  const showStaticOverlay = shouldUnmount3D || contextLost;
+  const resolvedImages = resolveLanyardImages({ lanyard });
+  const showStaticOverlay = shouldUnmount3D || contextLost || !interacted || !webglReady;
 
   return (
     <div
       data-lanyard-stage="true"
+      onPointerDown={() => {
+        if (hasWebGL && !interacted) setInteracted(true);
+      }}
+      onTouchStart={() => {
+        if (hasWebGL && !interacted) setInteracted(true);
+      }}
       className={`relative w-full ${className || "h-[320px] sm:h-[400px] lg:h-[440px]"}`}
     >
       {showStaticOverlay && (
-        <div className={shouldUnmount3D ? "h-full w-full" : "absolute inset-0 z-10 h-full w-full"}>
+        <div className={shouldUnmount3D || !interacted ? "h-full w-full" : "absolute inset-0 z-10 h-full w-full"}>
           <StaticLanyardCard
-            frontImage={resolveLanyardImages({ lanyard }).frontImage}
-            backImage={resolveLanyardImages({ lanyard }).backImage}
+            frontImage={resolvedImages.frontImage}
+            backImage={resolvedImages.backImage}
             strapColor={lanyard.strapColor || undefined}
           />
         </div>
       )}
-      {!shouldUnmount3D && (
-        <div className={contextLost ? "h-full w-full opacity-0 pointer-events-none" : "h-full w-full"}>
+      {!shouldUnmount3D && interacted && (
+        <div
+          className={
+            contextLost || !webglReady
+              ? "h-full w-full opacity-0 pointer-events-none"
+              : "h-full w-full transition-opacity duration-300 opacity-100"
+          }
+        >
           <DynamicLanyard
             {...lanyard}
-            frontImage={resolveLanyardImages({ lanyard }).frontImage}
-            backImage={resolveLanyardImages({ lanyard }).backImage}
+            frontImage={resolvedImages.frontImage}
+            backImage={resolvedImages.backImage}
             strapImage={lanyard.strapImage || undefined}
+            onReady={() => setWebglReady(true)}
             onInitFailed={() => setInitFailed(true)}
             onContextLost={() => setContextLost(true)}
             onContextRestored={() => setContextLost(false)}

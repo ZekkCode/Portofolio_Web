@@ -42,6 +42,7 @@ export interface LanyardProps {
   intro?: boolean;
   className?: string;
   style?: CSSProperties;
+  onReady?: () => void;
   onInitFailed?: () => void;
   onContextLost?: () => void;
   onContextRestored?: () => void;
@@ -936,6 +937,7 @@ const Lanyard = ({
   intro = true,
   className = '',
   style,
+  onReady,
   onInitFailed,
   onContextLost,
   onContextRestored
@@ -943,10 +945,10 @@ const Lanyard = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<Settings | null>(null);
   const applyRef = useRef<(() => void) | null>(null);
-  const callbacksRef = useRef({ onInitFailed, onContextLost, onContextRestored });
+  const callbacksRef = useRef({ onReady, onInitFailed, onContextLost, onContextRestored });
 
   useEffect(() => {
-    callbacksRef.current = { onInitFailed, onContextLost, onContextRestored };
+    callbacksRef.current = { onReady, onInitFailed, onContextLost, onContextRestored };
     settingsRef.current = {
       frontImage,
       backImage,
@@ -980,9 +982,11 @@ const Lanyard = ({
       deviceMemory?: number;
       connection?: { saveData?: boolean };
     };
+    const isNarrowViewport = window.innerWidth < 768;
     const constrainedDevice =
-      (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 2) ||
-      (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 2) ||
+      isNarrowViewport ||
+      (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 4) ||
+      (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4) ||
       Boolean(nav.connection?.saveData);
 
     let renderer: THREE.WebGLRenderer;
@@ -996,6 +1000,15 @@ const Lanyard = ({
       callbacksRef.current.onInitFailed?.();
       return undefined;
     }
+    let softwareRasterizer = false;
+    try {
+      const gl = renderer.getContext();
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const unmasked = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '') : '';
+      softwareRasterizer = /swiftshader|llvmpipe|software|basic render/i.test(unmasked);
+    } catch {}
+    const lowPowerGpu = constrainedDevice || softwareRasterizer;
+
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NeutralToneMapping;
@@ -1011,10 +1024,10 @@ const Lanyard = ({
 
     const maxTextureSize = renderer.capabilities.maxTextureSize || 2048;
     const faceWidth = Math.min(
-      constrainedDevice ? 1024 : FACE_WIDTH,
-      Math.max(1024, Math.floor((maxTextureSize * 1.6) / 2.25))
+      lowPowerGpu ? 896 : FACE_WIDTH,
+      Math.max(896, Math.floor((maxTextureSize * 1.6) / 2.25))
     );
-    const anisotropy = constrainedDevice ? 2 : Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    const anisotropy = lowPowerGpu ? 1 : Math.min(8, renderer.capabilities.getMaxAnisotropy());
     const scene = new THREE.Scene();
     let environment: THREE.WebGLRenderTarget | null = null;
     const hemiLight = new THREE.HemisphereLight(0xf1f5ff, 0x161925, 0.95);
@@ -1042,8 +1055,8 @@ const Lanyard = ({
     const strapTexture = makeCanvasTexture(strapCanvas, anisotropy);
     strapTexture.wrapS = THREE.ClampToEdgeWrapping;
     strapTexture.wrapT = THREE.RepeatWrapping;
-    const grain = buildGrainTexture();
-    const weave = buildWeaveTexture();
+    const grain = softwareRasterizer ? null : buildGrainTexture();
+    const weave = softwareRasterizer ? null : buildWeaveTexture();
     const foilUniforms = {
       foilStrength: { value: 0 },
       foilAspect: { value: 1.4 },
@@ -1063,22 +1076,21 @@ const Lanyard = ({
 
     const frontMaterial = new THREE.MeshPhysicalMaterial({
       map: frontTexture,
-      normalMap: grain,
-      normalScale: new THREE.Vector2(0.025, 0.025)
+      ...(grain ? { normalMap: grain, normalScale: new THREE.Vector2(0.025, 0.025) } : {})
     });
     const backMaterial = new THREE.MeshPhysicalMaterial({
       map: backTexture,
-      normalMap: grain,
-      normalScale: new THREE.Vector2(0.025, 0.025)
+      ...(grain ? { normalMap: grain, normalScale: new THREE.Vector2(0.025, 0.025) } : {})
     });
-    frontMaterial.onBeforeCompile = injectFoil;
-    backMaterial.onBeforeCompile = injectFoil;
+    if (!softwareRasterizer) {
+      frontMaterial.onBeforeCompile = injectFoil;
+      backMaterial.onBeforeCompile = injectFoil;
+    }
     const edgeMaterial = new THREE.MeshStandardMaterial({ roughness: 0.35 });
     const metalMaterial = new THREE.MeshStandardMaterial({ metalness: 1 });
     const bandMaterial = new THREE.MeshStandardMaterial({
       map: strapTexture,
-      normalMap: weave,
-      normalScale: new THREE.Vector2(0.7, 0.7),
+      ...(weave ? { normalMap: weave, normalScale: new THREE.Vector2(0.7, 0.7) } : {}),
       roughness: 0.65,
       metalness: 0.08,
       side: THREE.DoubleSide
@@ -1122,6 +1134,8 @@ const Lanyard = ({
     let activeTime = 0;
     let visible = true;
     let alive = true;
+    let awake = true;
+    let readyNotified = false;
     let placed = false;
     let hovering = false;
     let press: Press | null = null;
@@ -1155,7 +1169,7 @@ const Lanyard = ({
     const repaintStrap = () => {
       const s = settingsRef.current!;
       tileRatio = paintStrap(strapCanvas, images.strap, parseColor(s.strapColor, [0.07, 0.07, 0.07]));
-      weave.repeat.set(2, 2 * tileRatio);
+      weave?.repeat.set(2, 2 * tileRatio);
       strapTexture.needsUpdate = true;
       start();
     };
@@ -1234,7 +1248,7 @@ const Lanyard = ({
       if (framingKey !== applied.framingKey) {
         frameView();
         if (!placed) {
-          placeHanging(sim, layout, s.intro && !reducedMotion);
+          placeHanging(sim, layout, awake && s.intro && !reducedMotion);
           placed = true;
         } else if (layoutKey !== applied.layoutKey) {
           placeHanging(sim, layout, false);
@@ -1410,6 +1424,10 @@ const Lanyard = ({
       updateBand();
       if (!shaderReady || contextLostFlag) return;
       renderer.render(scene, camera);
+      if (!readyNotified && (!settingsRef.current?.frontImage || Boolean(images.front))) {
+        readyNotified = true;
+        callbacksRef.current.onReady?.();
+      }
     };
 
     const physics = (): Physics => {
@@ -1418,7 +1436,7 @@ const Lanyard = ({
       const weight = Math.max(gravity, 20);
       const springy = clamp(s.elasticity, 0, 1);
       const settle = clamp(s.damping, 0, 1);
-      const maxActiveSeconds = constrainedDevice ? 4.0 : 7.0;
+      const maxActiveSeconds = lowPowerGpu ? 2.5 : 5.5;
       const breezeScale = sim.grab ? 1 : activeTime > maxActiveSeconds ? 0 : 1 - activeTime / maxActiveSeconds;
       return {
         gravity,
@@ -1463,10 +1481,20 @@ const Lanyard = ({
 
     const start = () => {
       activeTime = 0;
-      if (raf || !visible || !alive || !shaderReady || contextLostFlag) return;
+      if (!visible || !alive || !shaderReady || contextLostFlag) return;
+      if (!awake) {
+        render();
+        return;
+      }
+      if (raf) return;
       sim.calm = 0;
       last = performance.now();
       raf = requestAnimationFrame(tick);
+    };
+
+    const wake = () => {
+      awake = true;
+      start();
     };
 
     const raycaster = new THREE.Raycaster();
@@ -1531,7 +1559,7 @@ const Lanyard = ({
       canvas.setPointerCapture?.(event.pointerId);
       setCursor('grabbing');
       event.preventDefault();
-      start();
+      wake();
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -1546,14 +1574,14 @@ const Lanyard = ({
         const maxGrabY = frustum.height / 2 - (cardDiag * 0.58 + 0.45);
         sim.grab.target.x = clamp(sim.grab.target.x, -maxGrabX, maxGrabX);
         sim.grab.target.y = clamp(sim.grab.target.y, minGrabY, maxGrabY);
-        start();
+        wake();
         return;
       }
       if (event.pointerType === 'touch') return;
       const wasHovering = hovering;
       hovering = !!pickCard();
       setCursor(hovering ? 'grab' : '');
-      if (hovering && !wasHovering) start();
+      if (hovering && !wasHovering) wake();
     };
 
     const onPointerUp = (event: PointerEvent) => {
@@ -1567,7 +1595,7 @@ const Lanyard = ({
       press = null;
       canvas.releasePointerCapture?.(event.pointerId);
       setCursor(hovering && event.pointerType !== 'touch' ? 'grab' : '');
-      start();
+      wake();
     };
 
     const onTouchStart = (event: TouchEvent) => {
@@ -1576,7 +1604,7 @@ const Lanyard = ({
       toPointer(event.touches[0]);
       if (pickCard()) {
         event.preventDefault();
-        start();
+        wake();
       }
     };
 
@@ -1588,11 +1616,49 @@ const Lanyard = ({
     canvas.addEventListener('lostpointercapture', onPointerUp);
     canvas.addEventListener('touchstart', onTouchStart, { passive: false });
 
+    let wakeOriginX: number | null = null;
+    let wakeOriginY: number | null = null;
+    const detachWakeListeners = () => {
+      window.removeEventListener('pointermove', onGlobalPointerMove);
+      window.removeEventListener('pointerdown', onGlobalWake);
+      window.removeEventListener('touchstart', onGlobalWake);
+      window.removeEventListener('wheel', onGlobalWake);
+      window.removeEventListener('scroll', onGlobalScroll);
+      window.removeEventListener('keydown', onGlobalWake);
+    };
+    const onGlobalWake = () => {
+      wake();
+      detachWakeListeners();
+    };
+    const onGlobalPointerMove = (e: PointerEvent) => {
+      if (wakeOriginX === null || wakeOriginY === null) {
+        wakeOriginX = e.clientX;
+        wakeOriginY = e.clientY;
+        return;
+      }
+      if (Math.hypot(e.clientX - wakeOriginX, e.clientY - wakeOriginY) > 6) {
+        onGlobalWake();
+      }
+    };
+    const onGlobalScroll = () => {
+      if (window.scrollY > 24) onGlobalWake();
+    };
+    if (!reducedMotion) {
+      window.addEventListener('pointermove', onGlobalPointerMove, { passive: true });
+      window.addEventListener('pointerdown', onGlobalWake, { once: true, passive: true });
+      window.addEventListener('touchstart', onGlobalWake, { once: true, passive: true });
+      window.addEventListener('wheel', onGlobalWake, { once: true, passive: true });
+      window.addEventListener('scroll', onGlobalScroll, { passive: true });
+      window.addEventListener('keydown', onGlobalWake, { once: true, passive: true });
+    }
+
     const resize = () => {
       view.width = Math.max(1, container.clientWidth);
       view.height = Math.max(1, container.clientHeight);
       cachedRect = null;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, constrainedDevice ? 1.25 : 2));
+      renderer.setPixelRatio(
+        softwareRasterizer ? 1 : Math.min(window.devicePixelRatio || 1, lowPowerGpu ? 1.25 : 2)
+      );
       renderer.setSize(view.width, view.height, false);
       apply();
       render();
@@ -1647,8 +1713,10 @@ const Lanyard = ({
     const bootShaders = () => {
       initRaf = 0;
       if (!alive || contextLostFlag) return;
-      environment = buildEnvironment(renderer);
-      scene.environment = environment.texture;
+      if (!softwareRasterizer) {
+        environment = buildEnvironment(renderer);
+        scene.environment = environment.texture;
+      }
       resize();
       if (!shaderReady && typeof renderer.compileAsync === 'function') {
         void renderer
@@ -1678,6 +1746,7 @@ const Lanyard = ({
       applyRef.current = null;
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
+      detachWakeListeners();
       document.removeEventListener('visibilitychange', onVisibility);
       canvas.removeEventListener('webglcontextlost', onCanvasContextLost);
       canvas.removeEventListener('webglcontextrestored', onCanvasContextRestored);
@@ -1690,7 +1759,7 @@ const Lanyard = ({
       canvas.removeEventListener('touchstart', onTouchStart);
       [bodyMesh, frontMesh, backMesh, ring, clampMesh, eyelet, band].forEach(mesh => mesh.geometry?.dispose());
       [frontMaterial, backMaterial, edgeMaterial, metalMaterial, bandMaterial].forEach(material => material.dispose());
-      [frontTexture, backTexture, strapTexture, grain, weave].forEach(texture => texture.dispose());
+      [frontTexture, backTexture, strapTexture, grain, weave].forEach(texture => texture?.dispose());
       environment?.dispose();
       renderer.dispose();
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);

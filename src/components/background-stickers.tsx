@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import { StickerPeel } from "@/components/sticker-peel";
 import { STICKER_LOGOS, type StickerItem } from "@/lib/sticker-manifest";
 import { useAdaptivePerformance } from "@/lib/device-performance";
@@ -165,16 +166,28 @@ function StickerSlotItem({
           }}
           className="flex items-center justify-center select-none pointer-events-none"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logo.src}
-            alt=""
-            width={width}
-            height={width}
-            decoding="async"
-            loading="lazy"
-            className="max-w-full max-h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.16)]"
-          />
+          {logo.src.startsWith("/") && !logo.src.startsWith("//") ? (
+            <Image
+              src={logo.src}
+              alt=""
+              width={width}
+              height={width}
+              sizes="44px"
+              loading="lazy"
+              className="max-w-full max-h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.16)]"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logo.src}
+              alt=""
+              width={width}
+              height={width}
+              decoding="async"
+              loading="lazy"
+              className="max-w-full max-h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.16)]"
+            />
+          )}
         </div>
       )}
 

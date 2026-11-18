@@ -16,6 +16,31 @@ interface PersonaCardItem {
   alt: string;
 }
 
+function canUseNextImageOptimizer(src: string): boolean {
+  if (!src) return false;
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  try {
+    const { protocol, hostname } = new URL(src);
+    if (protocol !== "https:") return false;
+    const h = hostname.toLowerCase();
+    return (
+      h.endsWith(".workers.dev") ||
+      h.endsWith(".r2.dev") ||
+      h.endsWith(".supabase.co") ||
+      h === "zekktech.biz.id" ||
+      h === "raw.githubusercontent.com" ||
+      h === "avatars.githubusercontent.com" ||
+      h === "zakariamp.id" ||
+      h.endsWith(".zakariamp.id") ||
+      h === "zakariamp.my.id" ||
+      h.endsWith(".zakariamp.my.id") ||
+      h === "zakariamp.vercel.app"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function AboutPersonaCard() {
   const { i18n } = useTranslation();
   const locale = (i18n.language || "id").startsWith("en") ? "en" : "id";
@@ -86,7 +111,8 @@ export function AboutPersonaCard() {
                     alt={card.alt}
                     fill
                     sizes="(max-width: 640px) 228px, 260px"
-                    unoptimized
+                    loading="lazy"
+                    unoptimized={!canUseNextImageOptimizer(card.src)}
                     draggable={false}
                     className="object-cover"
                   />

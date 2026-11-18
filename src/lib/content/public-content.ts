@@ -126,6 +126,33 @@ export async function fetchPublishedContent(): Promise<SiteConfig> {
 }
 
 /**
+ * Mengambil konfigurasi terpublikasi dengan batas waktu cepat untuk endpoint crawler (/robots.txt)
+ * agar cold-start database tidak pernah memicu timeout pada Googlebot atau Lighthouse.
+ */
+export async function fetchPublishedContentFast(timeoutMs = 250): Promise<SiteConfig> {
+  const cache = getPublishedCache();
+  if (cache.snapshot) {
+    if (Date.now() - cache.timestamp >= MEMORY_TTL_MS) {
+      void fetchPublishedContentWithMeta().catch(() => {});
+    }
+    return cache.snapshot;
+  }
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    const raced = await Promise.race([
+      fetchPublishedContentWithMeta().then((res) => res.config),
+      new Promise<SiteConfig>((resolve) => {
+        timer = setTimeout(() => resolve(cache.snapshot ?? defaultSiteConfig), timeoutMs);
+      }),
+    ]);
+    return raced;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Mengambil konfigurasi Draf (untuk halaman /admin/preview terotentikasi).
  * Jika draf belum ada, fallback ke konten terpublikasi saat ini.
  */

@@ -177,19 +177,61 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     [isNative]
   );
 
-  // Single RAF Loop: Lenis synced 1:1 to GSAP ticker without lag-smoothing clamp
+  // Demand-driven RAF Loop: attaches to GSAP ticker on scroll/click/hash activity and sleeps cleanly when idle
   useEffect(() => {
-    if (isNative) return;
+    if (isNative || typeof window === "undefined") return;
+
+    let attached = false;
+    let sleepTimer: ReturnType<typeof setTimeout> | null = null;
 
     function update(time: number) {
       lenisRef.current?.lenis?.raf(time * 1000);
     }
 
-    gsap.ticker.add(update);
-    gsap.ticker.lagSmoothing(0);
+    const scheduleSleepCheck = () => {
+      if (sleepTimer) clearTimeout(sleepTimer);
+      sleepTimer = setTimeout(() => {
+        const instance = lenisRef.current?.lenis;
+        if (instance?.isScrolling) {
+          scheduleSleepCheck();
+          return;
+        }
+        if (attached) {
+          attached = false;
+          gsap.ticker.remove(update);
+        }
+      }, 2200);
+    };
+
+    const wakeTicker = () => {
+      if (!attached) {
+        attached = true;
+        gsap.ticker.add(update);
+        gsap.ticker.lagSmoothing(0);
+      }
+      scheduleSleepCheck();
+    };
+
+    if (window.location.hash) {
+      wakeTicker();
+    }
+
+    window.addEventListener("wheel", wakeTicker, { capture: true, passive: true });
+    window.addEventListener("touchstart", wakeTicker, { capture: true, passive: true });
+    window.addEventListener("touchmove", wakeTicker, { capture: true, passive: true });
+    window.addEventListener("keydown", wakeTicker, { capture: true, passive: true });
+    window.addEventListener("hashchange", wakeTicker);
+    document.addEventListener("click", wakeTicker, { capture: true, passive: true });
 
     return () => {
-      gsap.ticker.remove(update);
+      if (sleepTimer) clearTimeout(sleepTimer);
+      if (attached) gsap.ticker.remove(update);
+      window.removeEventListener("wheel", wakeTicker, true);
+      window.removeEventListener("touchstart", wakeTicker, true);
+      window.removeEventListener("touchmove", wakeTicker, true);
+      window.removeEventListener("keydown", wakeTicker, true);
+      window.removeEventListener("hashchange", wakeTicker);
+      document.removeEventListener("click", wakeTicker, true);
     };
   }, [isNative]);
 

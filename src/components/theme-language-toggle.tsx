@@ -120,13 +120,13 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       data-sound="switch"
       onClick={toggle}
       className={`inline-flex min-h-[44px] items-center rounded-full border border-line/70 bg-white/95 px-3.5 text-xs font-bold text-ink shadow-2xs transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand touch-manipulation dark:border-line/40 dark:bg-slate-900/95 dark:text-slate-200 ${className}`}
-      aria-label="Ganti bahasa / Switch language"
+      aria-label="ID / EN — Ganti bahasa (Switch language)"
       title={currentLang === "id" ? "Switch to English" : "Ganti ke Bahasa Indonesia"}
     >
       <span className={currentLang === "id" ? "text-brand dark:text-blue-400 font-extrabold" : "text-body/70 dark:text-slate-400"}>
         ID
       </span>
-      <span className="mx-1 text-line/80 dark:text-line/40">•</span>
+      <span className="mx-1 text-line/80 dark:text-line/40" aria-hidden="true">•</span>
       <span className={currentLang === "en" ? "text-brand dark:text-blue-400 font-extrabold" : "text-body/70 dark:text-slate-400"}>
         EN
       </span>

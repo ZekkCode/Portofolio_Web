@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
-import { PortfolioPillNav } from "@/components/portfolio-pill-nav";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
 import ShapeGrid from "@/components/shape-grid";
 import { SubtlePortraitReveal } from "@/components/subtle-portrait-reveal";
-import { BackgroundStickers } from "@/components/background-stickers";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
 import { AnimatedEye } from "@/components/animated-eye";
 import { usePageViews } from "@/lib/use-page-views";
@@ -34,19 +33,47 @@ import {
 } from "@/lib/content/selectors";
 import { getOtherToolsCategoryLabel } from "@/lib/content/tech-stack-categories";
 import { ArrowRight, Mail } from "lucide-react";
-import { AcademicJourneySection } from "@/components/academic-journey-section";
-import { AchievementsSection } from "@/components/achievements-section";
 import { AboutPersonaCard } from "@/components/about-persona-card";
-import { ExperienceTimeline } from "@/components/experience-timeline";
-import { ServicesSection } from "@/components/services-section";
-import { ProjectsSection } from "@/components/projects-section";
-import { BlogPreviewSection } from "@/components/blog-preview-section";
-import { CertificatesSection } from "@/components/certificates-section";
-import { FaqSection } from "@/components/faq-section";
 import { SocialIcon, getSocialHoverClasses } from "@/components/social-icon";
 import { AnimatedHeroTitle } from "@/components/animated-hero-title";
-import { ContactForm } from "@/components/contact-form";
-import { CvFolderSection } from "@/components/cv-folder-section";
+
+const PortfolioPillNav = dynamic(() =>
+  import("@/components/portfolio-pill-nav").then((m) => m.PortfolioPillNav)
+);
+const BackgroundStickers = dynamic(
+  () => import("@/components/background-stickers").then((m) => m.BackgroundStickers),
+  { ssr: false }
+);
+const ExperienceTimeline = dynamic(() =>
+  import("@/components/experience-timeline").then((m) => m.ExperienceTimeline)
+);
+const AcademicJourneySection = dynamic(() =>
+  import("@/components/academic-journey-section").then((m) => m.AcademicJourneySection)
+);
+const AchievementsSection = dynamic(() =>
+  import("@/components/achievements-section").then((m) => m.AchievementsSection)
+);
+const ServicesSection = dynamic(() =>
+  import("@/components/services-section").then((m) => m.ServicesSection)
+);
+const CvFolderSection = dynamic(() =>
+  import("@/components/cv-folder-section").then((m) => m.CvFolderSection)
+);
+const ProjectsSection = dynamic(() =>
+  import("@/components/projects-section").then((m) => m.ProjectsSection)
+);
+const BlogPreviewSection = dynamic(() =>
+  import("@/components/blog-preview-section").then((m) => m.BlogPreviewSection)
+);
+const CertificatesSection = dynamic(() =>
+  import("@/components/certificates-section").then((m) => m.CertificatesSection)
+);
+const FaqSection = dynamic(() =>
+  import("@/components/faq-section").then((m) => m.FaqSection)
+);
+const ContactForm = dynamic(() =>
+  import("@/components/contact-form").then((m) => m.ContactForm)
+);
 
 const DynamicProfileCardStage = dynamic(
   () => import("@/components/profile-card-stage").then((m) => m.ProfileCardStage),
@@ -57,6 +84,41 @@ const DynamicProfileCardStage = dynamic(
     ),
   }
 );
+
+function LazyProfileCardSlot() {
+  const slotRef = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+
+  useEffect(() => {
+    const el = slotRef.current;
+    if (!el || near || typeof window === "undefined") return;
+    if (typeof IntersectionObserver === "undefined") {
+      setNear(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setNear(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "650px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [near]);
+
+  return (
+    <div ref={slotRef} className="flex w-full min-w-0 items-center justify-center">
+      {near ? (
+        <DynamicProfileCardStage />
+      ) : (
+        <div className="w-[280px] sm:w-[320px] aspect-[1/1.5] rounded-2xl bg-slate-100/60 dark:bg-slate-800/30 border border-line/60" />
+      )}
+    </div>
+  );
+}
 
 function Header() {
   const { t, i18n } = useTranslation();
@@ -76,15 +138,26 @@ function Header() {
           href="#atas"
           className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoUrl}
-            alt={brandName}
-            width={32}
-            height={32}
-            decoding="async"
-            className="size-8 rounded-full object-cover border border-brand/35 shadow-xs"
-          />
+          {logoUrl.startsWith("/") && !logoUrl.startsWith("//") ? (
+            <Image
+              src={logoUrl}
+              alt={brandName}
+              width={32}
+              height={32}
+              sizes="32px"
+              className="size-8 rounded-full object-cover border border-brand/35 shadow-xs"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={brandName}
+              width={32}
+              height={32}
+              decoding="async"
+              className="size-8 rounded-full object-cover border border-brand/35 shadow-xs"
+            />
+          )}
           <span className="font-display text-base font-bold tracking-tight text-ink">
             {brandName}
           </span>
@@ -129,14 +202,12 @@ function Hero() {
               name={pubProfile.name}
               className="w-full justify-center text-center lg:justify-start lg:text-start"
             />
-            <ScrollReveal y={16} duration={0.65} delay={0.12} className="w-full">
-              <p className="text-base sm:text-lg font-semibold text-body">
-                {pubProfile.roles || t("hero.roles")}
-              </p>
-            </ScrollReveal>
+            <p className="w-full text-base sm:text-lg font-semibold text-body">
+              {pubProfile.roles || t("hero.roles")}
+            </p>
           </div>
 
-          <ScrollReveal y={18} duration={0.65} delay={0.2} className="space-y-5 w-full max-w-xl mx-auto lg:mx-0">
+          <div className="space-y-5 w-full max-w-xl mx-auto lg:mx-0">
             <p className="text-sm sm:text-base leading-relaxed text-body">
               {pubProfile.heroDesc || t("hero.desc")}
             </p>
@@ -179,7 +250,7 @@ function Hero() {
                 </a>
               )}
             </div>
-          </ScrollReveal>
+          </div>
         </div>
 
         {/* Right Column: Interactive 3D Lanyard ID Card */}
@@ -651,7 +722,7 @@ function Contact() {
             {/* KIRI: Hologram Profile Card */}
             {contact.showProfileCard && (
               <div className="relative min-w-0 flex flex-col items-center justify-center border-b border-line lg:border-b-0 lg:border-r dark:border-line/40 bg-slate-50/70 dark:bg-[#0b0e1a] p-4 sm:p-8">
-                <DynamicProfileCardStage />
+                <LazyProfileCardSlot />
               </div>
             )}
 
@@ -779,8 +850,51 @@ function BackgroundGrid() {
   const { resolvedTheme } = useTheme();
   const mounted = useMounted();
   const { isLite, isBalanced, isFull, prefersReducedMotion } = useAdaptivePerformance();
+  const [interactiveGridReady, setInteractiveGridReady] = useState(false);
   const isDark = mounted && resolvedTheme === "dark";
   const gridLineColor = isDark ? "#171c2a" : "#e6e7f2";
+
+  useEffect(() => {
+    if (prefersReducedMotion || isLite || interactiveGridReady || typeof window === "undefined") {
+      return;
+    }
+
+    let originX: number | null = null;
+    let originY: number | null = null;
+    const activate = () => {
+      setInteractiveGridReady(true);
+      cleanup();
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (originX === null || originY === null) {
+        originX = e.clientX;
+        originY = e.clientY;
+        return;
+      }
+      if (Math.hypot(e.clientX - originX, e.clientY - originY) > 6) {
+        activate();
+      }
+    };
+    const onScroll = () => {
+      if (window.scrollY > 24) activate();
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerdown", activate);
+      window.removeEventListener("touchstart", activate);
+      window.removeEventListener("wheel", activate);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("keydown", activate);
+    };
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerdown", activate, { once: true, passive: true });
+    window.addEventListener("touchstart", activate, { once: true, passive: true });
+    window.addEventListener("wheel", activate, { once: true, passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("keydown", activate, { once: true, passive: true });
+
+    return cleanup;
+  }, [interactiveGridReady, isLite, prefersReducedMotion]);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 will-change-transform [contain:strict]" aria-hidden="true">
@@ -802,6 +916,7 @@ function BackgroundGrid() {
           fillOpacity={isDark ? 0.12 : 0.08}
           cellSize={isLite ? 52 : isBalanced ? 48 : 44}
           speed={isLite ? 0.06 : isBalanced ? 0.09 : 0.14}
+          paused={isLite || !interactiveGridReady}
           lineWidth={1}
           radius={isLite ? 1.0 : isBalanced ? 1.3 : 1.8}
           trail={0.45}

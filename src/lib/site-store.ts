@@ -440,7 +440,12 @@ export const readConfig = (): SiteConfig => {
 
     if (!cloudSynced) {
       cloudSynced = true;
-      void syncCloudConfig(true);
+      const isAdminRoute = window.location.pathname.startsWith("/admin");
+      if (isAdminRoute || !ssrSeedConfig) {
+        void syncCloudConfig(true);
+      } else {
+        lastSyncCheck = Date.now();
+      }
 
       if (typeof document !== "undefined") {
         document.addEventListener("visibilitychange", () => {

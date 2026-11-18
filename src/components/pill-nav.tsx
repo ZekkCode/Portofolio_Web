@@ -887,7 +887,7 @@ export const PillNav = ({
       {logo && (
         <span ref={logoRef} className={[LOGO, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
           <LinkComponent href={logoHref} className={LOGO_LINK} aria-label={logoAlt} onPointerEnter={spin}>
-            <span ref={markRef} className={MARK}>
+            <span ref={markRef} className={MARK} aria-hidden="true">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {typeof logo === 'string' ? <img src={logo} alt="" draggable={false} /> : logo}
             </span>

@@ -356,7 +356,7 @@ export function PortfolioPillNav() {
         label: "Home",
         href: "#atas",
         icon: (
-          <span className="font-display text-[10.5px] font-black italic tracking-tighter text-inherit">
+          <span aria-hidden="true" className="font-display text-[10.5px] font-black italic tracking-tighter text-inherit">
             {brandInitials}
           </span>
         ),
@@ -404,11 +404,11 @@ export function PortfolioPillNav() {
         <div className="pointer-events-auto overflow-hidden rounded-full">
           <ThemedPillNav
             logo={
-              <span className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-black italic tracking-tighter text-white shadow-sm">
+              <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-full bg-brand text-[11px] font-black italic tracking-tighter text-white shadow-sm">
                 {brandInitials}
               </span>
             }
-            logoAlt={`${pubProfile.brand} Home`}
+            logoAlt={`${brandInitials} ${pubProfile.brand} Home`}
             logoHref="#atas"
             items={desktopNavItems}
             activeHref={activeSection}
@@ -456,7 +456,7 @@ export function PortfolioPillNav() {
               <a
                 href={item.href}
                 onClick={(e) => handleMobileNavClick(item.href, item.openInNewTab, e)}
-                aria-label={item.label}
+                aria-label={isHome ? `${brandInitials} ${item.label}` : item.label}
                 aria-current={isActive ? "location" : undefined}
                 title={item.label}
                 className={`group relative flex size-9 items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
@@ -467,7 +467,10 @@ export function PortfolioPillNav() {
               >
                 {item.icon}
 
-                <span className="pointer-events-none absolute end-[calc(100%+8px)] top-1/2 -translate-y-1/2 rounded-md bg-slate-900/95 px-2 py-1 text-[11px] font-medium text-white shadow-md whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 dark:bg-slate-800/95">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute end-[calc(100%+8px)] top-1/2 -translate-y-1/2 rounded-md bg-slate-900/95 px-2 py-1 text-[11px] font-medium text-white shadow-md whitespace-nowrap opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 dark:bg-slate-800/95"
+                >
                   {item.label}
                 </span>
               </a>

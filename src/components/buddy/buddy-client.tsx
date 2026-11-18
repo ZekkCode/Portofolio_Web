@@ -20,6 +20,7 @@ const BuddyChat = dynamic(
 export function BuddyClient() {
   const pathname = usePathname();
   const mounted = useMounted();
+  const [isActivated, setIsActivated] = useState(false);
   const [isHidden, setIsHidden] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -40,12 +41,52 @@ export function BuddyClient() {
   const replyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const isPaused = isChatOpen;
+  useEffect(() => {
+    if (!mounted || isActivated || typeof window === "undefined") return;
+
+    let originX: number | null = null;
+    let originY: number | null = null;
+    const activate = () => {
+      setIsActivated(true);
+      cleanup();
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (originX === null || originY === null) {
+        originX = e.clientX;
+        originY = e.clientY;
+        return;
+      }
+      if (Math.hypot(e.clientX - originX, e.clientY - originY) > 6) {
+        activate();
+      }
+    };
+    const onScroll = () => {
+      if (window.scrollY > 24) activate();
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointerdown", activate);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("touchstart", activate);
+      window.removeEventListener("wheel", activate);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("keydown", activate);
+    };
+    window.addEventListener("pointerdown", activate, { once: true, passive: true });
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("touchstart", activate, { once: true, passive: true });
+    window.addEventListener("wheel", activate, { once: true, passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("keydown", activate, { once: true, passive: true });
+
+    return cleanup;
+  }, [mounted, isActivated]);
+
+  const isPaused = isChatOpen || !isActivated;
 
   const { domRef, state, deviceMode, isDocked, playAction, setState } =
     useBuddyRoaming({
       isPaused,
-      isHidden,
+      isHidden: isHidden || !isActivated,
     });
 
   // Toggle chat or trigger greeting
@@ -140,6 +181,7 @@ export function BuddyClient() {
       setState,
       play: (act, opts) => playAction(act, opts?.durationMs),
       say: (text, opts) => {
+        setIsActivated(true);
         setLastReply(text);
         setIsChatOpen(true);
         if (replyTimeoutRef.current) clearTimeout(replyTimeoutRef.current);
@@ -150,8 +192,15 @@ export function BuddyClient() {
         }
       },
       hide: handleHide,
-      show: handleShow,
-      toggle: () => (isHidden ? handleShow() : handleHide()),
+      show: () => {
+        setIsActivated(true);
+        handleShow();
+      },
+      toggle: () => {
+        setIsActivated(true);
+        if (isHidden) handleShow();
+        else handleHide();
+      },
       get hidden() {
         return isHidden;
       },
@@ -170,7 +219,7 @@ export function BuddyClient() {
     };
   }, [handleHide, handleShow, isHidden, playAction, setState, state]);
 
-  if (!mounted || pathname?.startsWith("/admin")) return null;
+  if (!mounted || !isActivated || pathname?.startsWith("/admin")) return null;
 
   // Minimized dock button when user chooses to hide Miss Minute
   if (isHidden) {

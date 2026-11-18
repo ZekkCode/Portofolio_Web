@@ -176,7 +176,7 @@ export function usePageViews() {
       document.addEventListener("visibilitychange", handleVisibilityChange);
     }
     if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.addEventListener("pagehide", handleBeforeUnload);
     }
 
     return () => {
@@ -187,7 +187,7 @@ export function usePageViews() {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
       if (typeof window !== "undefined") {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
+        window.removeEventListener("pagehide", handleBeforeUnload);
       }
     };
   }, []);

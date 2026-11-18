@@ -290,7 +290,7 @@ export function AcademicJourneySection() {
                   key={year}
                   type="button"
                   onClick={() => handleYearClick(year)}
-                  aria-label={`Tahun ${year}${
+                  aria-label={`${year}${
                     eduMatch ? ` — ${eduMatch.institution}` : ""
                   }`}
                   aria-pressed={isActiveYear}
@@ -326,7 +326,10 @@ export function AcademicJourneySection() {
 
                   {/* Optional Milestone Label Indicator */}
                   {isMilestone && (
-                    <span className="hidden sm:inline-block absolute -bottom-5 text-[9px] font-semibold text-muted tracking-tight truncate max-w-[90px] text-center">
+                    <span
+                      aria-hidden="true"
+                      className="hidden sm:inline-block absolute -bottom-5 text-[9px] font-semibold text-muted tracking-tight truncate max-w-[90px] text-center"
+                    >
                       {eduMatch?.institution.split(" ")[0]}
                     </span>
                   )}

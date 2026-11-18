@@ -231,7 +231,7 @@ export function ExperienceTimeline() {
                 key={item.id || `${item.org}-${idx}`}
                 type="button"
                 onClick={() => scrollToIndex(idx)}
-                aria-label={`Milestone ${item.org} — ${roleText}`}
+                aria-label={`${item.org} — ${roleText}`}
                 aria-pressed={isActive}
                 className="group flex flex-col items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg p-1 -m-1 transition-transform duration-200"
                 style={{

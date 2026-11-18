@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
-import { fetchPublishedContent } from "@/lib/content/public-content";
+import { fetchPublishedContentFast } from "@/lib/content/public-content";
 import { getPublishedProfile, getPublishedSeo } from "@/lib/content/selectors";
 import { resolveSafeHostContext } from "@/lib/seo/allowed-hosts";
 
 export const dynamic = "force-dynamic";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
-  const config = await fetchPublishedContent();
+  const config = await fetchPublishedContentFast(220);
   const seo = getPublishedSeo(config, "id");
   const prof = getPublishedProfile(config, "id");
 

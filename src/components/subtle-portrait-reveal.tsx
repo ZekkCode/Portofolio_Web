@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface SubtlePortraitRevealProps {
   isDark?: boolean;
@@ -14,6 +14,7 @@ export interface SubtlePortraitRevealProps {
  * yang terungkap secara sangat samar (subtle) di sekitar kursor pengguna melalui radial mask lembut.
  *
  * Karakteristik Performa & Aksesibilitas:
+ * - Ditunda hingga interaksi kursor/sentuhan pertama agar gambar dekoratif tidak pernah mengambil alih kandidat LCP Hero.
  * - 100% bebas React setState pada pointermove: posisi dan opacity diperbarui langsung via CSS variables.
  * - Menggunakan requestAnimationFrame untuk compositing GPU yang mulus.
  * - pointer-events: none & aria-hidden="true" sehingga tidak mengganggu interaksi tautan, tombol, atau 3D lanyard.
@@ -24,9 +25,25 @@ export function SubtlePortraitReveal({
   prefersReducedMotion = false,
 }: SubtlePortraitRevealProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [activated, setActivated] = useState(false);
 
   useEffect(() => {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || activated || typeof window === "undefined") return;
+
+    const enable = () => setActivated(true);
+    window.addEventListener("pointermove", enable, { once: true, passive: true });
+    window.addEventListener("pointerdown", enable, { once: true, passive: true });
+    window.addEventListener("touchstart", enable, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener("pointermove", enable);
+      window.removeEventListener("pointerdown", enable);
+      window.removeEventListener("touchstart", enable);
+    };
+  }, [activated, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (prefersReducedMotion || !activated) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -150,9 +167,9 @@ export function SubtlePortraitReveal({
       window.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [isDark, prefersReducedMotion]);
+  }, [activated, isDark, prefersReducedMotion]);
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion || !activated) {
     return null;
   }
 
@@ -190,7 +207,9 @@ export function SubtlePortraitReveal({
         <img
           src="/images/bg-portrait-reveal.webp"
           alt=""
-          loading="eager"
+          width={800}
+          height={1050}
+          loading="lazy"
           decoding="async"
           draggable={false}
           className={`h-[90vh] max-h-[1050px] w-auto max-w-[92vw] object-contain select-none pointer-events-none transition-[filter] duration-300 ${

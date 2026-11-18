@@ -152,7 +152,7 @@ export function ScrollReveal({
 
         if (
           reduceMotion ||
-          (window.scrollY < 40 && el.getBoundingClientRect().top < window.innerHeight * 0.9)
+          (window.scrollY < 40 && el.getBoundingClientRect().top <= window.innerHeight * 1.05)
         ) {
           gsap.set(el, { opacity: 1, y: 0 });
           return;

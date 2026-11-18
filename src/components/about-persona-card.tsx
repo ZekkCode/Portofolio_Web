@@ -110,7 +110,7 @@ export function AboutPersonaCard() {
                     src={card.src}
                     alt={card.alt}
                     fill
-                    sizes="(max-width: 640px) 228px, 260px"
+                    sizes="(max-width: 640px) 146px, 240px"
                     loading="lazy"
                     unoptimized={!canUseNextImageOptimizer(card.src)}
                     draggable={false}

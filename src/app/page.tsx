@@ -9,7 +9,6 @@ import { LanyardStage } from "@/components/lanyard-stage";
 import { Parallax, ScrollReveal, SmoothNavLink } from "@/components/parallax";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SectionTitle } from "@/components/section-title";
-import ShapeGrid from "@/components/shape-grid";
 import { SubtlePortraitReveal } from "@/components/subtle-portrait-reveal";
 import { LanguageToggle, ThemeToggle } from "@/components/theme-language-toggle";
 import { AnimatedEye } from "@/components/animated-eye";
@@ -36,6 +35,10 @@ import { ArrowRight, Mail } from "lucide-react";
 import { AboutPersonaCard } from "@/components/about-persona-card";
 import { SocialIcon, getSocialHoverClasses } from "@/components/social-icon";
 import { AnimatedHeroTitle } from "@/components/animated-hero-title";
+
+const DynamicShapeGrid = dynamic(() => import("@/components/shape-grid"), {
+  ssr: false,
+});
 
 const PortfolioPillNav = dynamic(() =>
   import("@/components/portfolio-pill-nav").then((m) => m.PortfolioPillNav)
@@ -898,16 +901,17 @@ function BackgroundGrid() {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 will-change-transform [contain:strict]" aria-hidden="true">
-      {prefersReducedMotion ? (
+      {prefersReducedMotion || isLite || !interactiveGridReady ? (
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `linear-gradient(to right, ${gridLineColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridLineColor} 1px, transparent 1px)`,
+            backgroundImage:
+              "linear-gradient(to right, var(--grid-line) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px)",
             backgroundSize: "44px 44px",
           }}
         />
       ) : (
-        <ShapeGrid
+        <DynamicShapeGrid
           shape="square"
           direction="diagonal"
           lineColor={gridLineColor}
@@ -916,7 +920,6 @@ function BackgroundGrid() {
           fillOpacity={isDark ? 0.12 : 0.08}
           cellSize={isLite ? 52 : isBalanced ? 48 : 44}
           speed={isLite ? 0.06 : isBalanced ? 0.09 : 0.14}
-          paused={isLite || !interactiveGridReady}
           lineWidth={1}
           radius={isLite ? 1.0 : isBalanced ? 1.3 : 1.8}
           trail={0.45}

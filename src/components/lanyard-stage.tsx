@@ -86,7 +86,7 @@ export function StaticLanyardCard({ frontImage, backImage, strapColor }: StaticL
                 : "Zakaria Mujur Prasetyo - UI/UX & Frontend Dev ID Badge"
             }
             fill
-            sizes="(max-width: 389px) 150px, (max-width: 639px) 180px, (max-width: 1023px) 225px, 250px"
+            sizes="(max-width: 639px) 146px, 240px"
             priority
             fetchPriority="high"
             unoptimized={cardImage.startsWith("data:") || cardImage.startsWith("blob:")}

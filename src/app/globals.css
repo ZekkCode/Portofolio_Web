@@ -14,6 +14,7 @@
   --color-surface: #f8fafc;
   --bg-page: #ffffff;
   --bg-section-alt: #f8fafc;
+  --grid-line: #e6e7f2;
 }
 
 .dark {
@@ -24,6 +25,7 @@
   --color-surface: #0e121d;
   --bg-page: #08090e;
   --bg-section-alt: #0b0e17;
+  --grid-line: #171c2a;
 }
 
 @theme {

@@ -20,16 +20,23 @@ export function xmlEscape(value: string): string {
 
 /**
  * Menjamin URI pada <loc> dan <image:loc> valid menurut skema xsd:anyURI (tanpa spasi mentah)
- * tanpa melakukan double-encoding pada persen yang sudah valid.
- */
+  * tanpa melakukan double-encoding pada persen yang sudah valid.
+   *
+    * Catatan: jangan memakai decodeURI di sini, karena decodeURI membiarkan
+     * urutan persen seperti %2F tetap ter-encode, lalu encodeURI mengubah
+      * persennya menjadi %25 sehingga hasilnya %252F (double-encoding).
+       */
 export function encodeSafeSitemapUri(rawUrl: string): string {
-  const trimmed = (rawUrl || "").trim();
-  if (!trimmed) return "";
-  try {
-    return encodeURI(decodeURI(trimmed));
-  } catch {
-    return trimmed.replace(/ /g, "%20");
-  }
+    const trimmed = (rawUrl || "").trim();
+    if (!trimmed) return "";
+    try {
+          return trimmed
+            .split(/(%[0-9A-Fa-f]{2})/g)
+            .map((part) => (/^%[0-9A-Fa-f]{2}$/.test(part) ? part : encodeURI(part)))
+            .join("");
+    } catch {
+          return trimmed.replace(/ /g, "%20");
+    }
 }
 
 /**

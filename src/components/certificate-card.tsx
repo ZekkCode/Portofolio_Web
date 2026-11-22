@@ -187,9 +187,9 @@ export function CertificateCard({ cert, onPreview, isEn = false }: CertificateCa
           </div>
         </div>
 
-        <h3 className="font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
+        <h2 className="font-display text-sm font-bold text-ink group-hover:text-brand transition-colors line-clamp-2">
           {cert.title}
-        </h3>
+        </h2>
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-muted">
           <span className="font-mono text-[11px] shrink-0">{cert.date}</span>

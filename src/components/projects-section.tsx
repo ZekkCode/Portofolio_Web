@@ -175,7 +175,7 @@ export function ProjectTiltedCard({
                 className="size-7 shrink-0 rounded-lg border border-line/60 bg-white object-contain p-0.5 dark:border-line/40 dark:bg-slate-900"
               />
             )}
-            <h3 className="m-0">
+            <h2 className="m-0">
               <button
                 type="button"
                 onClick={() => onPreview(project)}
@@ -183,7 +183,7 @@ export function ProjectTiltedCard({
               >
                 {project.title}
               </button>
-            </h3>
+            </h2>
           </div>
           {summaryText && (
             <p className="mt-2 text-xs sm:text-sm leading-relaxed text-body line-clamp-3">
@@ -224,7 +224,13 @@ export function ProjectTiltedCard({
             <ArrowUpRight className="size-3.5" />
           </button>
 
-          <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
+            <Link
+              href={`/projects/${project.slug || project.id}`}
+              className="inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-muted hover:text-brand transition-colors"
+            >
+              <span>{isEn ? "Details" : "Detail"}</span>
+            </Link>
             {project.caseStudyUrl && (
               <a
                 href={project.caseStudyUrl}

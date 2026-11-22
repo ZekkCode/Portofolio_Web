@@ -235,8 +235,6 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: metaTitle,
       description: metaDesc,
-      creator: "@zekksparow",
-      site: "@zekksparow",
       images: [ogImage],
     },
     robots: {
@@ -270,12 +268,14 @@ export default async function RootLayout({
 
   let rawLayoutHost = "";
   let locale: "id" | "en" = "id";
+  let explicitLang = "";
   let pathname = "/";
   try {
     const headerList = await headers();
     rawLayoutHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
     const hdrLang = headerList.get("x-zekk-lang")?.trim().toLowerCase();
     if (hdrLang === "en") locale = "en";
+    explicitLang = headerList.get("x-zekk-explicit-lang")?.trim().toLowerCase() || "";
     pathname = headerList.get("x-zekk-pathname") || "/";
   } catch {}
 
@@ -297,7 +297,13 @@ export default async function RootLayout({
   const phone = pub.phone;
   const bioIntro = pub.heroDesc;
   const absoluteOgImage = resolveAbsoluteUrl(seo.ogImage, siteUrl, "/opengraph-image");
-  const absolutePortraitUrl = `${siteUrl}/images/zakaria-profile-og.png`;
+    const absolutePortraitUrl = `${siteUrl}/images/zakaria-profile-og.png`;
+  const isHomePage = pathname === "/";
+  const profilePageUrl = isHomePage
+    ? locale === "en"
+      ? `${siteUrl}/?lang=en`
+      : siteUrl
+    : `${siteUrl}${pathname}${explicitLang ? `?lang=${explicitLang}` : ""}`;
 
   const sameAsUrls = Array.from(
     new Set([
@@ -308,6 +314,31 @@ export default async function RootLayout({
       "https://www.instagram.com/zekksparow",
       "https://www.tiktok.com/@zekksparow",
       "https://trakteer.id/zakariamp",
+      "https://dev.to/zakariamp",
+      "https://hashnode.com/@zakariamp",
+      "https://medium.com/@zakariamp",
+      "https://scholar.google.com/citations?user=nhYCbGEAAAAJ",
+      "https://orcid.org/0009-0007-9676-4994",
+      "https://www.researchgate.net/profile/Zakaria-Prasetyo",
+      "https://trunojoyoac.academia.edu/ZakariaPrasetyo",
+      "https://www.kaggle.com/zakariamujurprasetyo",
+      "https://www.pinterest.com/zakariamp/",
+      "https://dribbble.com/zakariamp",
+      "https://codepen.io/zakariamp",
+      "https://gitlab.com/zakariamp",
+      "https://stackoverflow.com/users/33332144/zakariamp",
+      "https://www.producthunt.com/@zakariamp",
+      "https://peerlist.io/zakariamp",
+      "https://daily.dev/zakariamp",
+      "https://replit.com/@zakariamp",
+      "https://www.deviantart.com/zakariamp",
+      "https://www.semanticscholar.org/author/Zakaria-Mujur-Prasetyo/2487045050",
+      "https://www.credly.com/users/zakaria-mujur-prasetyo.50693b80",
+      "https://www.dicoding.com/users/zakariamp/academies",
+      "https://www.skills.google/public_profiles/b30b5f7d-2984-4088-bdc3-b52e637021f7",
+      "https://www.artstation.com/zakariamp",
+      "https://www.awwwards.com/zakariamp/",
+      "https://huggingface.co/zakariamp",
       ...(config.blog?.portalUrl?.startsWith("http") ? [config.blog.portalUrl] : []),
     ])
   );
@@ -382,7 +413,7 @@ export default async function RootLayout({
       {
         "@type": "ProfilePage",
         "@id": `${siteUrl}/#profilepage`,
-        url: locale === "en" ? `${siteUrl}/?lang=en` : siteUrl,
+        url: profilePageUrl,
         name: `${name} | Portfolio`,
         inLanguage: inLanguageTag,
         ...(config.updatedAt ? { dateModified: config.updatedAt } : {}),
@@ -397,7 +428,7 @@ export default async function RootLayout({
         },
         primaryImageOfPage: absoluteOgImage,
       },
-      ...(pubFaq.length > 0
+      ...(isHomePage && pubFaq.length > 0
         ? [
             {
               "@type": "FAQPage",

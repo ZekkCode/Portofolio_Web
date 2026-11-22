@@ -130,20 +130,33 @@ ${subSitemaps
 
 /**
  * 2. SUB-SITEMAP MAIN (sitemap-main.xml)
- * Hanya berisi URL HTML kanonikal nyata (/, /?lang=id, /?lang=en) dengan hreflang timbal-balik bersih.
+ * Hanya berisi URL HTML kanonikal nyata (/, /?lang=id, /?lang=en, /projects, /certificates).
+ * Setiap entri memakai hreflang varian bahasanya sendiri.
  */
 export function buildMainSitemapXml(baseUrl: string, _config: SiteConfig, lastMod: string): string {
   const cleanMod = toValidW3cLastMod(lastMod, new Date().toISOString());
-  const rootUrl = encodeSafeSitemapUri(`${baseUrl}/`);
-  const idUrl = encodeSafeSitemapUri(`${baseUrl}/?lang=id`);
-  const enUrl = encodeSafeSitemapUri(`${baseUrl}/?lang=en`);
+  const homeAlternates = {
+    id: encodeSafeSitemapUri(`${baseUrl}/?lang=id`),
+    en: encodeSafeSitemapUri(`${baseUrl}/?lang=en`),
+    def: encodeSafeSitemapUri(`${baseUrl}/`),
+  };
+  const projectsAlternates = {
+    id: encodeSafeSitemapUri(`${baseUrl}/projects?lang=id`),
+    en: encodeSafeSitemapUri(`${baseUrl}/projects?lang=en`),
+    def: encodeSafeSitemapUri(`${baseUrl}/projects`),
+  };
+  const certificatesAlternates = {
+    id: encodeSafeSitemapUri(`${baseUrl}/certificates?lang=id`),
+    en: encodeSafeSitemapUri(`${baseUrl}/certificates?lang=en`),
+    def: encodeSafeSitemapUri(`${baseUrl}/certificates`),
+  };
 
   const urls = [
-    { loc: rootUrl, priority: "1.0", changefreq: "weekly" },
-    { loc: idUrl, priority: "0.9", changefreq: "weekly" },
-    { loc: enUrl, priority: "0.9", changefreq: "weekly" },
-    { loc: encodeSafeSitemapUri(`${baseUrl}/certificates`), priority: "0.9", changefreq: "weekly" },
-    { loc: encodeSafeSitemapUri(`${baseUrl}/projects`), priority: "0.9", changefreq: "weekly" },
+    { loc: homeAlternates.def, priority: "1.0", changefreq: "weekly", alternates: homeAlternates },
+    { loc: homeAlternates.id, priority: "0.9", changefreq: "weekly", alternates: homeAlternates },
+    { loc: homeAlternates.en, priority: "0.9", changefreq: "weekly", alternates: homeAlternates },
+    { loc: certificatesAlternates.def, priority: "0.9", changefreq: "weekly", alternates: certificatesAlternates },
+    { loc: projectsAlternates.def, priority: "0.9", changefreq: "weekly", alternates: projectsAlternates },
   ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -156,9 +169,9 @@ ${urls
     <lastmod>${xmlEscape(cleanMod)}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
     <priority>${u.priority}</priority>
-    <xhtml:link rel="alternate" hreflang="id-ID" href="${xmlEscape(idUrl)}"/>
-    <xhtml:link rel="alternate" hreflang="en-US" href="${xmlEscape(enUrl)}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${xmlEscape(rootUrl)}"/>
+    <xhtml:link rel="alternate" hreflang="id-ID" href="${xmlEscape(u.alternates.id)}"/>
+    <xhtml:link rel="alternate" hreflang="en-US" href="${xmlEscape(u.alternates.en)}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${xmlEscape(u.alternates.def)}"/>
   </url>`
   )
   .join("\n")}
@@ -176,6 +189,8 @@ export function buildServicesSitemapXml(baseUrl: string, config: SiteConfig, las
 /**
  * 4. SUB-SITEMAP PROJECTS (sitemap-projects.xml)
  * Menampilkan studi kasus proyek terpublikasi beserta lampiran gambar tanpa duplikasi #proyek.
+ * Setiap proyek terpublikasi juga terdaftar sebagai URL detail /projects/[slug] dengan
+ * hreflang varian bahasanya dan cover sebagai gambar.
  */
 export function buildProjectsSitemapXml(baseUrl: string, config: SiteConfig, lastMod: string): string {
   const cleanMod = toValidW3cLastMod(lastMod, new Date().toISOString());
@@ -190,8 +205,27 @@ export function buildProjectsSitemapXml(baseUrl: string, config: SiteConfig, las
       caption: p.summary || p.desc || p.title,
     }));
 
+  const detailEntries = publishedProjects.map((p) => {
+    const slug = p.slug || p.id;
+    const detailUrl = encodeSafeSitemapUri(`${baseUrl}/projects/${slug}`);
+    return {
+      loc: detailUrl,
+      id: encodeSafeSitemapUri(`${baseUrl}/projects/${slug}?lang=id`),
+      en: encodeSafeSitemapUri(`${baseUrl}/projects/${slug}?lang=en`),
+      image:
+        p.image && !p.image.startsWith("data:")
+          ? {
+              loc: toAbsoluteAssetUrl(baseUrl, p.image),
+              title: p.title,
+              caption: p.summary || p.desc || p.title,
+            }
+          : null,
+    };
+  });
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>${xmlEscape(rootUrl)}</loc>
@@ -211,7 +245,33 @@ export function buildProjectsSitemapXml(baseUrl: string, config: SiteConfig, las
             .join("\n")
         : ""
     }
-  </url>
+  </url>${
+    detailEntries.length > 0
+      ? "\n" +
+        detailEntries
+          .map(
+            (entry) => `  <url>
+    <loc>${xmlEscape(entry.loc)}</loc>
+    <lastmod>${xmlEscape(cleanMod)}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="id-ID" href="${xmlEscape(entry.id)}"/>
+    <xhtml:link rel="alternate" hreflang="en-US" href="${xmlEscape(entry.en)}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${xmlEscape(entry.loc)}"/>${
+      entry.image
+        ? `
+    <image:image>
+      <image:loc>${xmlEscape(entry.image.loc)}</image:loc>
+      <image:title>${xmlEscape(entry.image.title)}</image:title>
+      <image:caption>${xmlEscape(entry.image.caption)}</image:caption>
+    </image:image>`
+        : ""
+    }
+  </url>`
+          )
+          .join("\n")
+      : ""
+  }
 </urlset>`;
 }
 

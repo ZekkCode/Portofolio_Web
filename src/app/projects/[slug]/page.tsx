@@ -96,13 +96,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const { config, rawHost, locale, project } = await resolveProjectDetail(slug);
-  const isEn = locale === "en";
-  if (!project) {
-    return {
-      title: isEn ? "Project Not Found" : "Proyek Tidak Ditemukan",
-      robots: { index: false, follow: true },
-    };
-  }
+  if (!project) notFound();
   const seo = getPublishedSeo(config, locale);
   const pub = getPublishedProfile(config, locale);
   const siteUrl = resolveSafeHostContext(rawHost, seo.canonicalUrl || pub.site).siteUrl;

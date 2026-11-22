@@ -339,10 +339,12 @@ export default async function RootLayout({
       "https://www.artstation.com/zakariamp",
       "https://www.awwwards.com/zakariamp/",
       "https://huggingface.co/zakariamp",
+      "https://contra.com/zakariamp",
       ...(config.blog?.portalUrl?.startsWith("http") ? [config.blog.portalUrl] : []),
     ])
   );
 
+  
   const knowsAbout = Array.from(
     new Set([
       ...pubServices.map((s) => s.title).filter(Boolean),

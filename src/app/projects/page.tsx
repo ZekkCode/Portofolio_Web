@@ -2,14 +2,19 @@ import type { Metadata } from "next";
 import { ProjectsClient } from "./projects-client";
 
 export const metadata: Metadata = {
-  title: "Portofolio Proyek Rekayasa & Desain | Zakaria Mujur Prasetyo",
+  title: "Proyek & Portofolio | Zakaria Mujur Prasetyo",
   description:
     "Katalog portofolio proyek perangkat lunak, antarmuka web modern, dan sistem rekayasa interaktif Zakaria Mujur Prasetyo.",
   alternates: {
     canonical: "/projects",
+    languages: {
+      "id-ID": "/projects?lang=id",
+      "en-US": "/projects?lang=en",
+      "x-default": "/projects",
+    },
   },
   openGraph: {
-    title: "Portofolio Proyek Rekayasa & Desain | Zakaria Mujur Prasetyo",
+    title: "Proyek & Portofolio | Zakaria Mujur Prasetyo",
     description:
       "Katalog portofolio proyek perangkat lunak, antarmuka web modern, dan sistem rekayasa interaktif Zakaria Mujur Prasetyo.",
     url: "/projects",
@@ -18,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Portofolio Proyek Rekayasa & Desain | Zakaria Mujur Prasetyo",
+    title: "Proyek & Portofolio | Zakaria Mujur Prasetyo",
     description:
       "Katalog portofolio proyek perangkat lunak, antarmuka web modern, dan sistem rekayasa interaktif Zakaria Mujur Prasetyo.",
   },

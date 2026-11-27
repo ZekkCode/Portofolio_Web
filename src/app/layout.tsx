@@ -136,8 +136,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const ogAlt = seo.ogImageAlt || `${name} - ${brand}`;
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const allowIndex = seo.robotsIndex !== false && hostCtx.isIndexableHost && !isAdminRoute;
-  const canonicalPath =
-    explicitLang === "en" ? "/?lang=en" : explicitLang === "id" ? "/?lang=id" : "/";
+  const canonicalPath = explicitLang === "en" ? "/?lang=en" : "/";
   const ogUrl = canonicalPath === "/" ? siteUrl : `${siteUrl}${canonicalPath}`;
 
   return {
@@ -156,7 +155,7 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: canonicalPath,
       languages: {
-        "id-ID": "/?lang=id",
+        "id-ID": "/",
         "en-US": "/?lang=en",
         "x-default": "/",
       },
